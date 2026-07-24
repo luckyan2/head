@@ -6,20 +6,14 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>厨师大冒险 · 像素厨房</title>
-
-    <!-- 加载像素风格字体（Google Font） -->
+    <title>像素厨房 · 头部控菜</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
-
-    <!-- MediaPipe -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
-
     <style>
-      /* ===== 全局重置 ===== */
       * {
         margin: 0;
         padding: 0;
@@ -28,32 +22,28 @@
         -webkit-tap-highlight-color: transparent;
       }
       body {
-        background: #f5efe6; /* 暖白底 */
+        background: #f5efe6;
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        font-family: "Press Start 2P", "Courier New", monospace;
+        font-family: "Press Start 2P", monospace;
         touch-action: none;
       }
-
-      /* ===== 游戏容器（手机竖屏） ===== */
       #game-wrapper {
         position: relative;
         width: 100%;
         max-width: 420px;
         aspect-ratio: 9 / 16;
-        background: #ffffff;
+        background: #fdf8f0;
         border-radius: 20px;
         overflow: hidden;
         box-shadow:
           0 8px 0 #d0c8b8,
           0 12px 40px rgba(0, 0, 0, 0.1);
         margin: 12px;
-        border: 4px solid #d0c8b8; /* 像素风格边框 */
+        border: 4px solid #d0c8b8;
       }
-
-      /* ===== 画布 ===== */
       #gameCanvas {
         position: absolute;
         top: 0;
@@ -62,11 +52,9 @@
         height: 100%;
         display: block;
         z-index: 2;
+        image-rendering: pixelated;
         touch-action: none;
-        image-rendering: pixelated; /* 像素风格 */
       }
-
-      /* ===== 摄像头视频 ===== */
       #webcam {
         position: absolute;
         top: 0;
@@ -78,15 +66,14 @@
         opacity: 0.01;
         pointer-events: none;
       }
-
-      /* ===== 通用弹窗遮罩 ===== */
+      /* ===== 弹窗样式（像素风） ===== */
       .modal-overlay {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(255, 248, 240, 0.85);
+        background: rgba(255, 248, 240, 0.88);
         backdrop-filter: blur(4px);
         -webkit-backdrop-filter: blur(4px);
         display: flex;
@@ -99,7 +86,6 @@
       .modal-overlay.hidden {
         display: none;
       }
-
       @keyframes fadeIn {
         from {
           opacity: 0;
@@ -110,8 +96,6 @@
           transform: scale(1);
         }
       }
-
-      /* ===== 弹窗卡片（像素风格） ===== */
       .modal-card {
         background: #ffffff;
         border-radius: 16px;
@@ -124,12 +108,11 @@
         box-shadow:
           0 8px 0 #b0a898,
           0 12px 30px rgba(0, 0, 0, 0.08);
-        font-family: "Press Start 2P", "Courier New", monospace;
+        font-family: "Press Start 2P", monospace;
       }
       .modal-card h2 {
         font-size: 22px;
         font-weight: 700;
-        letter-spacing: 1px;
         margin-bottom: 12px;
         color: #e67e22;
         text-shadow: 2px 2px 0 #f1c40f;
@@ -152,7 +135,7 @@
         cursor: pointer;
         transition: all 0.05s linear;
         box-shadow: 0 4px 0 #b9770e;
-        font-family: "Press Start 2P", "Courier New", monospace;
+        font-family: "Press Start 2P", monospace;
         letter-spacing: 0.5px;
       }
       .modal-card .btn:active {
@@ -175,8 +158,6 @@
         gap: 12px;
         margin-top: 10px;
       }
-
-      /* ===== 暂停弹窗设置项 ===== */
       .settings-row {
         display: flex;
         justify-content: space-between;
@@ -201,7 +182,7 @@
         color: #3d3a36;
         font-size: 10px;
         cursor: pointer;
-        font-family: "Press Start 2P", "Courier New", monospace;
+        font-family: "Press Start 2P", monospace;
         transition: 0.1s;
       }
       .toggle-btn.active {
@@ -209,8 +190,6 @@
         border-color: #d4ac0d;
         color: #2c2a26;
       }
-
-      /* ===== 结算分数 ===== */
       .score-number {
         font-size: 56px;
         font-weight: bold;
@@ -239,7 +218,6 @@
         font-size: 10px;
         color: #7a7268;
       }
-
       @media (max-width: 440px) {
         .modal-card {
           padding: 20px 16px 24px;
@@ -258,7 +236,7 @@
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
 
-      <!-- ===== 弹窗1: 摄像头权限 ===== -->
+      <!-- 弹窗：摄像头 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -272,8 +250,7 @@
           </div>
         </div>
       </div>
-
-      <!-- ===== 弹窗2: 暂停 ===== -->
+      <!-- 暂停 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -286,9 +263,8 @@
                   data-setting="bgm"
                   data-val="on"
                 >
-                  开
-                </button>
-                <button class="toggle-btn" data-setting="bgm" data-val="off">
+                  开</button
+                ><button class="toggle-btn" data-setting="bgm" data-val="off">
                   关
                 </button>
               </div>
@@ -301,22 +277,22 @@
                   data-setting="sfx"
                   data-val="on"
                 >
-                  开
-                </button>
-                <button class="toggle-btn" data-setting="sfx" data-val="off">
+                  开</button
+                ><button class="toggle-btn" data-setting="sfx" data-val="off">
                   关
                 </button>
               </div>
             </div>
           </div>
           <div class="btn-group">
-            <button class="btn" id="resumeBtn">▶ 继续</button>
-            <button class="btn btn-secondary" id="surrenderBtn">🏳️ 认输</button>
+            <button class="btn" id="resumeBtn">▶ 继续</button
+            ><button class="btn btn-secondary" id="surrenderBtn">
+              🏳️ 认输
+            </button>
           </div>
         </div>
       </div>
-
-      <!-- ===== 弹窗3: 结算 ===== -->
+      <!-- 结算 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -339,8 +315,7 @@
           <button class="btn" id="retryBtn">🔄 再来一局</button>
         </div>
       </div>
-
-      <!-- ===== 弹窗4: 开始游戏 ===== -->
+      <!-- 开始 -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -359,12 +334,11 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 明亮像素风格版
-      //  保留所有功能，颜色全面提亮
+      // 厨师大冒险 - 明亮像素风（修正头部追踪 + 重排下半部分）
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
-        alert("⚠️ 关键库加载失败，请检查网络并刷新。");
+        alert("⚠️ 关键库加载失败，请检查网络。");
         throw new Error("FaceMesh or Camera not loaded");
       }
 
@@ -405,7 +379,6 @@
 
       // ---------- 音效 ----------
       let audioCtx = null;
-
       function initAudio() {
         if (!audioCtx)
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -431,7 +404,6 @@
           osc.stop(audioCtx.currentTime + duration);
         } catch (_) {}
       }
-
       function sfxPickup() {
         playTone(880, 0.08, "sine", 0.15);
       }
@@ -453,7 +425,6 @@
       }
 
       let bgmInterval = null;
-
       function startBGM() {
         if (!bgmEnabled) return;
         stopBGM();
@@ -464,7 +435,6 @@
           playTone(f, 0.15, "sine", 0.04);
         }, 400);
       }
-
       function stopBGM() {
         if (bgmInterval) {
           clearInterval(bgmInterval);
@@ -499,6 +469,9 @@
         spawnTimer: 0,
         cameraReady: false,
         faceMesh: null,
+        // 调试用
+        debugHeadX: 0.5,
+        debugHeadY: 0.5,
       };
 
       // ---------- 食材库 ----------
@@ -573,19 +546,15 @@
       function rand(min, max) {
         return Math.random() * (max - min) + min;
       }
-
       function randInt(min, max) {
         return Math.floor(rand(min, max + 1));
       }
-
       function clamp(v, min, max) {
         return Math.max(min, Math.min(max, v));
       }
-
       function lerp(a, b, t) {
         return a + (b - a) * t;
       }
-
       function getPos(row, col) {
         const w = canvas.width,
           h = canvas.height;
@@ -674,11 +643,8 @@
           state.rightDemand = null;
           sfxCombo();
         }
-        if (!matched) {
-          sfxServe();
-        } else {
-          sfxServe();
-        }
+        if (!matched) sfxServe();
+        else sfxServe();
 
         state.score += points;
         generateMenu();
@@ -690,7 +656,7 @@
         updateUI();
       }
 
-      // ---------- 食材生成 ----------
+      // ---------- 食材生成（保持大小不变，排队下落） ----------
       function spawnIngredient() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
         const lane = Math.random() > 0.5 ? 0 : 1;
@@ -699,8 +665,8 @@
         const cellW = canvas.width / COLS;
         const cellH = canvas.height / ROWS;
         let startX;
-        if (lane === 0) startX = cellW * 0.5 + rand(0, cellW * 0.8);
-        else startX = cellW * 2.5 + rand(0, cellW * 0.8);
+        if (lane === 0) startX = cellW * 0.5 + rand(0, cellW * 0.6);
+        else startX = cellW * 2.5 + rand(0, cellW * 0.6);
 
         const ingredient = {
           id: type.id,
@@ -709,13 +675,11 @@
           emoji: type.emoji,
           lane: lane,
           x: startX,
-          y: cellH * 0.5,
+          y: cellH * 0.2, // 从顶部出现
           startX: startX,
-          speed: 0.8 + rand(0, 0.6),
-          size: 14 + rand(0, 8),
+          speed: 1.0 + rand(0, 0.4),
+          size: 18 + rand(0, 6), // 固定大小（不缩放）
           alive: true,
-          scale: 0.5,
-          targetY: cellH * 6.2,
         };
         state.ingredients.push(ingredient);
       }
@@ -731,16 +695,10 @@
           }
 
           ing.y += ing.speed * 1.2;
-          const progress = clamp(
-            (ing.y - cellH * 0.5) / (cellH * 6.5 - cellH * 0.5),
-            0,
-            1,
-          );
-          ing.scale = 0.4 + progress * 0.8;
-          const drift = Math.sin(ing.y * 0.02 + Date.now() * 0.001) * 3;
-          ing.x = ing.startX + drift;
+          // 轻微左右飘动模拟传送带
+          ing.x = ing.startX + Math.sin(ing.y * 0.03 + Date.now() * 0.001) * 2;
 
-          if (ing.y > cellH * 7.0) {
+          if (ing.y > cellH * 7.2) {
             ing.alive = false;
             if (state.combo > 0) {
               state.combo = 0;
@@ -752,8 +710,9 @@
 
           const chefPixelX = state.chefX * canvas.width;
           const dist = Math.abs(ing.x - chefPixelX);
-          const threshold = 40 + ing.size * 0.6;
+          const threshold = 35 + ing.size * 0.5;
 
+          // 检测区域：第4行到第6.5行之间
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
             ing.alive = false;
             state.ingredientsCollected++;
@@ -767,7 +726,8 @@
             continue;
           }
 
-          if (ing.y > cellH * 6.8) {
+          // 超出底部消失
+          if (ing.y > cellH * 7.0) {
             ing.alive = false;
             state.ingredients.splice(i, 1);
             if (state.combo > 0) {
@@ -789,7 +749,7 @@
         }
 
         state.spawnTimer += deltaTime;
-        if (state.spawnTimer > 0.7 + rand(0, 0.8)) {
+        if (state.spawnTimer > 0.5 + rand(0, 0.6)) {
           state.spawnTimer = 0;
           spawnIngredient();
           if (Math.random() > 0.6) spawnIngredient();
@@ -797,9 +757,11 @@
 
         updateIngredients();
 
-        state.chefX = lerp(state.chefX, state.targetX, 0.12);
+        // 厨师平滑跟随头部
+        state.chefX = lerp(state.chefX, state.targetX, 0.15);
         state.chefX = clamp(state.chefX, 0.08, 0.92);
 
+        // 抬头检测（headY < 0.35 视为抬头）
         const headUp = state.headY < 0.35;
         if (headUp && !state.isHeadUp) {
           state.isHeadUp = true;
@@ -811,7 +773,7 @@
         updateUI();
       }
 
-      // ---------- 绘制（明亮像素风格） ----------
+      // ---------- 绘制（重新布局下半部分） ----------
       function drawGame() {
         const W = canvas.width,
           H = canvas.height;
@@ -820,12 +782,12 @@
 
         ctx.clearRect(0, 0, W, H);
 
-        // ---- 背景：奶油白 ----
+        // ---- 背景 ----
         ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
-        // ---- 像素网格装饰（浅线） ----
-        ctx.strokeStyle = "rgba(200, 190, 175, 0.3)";
+        // ---- 网格装饰 ----
+        ctx.strokeStyle = "rgba(200, 190, 175, 0.25)";
         ctx.lineWidth = 1;
         for (let r = 0; r <= ROWS; r++) {
           ctx.beginPath();
@@ -841,12 +803,12 @@
         }
 
         // ---- 传输带区域 ----
-        const beltY1 = cellH * 1.8;
-        const beltY2 = cellH * 6.8;
+        const beltTop = cellH * 1.5;
+        const beltBottom = cellH * 6.8;
         ctx.fillStyle = "rgba(230, 220, 205, 0.5)";
-        ctx.fillRect(0, beltY1, W, beltY2 - beltY1);
+        ctx.fillRect(0, beltTop, W, beltBottom - beltTop);
         // 条纹
-        for (let y = beltY1; y < beltY2; y += 16) {
+        for (let y = beltTop; y < beltBottom; y += 14) {
           ctx.strokeStyle = "rgba(180, 170, 155, 0.2)";
           ctx.lineWidth = 2;
           ctx.beginPath();
@@ -855,37 +817,40 @@
           ctx.stroke();
         }
 
-        // ---- 轨道指示（亮色箭头） ----
-        ctx.fillStyle = "rgba(231, 76, 60, 0.15)";
-        ctx.fillRect(cellW * 0.3, beltY1, cellW * 1.6, beltY2 - beltY1);
-        ctx.fillStyle = "rgba(52, 152, 219, 0.15)";
-        ctx.fillRect(cellW * 2.3, beltY1, cellW * 1.6, beltY2 - beltY1);
+        // ---- 轨道 ----
+        // 左轨道（第1-2列）
+        ctx.fillStyle = "rgba(231, 76, 60, 0.1)";
+        ctx.fillRect(cellW * 0.3, beltTop, cellW * 1.6, beltBottom - beltTop);
+        // 右轨道（第3-4列）
+        ctx.fillStyle = "rgba(52, 152, 219, 0.1)";
+        ctx.fillRect(cellW * 2.3, beltTop, cellW * 1.6, beltBottom - beltTop);
+
+        // 箭头
         ctx.fillStyle = "#e67e22";
-        ctx.font = '20px "Press Start 2P", monospace';
-        for (let y = beltY1 + 30; y < beltY2 - 20; y += 60) {
+        ctx.font = '16px "Press Start 2P", monospace';
+        for (let y = beltTop + 30; y < beltBottom - 20; y += 50) {
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillText("▼", cellW * 0.9, y);
           ctx.fillText("▼", cellW * 2.9, y);
         }
 
-        // ---- 食材 ----
+        // ---- 食材（固定大小） ----
         state.ingredients.forEach((ing) => {
           if (!ing.alive) return;
-          const size = ing.size * ing.scale;
+          const size = ing.size;
           const x = ing.x,
             y = ing.y;
 
-          // 发光（亮色）
-          const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 2);
+          // 发光
+          const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 1.8);
           glow.addColorStop(0, ing.color + "80");
           glow.addColorStop(1, ing.color + "00");
           ctx.fillStyle = glow;
           ctx.beginPath();
-          ctx.arc(x, y, size * 2, 0, Math.PI * 2);
+          ctx.arc(x, y, size * 1.8, 0, Math.PI * 2);
           ctx.fill();
 
-          // 阴影
           ctx.shadowColor = "rgba(0,0,0,0.1)";
           ctx.shadowBlur = 8;
           ctx.beginPath();
@@ -893,7 +858,6 @@
           ctx.fillStyle = ing.color;
           ctx.fill();
           ctx.shadowBlur = 0;
-
           ctx.strokeStyle = "rgba(255,255,255,0.6)";
           ctx.lineWidth = 2;
           ctx.stroke();
@@ -908,15 +872,14 @@
           ctx.shadowBlur = 0;
         });
 
-        // ---- 厨师（明亮像素风） ----
+        // ---- 厨师 ----
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
 
         ctx.shadowColor = "rgba(0,0,0,0.1)";
         ctx.shadowBlur = 10;
-
-        // 身体（亮蓝色）
+        // 身体
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -929,7 +892,6 @@
         );
         ctx.fillStyle = "#3498db";
         ctx.fill();
-        // 围裙（白色）
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -942,14 +904,13 @@
         );
         ctx.fillStyle = "#ffffff";
         ctx.fill();
-
-        // 头（肤色）
+        // 头
         ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.arc(chefX, chefY - chefSize * 0.15, chefSize * 0.3, 0, Math.PI * 2);
         ctx.fillStyle = "#f5d6a8";
         ctx.fill();
-        // 厨师帽（白色+红色条纹）
+        // 帽子
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -974,7 +935,6 @@
           Math.PI * 2,
         );
         ctx.fill();
-
         // 眼睛
         const eyeOffset = (state.chefX - 0.5) * 12;
         ctx.fillStyle = "#2c3e50";
@@ -1015,17 +975,15 @@
           Math.PI * 2,
         );
         ctx.fill();
-
         // 微笑
         ctx.strokeStyle = "#c0392b";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(chefX, chefY - chefSize * 0.05, 10, 0.1, Math.PI - 0.1);
         ctx.stroke();
-
         ctx.shadowBlur = 0;
 
-        // ---- 锅（亮色） ----
+        // ---- 锅（第6-7行） ----
         const potX = chefX;
         const potY = cellH * 6.2;
         const potW = cellW * 1.0;
@@ -1040,7 +998,6 @@
         ctx.strokeStyle = "#bdc3c7";
         ctx.lineWidth = 3;
         ctx.stroke();
-
         ctx.beginPath();
         ctx.ellipse(
           potX,
@@ -1078,14 +1035,13 @@
           ctx.fillStyle = "#bdc3c7";
           ctx.fillText("🥘", potX, potY - potH * 0.05);
         }
-
         ctx.shadowBlur = 0;
 
-        // ---- 菜单（像素风卡片） ----
-        const menuX = cellW * 2.3;
-        const menuY = cellH * 6.3;
-        const menuW = cellW * 1.5;
-        const menuH = cellH * 1.0;
+        // ---- 菜单（锅的右边，第3-4列，第6.5-7.5行） ----
+        const menuX = cellW * 2.4;
+        const menuY = cellH * 6.4;
+        const menuW = cellW * 1.4;
+        const menuH = cellH * 0.9;
 
         ctx.fillStyle = "rgba(255, 248, 240, 0.95)";
         ctx.shadowBlur = 10;
@@ -1100,38 +1056,38 @@
         ctx.roundRect(menuX, menuY, menuW, menuH, 8);
         ctx.stroke();
 
-        ctx.font = 'bold 12px "Press Start 2P", monospace';
+        ctx.font = 'bold 10px "Press Start 2P", monospace';
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
         ctx.fillStyle = "#e67e22";
-        ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 6);
+        ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 4);
 
         if (state.menuComplete) {
-          ctx.font = "40px serif";
+          ctx.font = "32px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#2ecc71";
-          ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2 + 4);
-          ctx.font = '10px "Press Start 2P", monospace';
+          ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2 + 2);
+          ctx.font = '8px "Press Start 2P", monospace';
           ctx.fillStyle = "#e67e22";
-          ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 20);
+          ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 16);
         } else {
-          let yOff = 28;
+          let yOff = 24;
           state.menu.forEach((item) => {
             const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
             const collected = state.pot[item.id] || 0;
             const needed = item.count;
-            ctx.font = '10px "Press Start 2P", monospace';
+            ctx.font = '8px "Press Start 2P", monospace';
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
             ctx.fillStyle = "#3d3a36";
             const label = `${ing ? ing.emoji : "🍽"} ${ing ? ing.name : ""}`;
-            ctx.fillText(label, menuX + 10, menuY + yOff);
-            // 进度条（像素风格）
-            const barX = menuX + 90;
+            ctx.fillText(label, menuX + 6, menuY + yOff);
+            // 像素进度条
+            const barX = menuX + 80;
             const barY = menuY + yOff + 2;
-            const barW = menuW - 110;
-            const barH = 12;
+            const barW = menuW - 94;
+            const barH = 10;
             ctx.fillStyle = "#ecf0f1";
             ctx.fillRect(barX, barY, barW, barH);
             ctx.strokeStyle = "#bdc3c7";
@@ -1143,158 +1099,205 @@
             ctx.fillStyle = "#3d3a36";
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
-            ctx.font = '8px "Press Start 2P", monospace';
+            ctx.font = '7px "Press Start 2P", monospace';
             ctx.fillText(
               `${collected}/${needed}`,
-              menuX + menuW - 8,
+              menuX + menuW - 6,
               menuY + yOff,
             );
-            yOff += 24;
+            yOff += 22;
           });
         }
 
-        // ---- 餐厅（亮色桌椅） ----
-        const restY = cellH * 5.2;
-        const restH = cellH * 3.5;
-        const restW = cellW * 1.6;
+        // ---- 餐厅区域（锅的下方，第7.5行～第9.5行） ----
+        const restaurantTop = cellH * 7.3;
+        const restaurantBottom = cellH * 9.8;
+        const restaurantH = restaurantBottom - restaurantTop;
 
-        // 左桌
+        // 餐厅背景盒子（半透明）
+        ctx.fillStyle = "rgba(240, 235, 220, 0.5)";
         ctx.shadowBlur = 6;
         ctx.shadowColor = "rgba(0,0,0,0.05)";
-        ctx.fillStyle = "rgba(230, 220, 205, 0.7)";
         ctx.beginPath();
-        ctx.roundRect(cellW * 0.2, restY + restH * 0.3, restW, restH * 0.6, 8);
+        ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
         ctx.fill();
-        ctx.fillStyle = "rgba(180, 120, 100, 0.15)";
-        ctx.beginPath();
-        ctx.roundRect(
-          cellW * 0.25,
-          restY + restH * 0.35,
-          restW - 10,
-          restH * 0.3,
-          4,
-        );
-        ctx.fill();
-
-        if (state.leftDemand) {
-          ctx.font = "28px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#2c3e50";
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(0,0,0,0.1)";
-          ctx.fillText(
-            state.leftDemand.emoji,
-            cellW * 1.0,
-            restY + restH * 0.45,
-          );
-          ctx.font = '10px "Press Start 2P", monospace';
-          ctx.fillStyle = "#e67e22";
-          ctx.fillText(state.leftDemand.dish, cellW * 1.0, restY + restH * 0.7);
-          ctx.font = "18px serif";
-          ctx.fillStyle = "#f1c40f";
-          ctx.fillText("💬", cellW * 0.5, restY + restH * 0.15);
-        } else {
-          ctx.font = "24px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#bdc3c7";
-          ctx.fillText("🪑", cellW * 1.0, restY + restH * 0.5);
-        }
-
-        // 右桌
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = "rgba(0,0,0,0.05)";
-        ctx.fillStyle = "rgba(230, 220, 205, 0.7)";
-        ctx.beginPath();
-        ctx.roundRect(cellW * 2.2, restY + restH * 0.3, restW, restH * 0.6, 8);
-        ctx.fill();
-        ctx.fillStyle = "rgba(100, 130, 180, 0.15)";
-        ctx.beginPath();
-        ctx.roundRect(
-          cellW * 2.25,
-          restY + restH * 0.35,
-          restW - 10,
-          restH * 0.3,
-          4,
-        );
-        ctx.fill();
-
-        if (state.rightDemand) {
-          ctx.font = "28px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#2c3e50";
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(0,0,0,0.1)";
-          ctx.fillText(
-            state.rightDemand.emoji,
-            cellW * 3.0,
-            restY + restH * 0.45,
-          );
-          ctx.font = '10px "Press Start 2P", monospace';
-          ctx.fillStyle = "#e67e22";
-          ctx.fillText(
-            state.rightDemand.dish,
-            cellW * 3.0,
-            restY + restH * 0.7,
-          );
-          ctx.font = "18px serif";
-          ctx.fillStyle = "#f1c40f";
-          ctx.fillText("💬", cellW * 3.5, restY + restH * 0.15);
-        } else {
-          ctx.font = "24px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#bdc3c7";
-          ctx.fillText("🪑", cellW * 3.0, restY + restH * 0.5);
-        }
-
         ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#d0c8b8";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
+        ctx.stroke();
 
-        // ---- 顶部信息栏（像素风格） ----
+        // 左右分割线
+        ctx.strokeStyle = "#d0c8b8";
+        ctx.lineWidth = 2;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(W / 2, restaurantTop);
+        ctx.lineTo(W / 2, restaurantBottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // ---- 左桌 ----
+        const leftTableX = cellW * 0.2;
+        const leftTableW = cellW * 1.6;
+        const leftTableY = restaurantTop + restaurantH * 0.2;
+        const leftTableH = restaurantH * 0.6;
+
+        ctx.fillStyle = "rgba(220, 200, 180, 0.6)";
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(0,0,0,0.05)";
+        ctx.beginPath();
+        ctx.roundRect(leftTableX, leftTableY, leftTableW, leftTableH, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#b0a898";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(leftTableX, leftTableY, leftTableW, leftTableH, 8);
+        ctx.stroke();
+
+        // 左桌客人（四个椅子）
+        const chairSize = 20;
+        const chairY = leftTableY + leftTableH + 6;
+        // 左边两个
+        ctx.font = "20px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#7f8c8d";
+        ctx.fillText("🪑", leftTableX + 20, chairY);
+        ctx.fillText("🪑", leftTableX + 20, chairY + 24);
+        // 右边两个
+        ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY);
+        ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY + 24);
+
+        // 左桌需求气泡（在桌子左上方）
+        if (state.leftDemand) {
+          const bubbleX = leftTableX + 10;
+          const bubbleY = leftTableY - 30;
+          ctx.fillStyle = "rgba(255,255,240,0.95)";
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(0,0,0,0.1)";
+          ctx.beginPath();
+          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#f1c40f";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
+          ctx.stroke();
+          ctx.font = "28px serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = "#2c3e50";
+          ctx.fillText(state.leftDemand.emoji, bubbleX + 30, bubbleY + 18);
+          ctx.font = '7px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e67e22";
+          ctx.fillText(state.leftDemand.dish, bubbleX + 30, bubbleY + 34);
+        }
+
+        // ---- 右桌 ----
+        const rightTableX = cellW * 2.2;
+        const rightTableW = cellW * 1.6;
+        const rightTableY = restaurantTop + restaurantH * 0.2;
+        const rightTableH = restaurantH * 0.6;
+
+        ctx.fillStyle = "rgba(200, 215, 230, 0.6)";
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(0,0,0,0.05)";
+        ctx.beginPath();
+        ctx.roundRect(rightTableX, rightTableY, rightTableW, rightTableH, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#b0a898";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.roundRect(rightTableX, rightTableY, rightTableW, rightTableH, 8);
+        ctx.stroke();
+
+        // 右桌客人
+        ctx.font = "20px serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "#7f8c8d";
+        ctx.fillText("🪑", rightTableX + 20, chairY);
+        ctx.fillText("🪑", rightTableX + 20, chairY + 24);
+        ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY);
+        ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY + 24);
+
+        // 右桌需求气泡
+        if (state.rightDemand) {
+          const bubbleX = rightTableX + rightTableW - 70;
+          const bubbleY = rightTableY - 30;
+          ctx.fillStyle = "rgba(255,255,240,0.95)";
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(0,0,0,0.1)";
+          ctx.beginPath();
+          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = "#f1c40f";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
+          ctx.stroke();
+          ctx.font = "28px serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = "#2c3e50";
+          ctx.fillText(state.rightDemand.emoji, bubbleX + 30, bubbleY + 18);
+          ctx.font = '7px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e67e22";
+          ctx.fillText(state.rightDemand.dish, bubbleX + 30, bubbleY + 34);
+        }
+
+        // ---- 顶部信息栏 ----
         const minutes = Math.floor(state.timeLeft / 60);
         const seconds = Math.floor(state.timeLeft % 60);
         const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
-        ctx.font = 'bold 18px "Press Start 2P", monospace';
+        ctx.font = 'bold 16px "Press Start 2P", monospace';
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillStyle = "#2c3e50";
-        ctx.shadowBlur = 0;
         ctx.fillText("⏱ " + timeStr, 14, 10);
 
         ctx.textAlign = "center";
-        ctx.font = 'bold 16px "Press Start 2P", monospace';
+        ctx.font = 'bold 14px "Press Start 2P", monospace';
         ctx.fillStyle = "#e67e22";
         ctx.fillText("⭐ " + state.score, W / 2, 12);
 
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
-        ctx.font = '24px "Press Start 2P", monospace';
+        ctx.font = '22px "Press Start 2P", monospace';
         ctx.fillStyle = "#2c3e50";
         ctx.fillText("⏸", W - 16, 6);
 
         if (state.combo > 1) {
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
-          ctx.font = 'bold 12px "Press Start 2P", monospace';
+          ctx.font = 'bold 11px "Press Start 2P", monospace';
           ctx.fillStyle = "#e74c3c";
-          ctx.fillText("🔥 x" + state.combo, W / 2, 40);
+          ctx.fillText("🔥 x" + state.combo, W / 2, 38);
         }
 
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
-        ctx.font = '10px "Press Start 2P", monospace';
+        ctx.font = '9px "Press Start 2P", monospace';
         ctx.fillStyle = "#7a7268";
-        ctx.fillText("🧺 " + state.ingredientsCollected, W - 14, 40);
+        ctx.fillText("🧺 " + state.ingredientsCollected, W - 14, 38);
 
         // 底部提示
         ctx.textAlign = "left";
         ctx.textBaseline = "bottom";
-        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.font = '7px "Press Start 2P", monospace';
         ctx.fillStyle = "#b0a898";
         ctx.fillText("←歪头  ·  抬头→", 10, H - 8);
+
+        // 调试：显示头部坐标（可注释掉）
+        // ctx.fillStyle = 'red'; ctx.font = '10px monospace';
+        // ctx.fillText(`hX:${state.headX.toFixed(2)} hY:${state.headY.toFixed(2)}`, 10, 60);
       }
 
       // ---- roundRect polyfill ----
@@ -1320,7 +1323,6 @@
 
       // ---------- 游戏循环 ----------
       let lastTimestamp = 0;
-
       function gameLoop(timestamp) {
         const delta = lastTimestamp
           ? Math.min((timestamp - lastTimestamp) / 1000, 0.05)
@@ -1412,7 +1414,7 @@
         }
       }
 
-      // ---------- MediaPipe ----------
+      // ---------- MediaPipe 初始化（添加调试日志） ----------
       function initFaceMesh() {
         const faceMesh = new FaceMesh({
           locateFile: (file) =>
@@ -1435,12 +1437,18 @@
                 y = nose.y;
               state.headX = clamp(x, 0, 1);
               state.headY = clamp(y, 0, 1);
+              // 映射到目标位置
               let target = 0.5;
               if (x < 0.35) target = 0.1 + (x / 0.35) * 0.3;
               else if (x > 0.65) target = 0.9 - ((1 - x) / 0.35) * 0.3;
               else target = 0.3 + ((x - 0.35) / 0.3) * 0.4;
               state.targetX = clamp(target, 0.05, 0.95);
+              // 调试
+              // console.log(`head: (${x.toFixed(2)}, ${y.toFixed(2)}) -> targetX: ${state.targetX.toFixed(2)}`);
             }
+          } else {
+            // 未检测到人脸，可能摄像头没拍到
+            // console.log('No face detected');
           }
         });
         return faceMesh;
@@ -1471,15 +1479,14 @@
           cameraModal.classList.add("hidden");
           startOverlay.classList.remove("hidden");
           initAudio();
+          console.log("✅ 摄像头启动成功，头部追踪已开启");
           return true;
         } catch (err) {
           console.error(err);
           let msg = "无法访问摄像头: ";
-          if (err.name === "NotAllowedError")
-            msg += "权限被拒绝。请在浏览器设置中允许摄像头。";
-          else if (err.name === "NotFoundError") msg += "未检测到摄像头设备。";
-          else if (err.name === "NotReadableError")
-            msg += "摄像头被其他应用占用。";
+          if (err.name === "NotAllowedError") msg += "权限被拒绝。";
+          else if (err.name === "NotFoundError") msg += "未检测到摄像头。";
+          else if (err.name === "NotReadableError") msg += "摄像头被占用。";
           else if (err.name === "AbortError") msg += "启动被中止，请刷新。";
           else if (err.name === "SecurityError")
             msg += "安全错误，请使用 HTTPS。";
@@ -1575,7 +1582,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已加载！");
+      console.log("🍳 像素厨房已加载（头部追踪已修复）");
     </script>
   </body>
 </html>
