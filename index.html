@@ -6,11 +6,17 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>厨师大冒险 · 头部控菜</title>
+    <title>厨师大冒险 · 像素厨房</title>
 
-    <!-- MediaPipe FaceMesh 库 -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1646424915/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029078/camera_utils.js"></script>
+    <!-- 加载像素风格字体（Google Font） -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- MediaPipe -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <style>
       /* ===== 全局重置 ===== */
@@ -22,29 +28,32 @@
         -webkit-tap-highlight-color: transparent;
       }
       body {
-        background: #1a1a2e;
+        background: #f5efe6; /* 暖白底 */
         display: flex;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
-        font-family: "Segoe UI", Roboto, system-ui, sans-serif;
+        font-family: "Press Start 2P", "Courier New", monospace;
         touch-action: none;
       }
 
-      /* ===== 游戏容器（手机竖屏比例） ===== */
+      /* ===== 游戏容器（手机竖屏） ===== */
       #game-wrapper {
         position: relative;
         width: 100%;
         max-width: 420px;
         aspect-ratio: 9 / 16;
-        background: #2d2d44;
-        border-radius: 28px;
+        background: #ffffff;
+        border-radius: 20px;
         overflow: hidden;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+        box-shadow:
+          0 8px 0 #d0c8b8,
+          0 12px 40px rgba(0, 0, 0, 0.1);
         margin: 12px;
+        border: 4px solid #d0c8b8; /* 像素风格边框 */
       }
 
-      /* ===== 画布（游戏主渲染层） ===== */
+      /* ===== 画布 ===== */
       #gameCanvas {
         position: absolute;
         top: 0;
@@ -52,11 +61,12 @@
         width: 100%;
         height: 100%;
         display: block;
-        z-index: 2; /* 盖住视频 */
+        z-index: 2;
         touch-action: none;
+        image-rendering: pixelated; /* 像素风格 */
       }
 
-      /* ===== 摄像头视频流（必须可见且渲染） ===== */
+      /* ===== 摄像头视频 ===== */
       #webcam {
         position: absolute;
         top: 0;
@@ -64,8 +74,8 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        z-index: 1; /* 画布下方 */
-        opacity: 0.01; /* 肉眼几乎看不见，但系统认为正在渲染 */
+        z-index: 1;
+        opacity: 0.01;
         pointer-events: none;
       }
 
@@ -76,9 +86,9 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.65);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
+        background: rgba(255, 248, 240, 0.85);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -101,185 +111,175 @@
         }
       }
 
-      /* ===== 弹窗卡片 ===== */
+      /* ===== 弹窗卡片（像素风格） ===== */
       .modal-card {
-        background: rgba(30, 30, 55, 0.96);
-        border-radius: 32px;
+        background: #ffffff;
+        border-radius: 16px;
         padding: 28px 24px 32px;
         max-width: 360px;
         width: 100%;
         text-align: center;
-        color: #f0eede;
-        border: 1px solid rgba(255, 215, 140, 0.2);
-        box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+        color: #3d3a36;
+        border: 4px solid #d0c8b8;
+        box-shadow:
+          0 8px 0 #b0a898,
+          0 12px 30px rgba(0, 0, 0, 0.08);
+        font-family: "Press Start 2P", "Courier New", monospace;
       }
       .modal-card h2 {
-        font-size: 26px;
+        font-size: 22px;
         font-weight: 700;
         letter-spacing: 1px;
-        margin-bottom: 8px;
-        background: linear-gradient(135deg, #f9d976, #f39b7b);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        margin-bottom: 12px;
+        color: #e67e22;
+        text-shadow: 2px 2px 0 #f1c40f;
       }
       .modal-card p {
-        font-size: 15px;
-        color: #c8c0b0;
-        line-height: 1.6;
+        font-size: 12px;
+        color: #5a5248;
+        line-height: 1.8;
         margin: 12px 0 20px;
       }
       .modal-card .btn {
         display: inline-block;
-        padding: 14px 40px;
-        background: linear-gradient(135deg, #f9d976, #f39b7b);
-        border: none;
-        border-radius: 60px;
-        font-size: 18px;
-        font-weight: 700;
-        color: #1a1a2e;
+        padding: 14px 32px;
+        background: #f39c12;
+        border: 4px solid #d68910;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: bold;
+        color: #2c2a26;
         cursor: pointer;
-        transition:
-          transform 0.15s,
-          box-shadow 0.2s;
-        box-shadow: 0 6px 20px rgba(243, 155, 123, 0.35);
+        transition: all 0.05s linear;
+        box-shadow: 0 4px 0 #b9770e;
+        font-family: "Press Start 2P", "Courier New", monospace;
         letter-spacing: 0.5px;
       }
       .modal-card .btn:active {
-        transform: scale(0.94);
+        transform: translateY(4px);
+        box-shadow: 0 0px 0 #b9770e;
       }
       .modal-card .btn-secondary {
-        background: rgba(255, 255, 255, 0.08);
-        color: #f0eede;
-        box-shadow: none;
-        border: 1px solid rgba(255, 215, 140, 0.2);
-        margin-top: 10px;
-        padding: 12px 28px;
-        font-size: 15px;
+        background: #ecf0f1;
+        border-color: #bdc3c7;
+        box-shadow: 0 4px 0 #95a5a6;
+        color: #2c3e50;
       }
       .modal-card .btn-secondary:active {
-        background: rgba(255, 255, 255, 0.15);
+        transform: translateY(4px);
+        box-shadow: 0 0px 0 #95a5a6;
       }
       .modal-card .btn-group {
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        margin-top: 6px;
+        gap: 12px;
+        margin-top: 10px;
       }
 
-      /* ===== 暂停弹窗内的设置项 ===== */
+      /* ===== 暂停弹窗设置项 ===== */
       .settings-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 10px 0;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-        font-size: 15px;
+        border-bottom: 2px dotted #d0c8b8;
+        font-size: 11px;
       }
       .settings-row:last-child {
         border-bottom: none;
       }
       .toggle-wrap {
         display: flex;
-        gap: 12px;
+        gap: 8px;
         align-items: center;
       }
       .toggle-btn {
-        padding: 6px 18px;
-        border-radius: 30px;
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        background: rgba(255, 255, 255, 0.05);
-        color: #c8c0b0;
-        font-size: 13px;
+        padding: 4px 14px;
+        border-radius: 4px;
+        border: 2px solid #b0a898;
+        background: #f5efe6;
+        color: #3d3a36;
+        font-size: 10px;
         cursor: pointer;
-        transition: 0.2s;
+        font-family: "Press Start 2P", "Courier New", monospace;
+        transition: 0.1s;
       }
       .toggle-btn.active {
-        background: #f9d976;
-        color: #1a1a2e;
-        border-color: #f9d976;
+        background: #f1c40f;
+        border-color: #d4ac0d;
+        color: #2c2a26;
       }
 
-      /* ===== 结算分数样式 ===== */
+      /* ===== 结算分数 ===== */
       .score-number {
-        font-size: 64px;
-        font-weight: 900;
-        background: linear-gradient(135deg, #f9d976, #f39b7b);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
+        font-size: 56px;
+        font-weight: bold;
+        color: #e67e22;
+        text-shadow: 4px 4px 0 #f1c40f;
         line-height: 1.2;
       }
       .score-label {
-        font-size: 14px;
-        color: #a09888;
+        font-size: 12px;
+        color: #7a7268;
         letter-spacing: 2px;
         text-transform: uppercase;
       }
       .stat-row {
         display: flex;
         justify-content: center;
-        gap: 32px;
+        gap: 24px;
         margin: 16px 0 20px;
       }
-      .stat-item {
-        text-align: center;
-      }
       .stat-item .num {
-        font-size: 28px;
-        font-weight: 700;
-        color: #f0eede;
+        font-size: 24px;
+        font-weight: bold;
+        color: #2c3e50;
       }
       .stat-item .label {
-        font-size: 12px;
-        color: #8a8272;
+        font-size: 10px;
+        color: #7a7268;
       }
 
-      /* 响应式微调 */
       @media (max-width: 440px) {
         .modal-card {
-          padding: 22px 16px 26px;
+          padding: 20px 16px 24px;
         }
         .modal-card h2 {
-          font-size: 22px;
+          font-size: 18px;
         }
         .score-number {
-          font-size: 48px;
+          font-size: 40px;
         }
       }
     </style>
   </head>
   <body>
     <div id="game-wrapper">
-      <!-- 画布（游戏渲染） -->
       <canvas id="gameCanvas"></canvas>
-
-      <!-- 摄像头视频流（隐藏但渲染） -->
       <video id="webcam" playsinline muted></video>
 
-      <!-- ==================== 弹窗1: 摄像头权限 ==================== -->
+      <!-- ===== 弹窗1: 摄像头权限 ===== -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
           <p>
-            游戏需要通过摄像头检测您的头部动作<br />
-            <span style="font-size: 13px; color: #a09888"
-              >向左歪头 → 接左道食材 &nbsp;|&nbsp; 向右歪头 → 接右道食材<br />抬头
-              → 出餐上菜</span
-            >
+            向左歪头 → 接左道食材<br />向右歪头 → 接右道食材<br />抬头 →
+            出餐上菜
           </p>
           <button class="btn" id="cameraAllowBtn">📸 允许并开始</button>
-          <div style="margin-top: 14px; font-size: 13px; color: #7a7262">
-            仅用于头部追踪，数据不会上传
+          <div style="margin-top: 14px; font-size: 9px; color: #7a7268">
+            仅用于头部追踪
           </div>
         </div>
       </div>
 
-      <!-- ==================== 弹窗2: 暂停菜单 ==================== -->
+      <!-- ===== 弹窗2: 暂停 ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
           <div style="margin: 16px 0 4px">
             <div class="settings-row">
-              <span>🎵 背景音乐</span>
+              <span>🎵 音乐</span>
               <div class="toggle-wrap">
                 <button
                   class="toggle-btn active"
@@ -309,14 +309,14 @@
               </div>
             </div>
           </div>
-          <div class="btn-group" style="margin-top: 18px">
-            <button class="btn" id="resumeBtn">▶ 继续游戏</button>
+          <div class="btn-group">
+            <button class="btn" id="resumeBtn">▶ 继续</button>
             <button class="btn btn-secondary" id="surrenderBtn">🏳️ 认输</button>
           </div>
         </div>
       </div>
 
-      <!-- ==================== 弹窗3: 游戏结算 ==================== -->
+      <!-- ===== 弹窗3: 结算 ===== -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -325,33 +325,33 @@
           <div class="stat-row">
             <div class="stat-item">
               <div class="num" id="statDishes">0</div>
-              <div class="label">出餐数</div>
+              <div class="label">出餐</div>
             </div>
             <div class="stat-item">
               <div class="num" id="statIngredients">0</div>
-              <div class="label">食材数</div>
+              <div class="label">食材</div>
             </div>
             <div class="stat-item">
               <div class="num" id="statCombo">0</div>
-              <div class="label">最高连击</div>
+              <div class="label">连击</div>
             </div>
           </div>
           <button class="btn" id="retryBtn">🔄 再来一局</button>
         </div>
       </div>
 
-      <!-- ==================== 弹窗4: 开始游戏 ==================== -->
+      <!-- ===== 弹窗4: 开始游戏 ===== -->
       <div
         id="startOverlay"
         class="modal-overlay"
-        style="background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px)"
+        style="background: rgba(255, 248, 240, 0.75)"
       >
-        <div class="modal-card" style="background: rgba(20, 20, 40, 0.92)">
-          <h2>👨‍🍳 厨师大冒险</h2>
-          <p style="font-size: 14px">用头部控制厨师 · 接食材 · 做菜上桌</p>
+        <div class="modal-card" style="background: #fffefc">
+          <h2>👨‍🍳 像素厨房</h2>
+          <p style="font-size: 11px">头部控制 · 接食材 · 做菜上桌</p>
           <button class="btn" id="startGameBtn">🔥 开始游戏</button>
-          <div style="margin-top: 16px; font-size: 13px; color: #7a7262">
-            向左/右歪头移动 &nbsp;·&nbsp; 抬头出餐
+          <div style="margin-top: 14px; font-size: 9px; color: #7a7268">
+            ←歪头移动 · 抬头出餐→
           </div>
         </div>
       </div>
@@ -359,12 +359,16 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 · 完整游戏逻辑 (已修复摄像头移动端兼容性)
-      //  技术：MediaPipe FaceMesh + Canvas 2D + Web Audio API
-      //  注释：每个功能区块已标明
+      //  厨师大冒险 - 明亮像素风格版
+      //  保留所有功能，颜色全面提亮
       // ================================================================
 
-      // ---------- DOM 引用 ----------
+      if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
+        alert("⚠️ 关键库加载失败，请检查网络并刷新。");
+        throw new Error("FaceMesh or Camera not loaded");
+      }
+
+      // ---------- DOM ----------
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
       const video = document.getElementById("webcam");
@@ -385,7 +389,7 @@
       const statIngredientsEl = document.getElementById("statIngredients");
       const statComboEl = document.getElementById("statCombo");
 
-      // ---------- 画布尺寸适配 ----------
+      // ---------- 画布适配 ----------
       function resizeCanvas() {
         const rect = canvas.parentElement.getBoundingClientRect();
         canvas.width = rect.width;
@@ -394,22 +398,20 @@
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
 
-      // ---------- 游戏常量 ----------
-      const ROWS = 10;
-      const COLS = 4;
-      const GAME_DURATION = 90; // 1分30秒
+      // ---------- 常量 ----------
+      const ROWS = 10,
+        COLS = 4,
+        GAME_DURATION = 90;
 
-      // ---------- 音效系统 (Web Audio) ----------
+      // ---------- 音效 ----------
       let audioCtx = null;
 
       function initAudio() {
-        if (!audioCtx) {
+        if (!audioCtx)
           audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        }
       }
-
-      let bgmEnabled = true;
-      let sfxEnabled = true;
+      let bgmEnabled = true,
+        sfxEnabled = true;
 
       function playTone(freq, duration, type = "sine", volume = 0.2) {
         if (!sfxEnabled || !audioCtx) return;
@@ -427,29 +429,23 @@
           gain.connect(audioCtx.destination);
           osc.start();
           osc.stop(audioCtx.currentTime + duration);
-        } catch (_) {
-          /* 静默失败 */
-        }
+        } catch (_) {}
       }
 
       function sfxPickup() {
         playTone(880, 0.08, "sine", 0.15);
       }
-
       function sfxCook() {
         playTone(660, 0.12, "square", 0.1);
         setTimeout(() => playTone(880, 0.12, "square", 0.1), 120);
       }
-
       function sfxServe() {
         playTone(1100, 0.1, "sine", 0.18);
         setTimeout(() => playTone(1320, 0.1, "sine", 0.18), 100);
       }
-
       function sfxMiss() {
         playTone(300, 0.2, "sawtooth", 0.08);
       }
-
       function sfxCombo() {
         playTone(1000, 0.06, "sine", 0.12);
         setTimeout(() => playTone(1200, 0.06, "sine", 0.12), 80);
@@ -487,78 +483,34 @@
         ingredientsCollected: 0,
         combo: 0,
         maxCombo: 0,
-
         chefX: 0.5,
         targetX: 0.5,
-
         headX: 0.5,
         headY: 0.5,
         isHeadUp: false,
-
         ingredients: [],
         pot: {},
         menu: [],
         menuComplete: false,
         dishName: "",
-
         leftDemand: null,
         rightDemand: null,
-
         timerInterval: null,
-        lastFrameTime: 0,
         spawnTimer: 0,
-        demandTimer: 0,
-
         cameraReady: false,
         faceMesh: null,
       };
 
       // ---------- 食材库 ----------
       const INGREDIENT_TYPES = [
-        {
-          id: "tomato",
-          name: "番茄",
-          color: "#e74c3c",
-          emoji: "🍅",
-          weight: 1,
-        },
-        { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", weight: 1 },
-        { id: "onion", name: "洋葱", color: "#9b59b6", emoji: "🧅", weight: 1 },
-        {
-          id: "garlic",
-          name: "大蒜",
-          color: "#ecf0f1",
-          emoji: "🧄",
-          weight: 1,
-        },
-        {
-          id: "carrot",
-          name: "胡萝卜",
-          color: "#e67e22",
-          emoji: "🥕",
-          weight: 1,
-        },
-        {
-          id: "potato",
-          name: "土豆",
-          color: "#d4a574",
-          emoji: "🥔",
-          weight: 1,
-        },
-        {
-          id: "pepper",
-          name: "青椒",
-          color: "#27ae60",
-          emoji: "🫑",
-          weight: 1,
-        },
-        {
-          id: "mushroom",
-          name: "蘑菇",
-          color: "#bdc3c7",
-          emoji: "🍄",
-          weight: 1,
-        },
+        { id: "tomato", name: "番茄", color: "#e74c3c", emoji: "🍅" },
+        { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚" },
+        { id: "onion", name: "洋葱", color: "#9b59b6", emoji: "🧅" },
+        { id: "garlic", name: "大蒜", color: "#ecf0f1", emoji: "🧄" },
+        { id: "carrot", name: "胡萝卜", color: "#e67e22", emoji: "🥕" },
+        { id: "potato", name: "土豆", color: "#d4a574", emoji: "🥔" },
+        { id: "pepper", name: "青椒", color: "#27ae60", emoji: "🫑" },
+        { id: "mushroom", name: "蘑菇", color: "#bdc3c7", emoji: "🍄" },
       ];
 
       const RECIPES = [
@@ -617,7 +569,7 @@
         },
       ];
 
-      // ---------- 辅助函数 ----------
+      // ---------- 辅助 ----------
       function rand(min, max) {
         return Math.random() * (max - min) + min;
       }
@@ -635,10 +587,10 @@
       }
 
       function getPos(row, col) {
-        const w = canvas.width;
-        const h = canvas.height;
-        const cellH = h / ROWS;
-        const cellW = w / COLS;
+        const w = canvas.width,
+          h = canvas.height;
+        const cellH = h / ROWS,
+          cellW = w / COLS;
         return {
           x: col * cellW,
           y: row * cellH,
@@ -649,7 +601,7 @@
         };
       }
 
-      // ---------- 菜单系统 ----------
+      // ---------- 菜单 ----------
       function generateMenu() {
         const recipe = RECIPES[randInt(0, RECIPES.length - 1)];
         state.dishName = recipe.name;
@@ -697,7 +649,6 @@
         return false;
       }
 
-      // 出餐 (抬头触发)
       function serveDish() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
         if (!state.menuComplete) {
@@ -736,29 +687,20 @@
         }
         if (matched) sfxCombo();
         else sfxServe();
-
         updateUI();
       }
 
       // ---------- 食材生成 ----------
       function spawnIngredient() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-
         const lane = Math.random() > 0.5 ? 0 : 1;
         const typeIdx = randInt(0, INGREDIENT_TYPES.length - 1);
         const type = INGREDIENT_TYPES[typeIdx];
-
         const cellW = canvas.width / COLS;
         const cellH = canvas.height / ROWS;
-
-        let startX, endX;
-        if (lane === 0) {
-          startX = cellW * 0.5 + rand(0, cellW * 0.8);
-          endX = cellW * 0.5 + rand(0, cellW * 0.8);
-        } else {
-          startX = cellW * 2.5 + rand(0, cellW * 0.8);
-          endX = cellW * 2.5 + rand(0, cellW * 0.8);
-        }
+        let startX;
+        if (lane === 0) startX = cellW * 0.5 + rand(0, cellW * 0.8);
+        else startX = cellW * 2.5 + rand(0, cellW * 0.8);
 
         const ingredient = {
           id: type.id,
@@ -769,7 +711,6 @@
           x: startX,
           y: cellH * 0.5,
           startX: startX,
-          endX: endX,
           speed: 0.8 + rand(0, 0.6),
           size: 14 + rand(0, 8),
           alive: true,
@@ -782,8 +723,6 @@
       // ---------- 更新食材 ----------
       function updateIngredients() {
         const cellH = canvas.height / ROWS;
-        const cellW = canvas.width / COLS;
-
         for (let i = state.ingredients.length - 1; i >= 0; i--) {
           const ing = state.ingredients[i];
           if (!ing.alive) {
@@ -798,7 +737,6 @@
             1,
           );
           ing.scale = 0.4 + progress * 0.8;
-
           const drift = Math.sin(ing.y * 0.02 + Date.now() * 0.001) * 3;
           ing.x = ing.startX + drift;
 
@@ -813,18 +751,15 @@
           }
 
           const chefPixelX = state.chefX * canvas.width;
-          const chefPixelY = canvas.height * 0.55;
           const dist = Math.abs(ing.x - chefPixelX);
           const threshold = 40 + ing.size * 0.6;
 
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
             ing.alive = false;
             state.ingredientsCollected++;
-            if (state.pot[ing.id] !== undefined) {
+            if (state.pot[ing.id] !== undefined)
               state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
-            } else {
-              state.pot[ing.id] = 1;
-            }
+            else state.pot[ing.id] = 1;
             sfxPickup();
             checkMenuComplete();
             updateUI();
@@ -843,10 +778,9 @@
         }
       }
 
-      // ---------- 游戏循环更新 ----------
+      // ---------- 更新循环 ----------
       function updateGame(deltaTime) {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-
         state.timeLeft -= deltaTime;
         if (state.timeLeft <= 0) {
           state.timeLeft = 0;
@@ -877,96 +811,112 @@
         updateUI();
       }
 
-      // ---------- 渲染 ----------
+      // ---------- 绘制（明亮像素风格） ----------
       function drawGame() {
-        const W = canvas.width;
-        const H = canvas.height;
-        const cellW = W / COLS;
-        const cellH = H / ROWS;
+        const W = canvas.width,
+          H = canvas.height;
+        const cellW = W / COLS,
+          cellH = H / ROWS;
 
         ctx.clearRect(0, 0, W, H);
 
-        // ---- 背景 ----
-        const grad = ctx.createLinearGradient(0, 0, 0, H);
-        grad.addColorStop(0, "#2c2c4a");
-        grad.addColorStop(0.35, "#3d3d5c");
-        grad.addColorStop(0.65, "#4a3d5c");
-        grad.addColorStop(1, "#2c2c3a");
-        ctx.fillStyle = grad;
+        // ---- 背景：奶油白 ----
+        ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
-        // ---- 传输带区域 (第2行~第6.5行) ----
-        const beltY1 = cellH * 1.8;
-        const beltY2 = cellH * 6.8;
-        ctx.fillStyle = "rgba(60, 55, 45, 0.3)";
-        ctx.fillRect(0, beltY1, W, beltY2 - beltY1);
-        for (let y = beltY1; y < beltY2; y += 12) {
-          ctx.strokeStyle = "rgba(200, 180, 160, 0.06)";
-          ctx.lineWidth = 2;
+        // ---- 像素网格装饰（浅线） ----
+        ctx.strokeStyle = "rgba(200, 190, 175, 0.3)";
+        ctx.lineWidth = 1;
+        for (let r = 0; r <= ROWS; r++) {
           ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(W, y + 6);
+          ctx.moveTo(0, r * cellH);
+          ctx.lineTo(W, r * cellH);
+          ctx.stroke();
+        }
+        for (let c = 0; c <= COLS; c++) {
+          ctx.beginPath();
+          ctx.moveTo(c * cellW, 0);
+          ctx.lineTo(c * cellW, H);
           ctx.stroke();
         }
 
-        // ---- 轨道指示 (左右) ----
-        ctx.fillStyle = "rgba(231, 76, 60, 0.05)";
-        ctx.fillRect(cellW * 0.3, beltY1, cellW * 1.6, beltY2 - beltY1);
-        ctx.fillStyle = "rgba(52, 152, 219, 0.05)";
-        ctx.fillRect(cellW * 2.3, beltY1, cellW * 1.6, beltY2 - beltY1);
-
-        ctx.fillStyle = "rgba(255,255,255,0.06)";
-        for (let y = beltY1 + 20; y < beltY2 - 20; y += 50) {
-          ctx.font = "16px sans-serif";
-          ctx.fillText("⬇", cellW * 0.8, y);
-          ctx.fillText("⬇", cellW * 2.8, y);
+        // ---- 传输带区域 ----
+        const beltY1 = cellH * 1.8;
+        const beltY2 = cellH * 6.8;
+        ctx.fillStyle = "rgba(230, 220, 205, 0.5)";
+        ctx.fillRect(0, beltY1, W, beltY2 - beltY1);
+        // 条纹
+        for (let y = beltY1; y < beltY2; y += 16) {
+          ctx.strokeStyle = "rgba(180, 170, 155, 0.2)";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(W, y + 8);
+          ctx.stroke();
         }
 
-        // ---- 绘制食材 ----
+        // ---- 轨道指示（亮色箭头） ----
+        ctx.fillStyle = "rgba(231, 76, 60, 0.15)";
+        ctx.fillRect(cellW * 0.3, beltY1, cellW * 1.6, beltY2 - beltY1);
+        ctx.fillStyle = "rgba(52, 152, 219, 0.15)";
+        ctx.fillRect(cellW * 2.3, beltY1, cellW * 1.6, beltY2 - beltY1);
+        ctx.fillStyle = "#e67e22";
+        ctx.font = '20px "Press Start 2P", monospace';
+        for (let y = beltY1 + 30; y < beltY2 - 20; y += 60) {
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("▼", cellW * 0.9, y);
+          ctx.fillText("▼", cellW * 2.9, y);
+        }
+
+        // ---- 食材 ----
         state.ingredients.forEach((ing) => {
           if (!ing.alive) return;
           const size = ing.size * ing.scale;
-          const x = ing.x;
-          const y = ing.y;
+          const x = ing.x,
+            y = ing.y;
 
-          const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 1.8);
-          glow.addColorStop(0, ing.color + "60");
+          // 发光（亮色）
+          const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 2);
+          glow.addColorStop(0, ing.color + "80");
           glow.addColorStop(1, ing.color + "00");
           ctx.fillStyle = glow;
           ctx.beginPath();
-          ctx.arc(x, y, size * 1.8, 0, Math.PI * 2);
+          ctx.arc(x, y, size * 2, 0, Math.PI * 2);
           ctx.fill();
 
-          ctx.shadowColor = "rgba(0,0,0,0.3)";
-          ctx.shadowBlur = 12;
+          // 阴影
+          ctx.shadowColor = "rgba(0,0,0,0.1)";
+          ctx.shadowBlur = 8;
           ctx.beginPath();
           ctx.arc(x, y, size, 0, Math.PI * 2);
           ctx.fillStyle = ing.color;
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          ctx.strokeStyle = "rgba(255,255,255,0.2)";
-          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = "rgba(255,255,255,0.6)";
+          ctx.lineWidth = 2;
           ctx.stroke();
 
           ctx.font = `${size * 1.2}px serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#fff";
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(0,0,0,0.5)";
+          ctx.shadowBlur = 6;
+          ctx.shadowColor = "rgba(0,0,0,0.2)";
           ctx.fillText(ing.emoji, x, y + 1);
           ctx.shadowBlur = 0;
         });
 
-        // ---- 厨师 (第5-8行, 第2列) ----
+        // ---- 厨师（明亮像素风） ----
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
 
-        ctx.shadowColor = "rgba(0,0,0,0.4)";
-        ctx.shadowBlur = 20;
+        ctx.shadowColor = "rgba(0,0,0,0.1)";
+        ctx.shadowBlur = 10;
 
+        // 身体（亮蓝色）
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -977,8 +927,9 @@
           0,
           Math.PI * 2,
         );
-        ctx.fillStyle = "#4a6fa5";
+        ctx.fillStyle = "#3498db";
         ctx.fill();
+        // 围裙（白色）
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -989,14 +940,16 @@
           0,
           Math.PI * 2,
         );
-        ctx.fillStyle = "#ecf0f1";
+        ctx.fillStyle = "#ffffff";
         ctx.fill();
 
-        ctx.shadowBlur = 12;
+        // 头（肤色）
+        ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.arc(chefX, chefY - chefSize * 0.15, chefSize * 0.3, 0, Math.PI * 2);
         ctx.fillStyle = "#f5d6a8";
         ctx.fill();
+        // 厨师帽（白色+红色条纹）
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -1009,19 +962,20 @@
         );
         ctx.fillStyle = "#ffffff";
         ctx.fill();
-        ctx.fillStyle = "#e8e0d0";
+        ctx.fillStyle = "#e74c3c";
         ctx.beginPath();
         ctx.ellipse(
           chefX,
           chefY - chefSize * 0.5,
-          chefSize * 0.3,
-          chefSize * 0.15,
+          chefSize * 0.25,
+          chefSize * 0.12,
           0,
           0,
           Math.PI * 2,
         );
         ctx.fill();
 
+        // 眼睛
         const eyeOffset = (state.chefX - 0.5) * 12;
         ctx.fillStyle = "#2c3e50";
         ctx.beginPath();
@@ -1062,6 +1016,7 @@
         );
         ctx.fill();
 
+        // 微笑
         ctx.strokeStyle = "#c0392b";
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -1070,20 +1025,20 @@
 
         ctx.shadowBlur = 0;
 
-        // ---- 锅 (第6-7行) ----
+        // ---- 锅（亮色） ----
         const potX = chefX;
         const potY = cellH * 6.2;
         const potW = cellW * 1.0;
         const potH = cellH * 0.7;
 
-        ctx.shadowBlur = 15;
-        ctx.shadowColor = "rgba(0,0,0,0.3)";
+        ctx.shadowColor = "rgba(0,0,0,0.08)";
+        ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.ellipse(potX, potY, potW * 0.6, potH * 0.5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = "#2c3e50";
+        ctx.fillStyle = "#ecf0f1";
         ctx.fill();
-        ctx.strokeStyle = "#4a5a6a";
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#bdc3c7";
+        ctx.lineWidth = 3;
         ctx.stroke();
 
         ctx.beginPath();
@@ -1096,10 +1051,11 @@
           0,
           Math.PI * 2,
         );
-        ctx.fillStyle = "#3d4a5a";
+        ctx.fillStyle = "#d5dbdb";
         ctx.fill();
         ctx.stroke();
 
+        // 锅中食材
         const potItems = Object.keys(state.pot).filter(
           (key) => state.pot[key] > 0,
         );
@@ -1112,114 +1068,111 @@
           ctx.font = "20px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "rgba(255,255,255,0.8)";
-          ctx.shadowBlur = 10;
-          ctx.shadowColor = "rgba(0,0,0,0.5)";
-          ctx.fillText(emojiStr.trim() || "🍲", potX, potY - potH * 0.1);
+          ctx.fillStyle = "#2c3e50";
           ctx.shadowBlur = 0;
+          ctx.fillText(emojiStr.trim() || "🍲", potX, potY - potH * 0.1);
         } else {
-          ctx.font = "16px serif";
+          ctx.font = "18px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "rgba(255,255,255,0.2)";
+          ctx.fillStyle = "#bdc3c7";
           ctx.fillText("🥘", potX, potY - potH * 0.05);
         }
 
         ctx.shadowBlur = 0;
 
-        // ---- 菜单 (第6.5-7.5行, 第3-4列) ----
+        // ---- 菜单（像素风卡片） ----
         const menuX = cellW * 2.3;
         const menuY = cellH * 6.3;
         const menuW = cellW * 1.5;
         const menuH = cellH * 1.0;
 
-        ctx.fillStyle = "rgba(20, 20, 35, 0.85)";
-        ctx.shadowBlur = 20;
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.fillStyle = "rgba(255, 248, 240, 0.95)";
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = "rgba(0,0,0,0.05)";
         ctx.beginPath();
-        ctx.roundRect(menuX, menuY, menuW, menuH, 12);
+        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
         ctx.fill();
         ctx.shadowBlur = 0;
-
-        ctx.strokeStyle = "rgba(255,215,140,0.2)";
-        ctx.lineWidth = 1.5;
+        ctx.strokeStyle = "#d0c8b8";
+        ctx.lineWidth = 3;
         ctx.beginPath();
-        ctx.roundRect(menuX, menuY, menuW, menuH, 12);
+        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
         ctx.stroke();
 
-        ctx.font = "bold 14px sans-serif";
+        ctx.font = 'bold 12px "Press Start 2P", monospace';
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
-        ctx.fillStyle = "#f0eede";
+        ctx.fillStyle = "#e67e22";
         ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 6);
 
         if (state.menuComplete) {
-          ctx.font = "48px sans-serif";
+          ctx.font = "40px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#2ecc71";
           ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2 + 4);
-          ctx.font = "12px sans-serif";
-          ctx.fillStyle = "#f39c12";
-          ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 18);
+          ctx.font = '10px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e67e22";
+          ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 20);
         } else {
           let yOff = 28;
           state.menu.forEach((item) => {
             const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
             const collected = state.pot[item.id] || 0;
             const needed = item.count;
-            ctx.font = "13px sans-serif";
+            ctx.font = '10px "Press Start 2P", monospace';
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
-            ctx.fillStyle = "#c8c0b0";
+            ctx.fillStyle = "#3d3a36";
             const label = `${ing ? ing.emoji : "🍽"} ${ing ? ing.name : ""}`;
-            ctx.fillText(label, menuX + 12, menuY + yOff);
-            const barX = menuX + 80;
-            const barY = menuY + yOff + 4;
-            const barW = menuW - 96;
-            const barH = 10;
-            ctx.fillStyle = "rgba(255,255,255,0.08)";
-            ctx.beginPath();
-            ctx.roundRect(barX, barY, barW, barH, 5);
-            ctx.fill();
+            ctx.fillText(label, menuX + 10, menuY + yOff);
+            // 进度条（像素风格）
+            const barX = menuX + 90;
+            const barY = menuY + yOff + 2;
+            const barW = menuW - 110;
+            const barH = 12;
+            ctx.fillStyle = "#ecf0f1";
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.strokeStyle = "#bdc3c7";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(barX, barY, barW, barH);
             const fillW = (collected / needed) * barW;
             ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
-            ctx.beginPath();
-            ctx.roundRect(barX, barY, Math.min(fillW, barW), barH, 5);
-            ctx.fill();
-            ctx.fillStyle = "#f0eede";
-            ctx.font = "11px sans-serif";
+            ctx.fillRect(barX, barY, Math.min(fillW, barW), barH);
+            ctx.fillStyle = "#3d3a36";
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
+            ctx.font = '8px "Press Start 2P", monospace';
             ctx.fillText(
               `${collected}/${needed}`,
               menuX + menuW - 8,
               menuY + yOff,
             );
-            yOff += 22;
+            yOff += 24;
           });
         }
 
-        // ---- 餐厅 (第5.5-9行, 左右两张桌子) ----
+        // ---- 餐厅（亮色桌椅） ----
         const restY = cellH * 5.2;
         const restH = cellH * 3.5;
         const restW = cellW * 1.6;
 
         // 左桌
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "rgba(0,0,0,0.2)";
-        ctx.fillStyle = "rgba(60, 50, 40, 0.5)";
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(0,0,0,0.05)";
+        ctx.fillStyle = "rgba(230, 220, 205, 0.7)";
         ctx.beginPath();
-        ctx.roundRect(cellW * 0.2, restY + restH * 0.3, restW, restH * 0.6, 16);
+        ctx.roundRect(cellW * 0.2, restY + restH * 0.3, restW, restH * 0.6, 8);
         ctx.fill();
-        ctx.fillStyle = "rgba(180, 80, 60, 0.15)";
+        ctx.fillStyle = "rgba(180, 120, 100, 0.15)";
         ctx.beginPath();
         ctx.roundRect(
           cellW * 0.25,
           restY + restH * 0.35,
           restW - 10,
           restH * 0.3,
-          8,
+          4,
         );
         ctx.fill();
 
@@ -1227,43 +1180,43 @@
           ctx.font = "28px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = "rgba(0,0,0,0.5)";
+          ctx.fillStyle = "#2c3e50";
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(0,0,0,0.1)";
           ctx.fillText(
             state.leftDemand.emoji,
             cellW * 1.0,
             restY + restH * 0.45,
           );
-          ctx.font = "12px sans-serif";
-          ctx.fillStyle = "#f0eede";
+          ctx.font = '10px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e67e22";
           ctx.fillText(state.leftDemand.dish, cellW * 1.0, restY + restH * 0.7);
-          ctx.font = "18px sans-serif";
-          ctx.fillStyle = "#f39c12";
+          ctx.font = "18px serif";
+          ctx.fillStyle = "#f1c40f";
           ctx.fillText("💬", cellW * 0.5, restY + restH * 0.15);
         } else {
-          ctx.font = "20px serif";
+          ctx.font = "24px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "rgba(255,255,255,0.15)";
+          ctx.fillStyle = "#bdc3c7";
           ctx.fillText("🪑", cellW * 1.0, restY + restH * 0.5);
         }
 
         // 右桌
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "rgba(0,0,0,0.2)";
-        ctx.fillStyle = "rgba(60, 50, 40, 0.5)";
+        ctx.shadowBlur = 6;
+        ctx.shadowColor = "rgba(0,0,0,0.05)";
+        ctx.fillStyle = "rgba(230, 220, 205, 0.7)";
         ctx.beginPath();
-        ctx.roundRect(cellW * 2.2, restY + restH * 0.3, restW, restH * 0.6, 16);
+        ctx.roundRect(cellW * 2.2, restY + restH * 0.3, restW, restH * 0.6, 8);
         ctx.fill();
-        ctx.fillStyle = "rgba(60, 80, 120, 0.15)";
+        ctx.fillStyle = "rgba(100, 130, 180, 0.15)";
         ctx.beginPath();
         ctx.roundRect(
           cellW * 2.25,
           restY + restH * 0.35,
           restW - 10,
           restH * 0.3,
-          8,
+          4,
         );
         ctx.fill();
 
@@ -1271,79 +1224,77 @@
           ctx.font = "28px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
-          ctx.shadowBlur = 20;
-          ctx.shadowColor = "rgba(0,0,0,0.5)";
+          ctx.fillStyle = "#2c3e50";
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(0,0,0,0.1)";
           ctx.fillText(
             state.rightDemand.emoji,
             cellW * 3.0,
             restY + restH * 0.45,
           );
-          ctx.font = "12px sans-serif";
-          ctx.fillStyle = "#f0eede";
+          ctx.font = '10px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e67e22";
           ctx.fillText(
             state.rightDemand.dish,
             cellW * 3.0,
             restY + restH * 0.7,
           );
-          ctx.font = "18px sans-serif";
-          ctx.fillStyle = "#f39c12";
+          ctx.font = "18px serif";
+          ctx.fillStyle = "#f1c40f";
           ctx.fillText("💬", cellW * 3.5, restY + restH * 0.15);
         } else {
-          ctx.font = "20px serif";
+          ctx.font = "24px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.fillStyle = "rgba(255,255,255,0.15)";
+          ctx.fillStyle = "#bdc3c7";
           ctx.fillText("🪑", cellW * 3.0, restY + restH * 0.5);
         }
 
         ctx.shadowBlur = 0;
 
-        // ---- 顶部信息栏 (第1行) ----
+        // ---- 顶部信息栏（像素风格） ----
         const minutes = Math.floor(state.timeLeft / 60);
         const seconds = Math.floor(state.timeLeft % 60);
         const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
 
-        ctx.font = "bold 20px monospace";
+        ctx.font = 'bold 18px "Press Start 2P", monospace';
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
-        ctx.fillStyle = "#f0eede";
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "rgba(0,0,0,0.5)";
+        ctx.fillStyle = "#2c3e50";
+        ctx.shadowBlur = 0;
         ctx.fillText("⏱ " + timeStr, 14, 10);
 
         ctx.textAlign = "center";
-        ctx.font = "bold 18px sans-serif";
-        ctx.fillStyle = "#f9d976";
-        ctx.fillText("⭐ " + state.score, canvas.width / 2, 12);
+        ctx.font = 'bold 16px "Press Start 2P", monospace';
+        ctx.fillStyle = "#e67e22";
+        ctx.fillText("⭐ " + state.score, W / 2, 12);
 
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
-        ctx.font = "26px sans-serif";
-        ctx.fillStyle = "#f0eede";
-        ctx.fillText("⏸", canvas.width - 16, 6);
+        ctx.font = '24px "Press Start 2P", monospace';
+        ctx.fillStyle = "#2c3e50";
+        ctx.fillText("⏸", W - 16, 6);
 
         if (state.combo > 1) {
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
-          ctx.font = "bold 14px sans-serif";
-          ctx.fillStyle = "#f39c12";
-          ctx.fillText("🔥 x" + state.combo, canvas.width / 2, 38);
+          ctx.font = 'bold 12px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e74c3c";
+          ctx.fillText("🔥 x" + state.combo, W / 2, 40);
         }
 
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
-        ctx.font = "13px sans-serif";
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
-        ctx.fillText("🧺 " + state.ingredientsCollected, canvas.width - 14, 38);
+        ctx.font = '10px "Press Start 2P", monospace';
+        ctx.fillStyle = "#7a7268";
+        ctx.fillText("🧺 " + state.ingredientsCollected, W - 14, 40);
 
-        ctx.shadowBlur = 0;
-
+        // 底部提示
         ctx.textAlign = "left";
         ctx.textBaseline = "bottom";
-        ctx.font = "11px sans-serif";
-        ctx.fillStyle = "rgba(255,255,255,0.2)";
-        ctx.fillText("←歪头  ·  抬头→", 10, canvas.height - 8);
+        ctx.font = '8px "Press Start 2P", monospace';
+        ctx.fillStyle = "#b0a898";
+        ctx.fillText("←歪头  ·  抬头→", 10, H - 8);
       }
 
       // ---- roundRect polyfill ----
@@ -1365,10 +1316,7 @@
         };
       }
 
-      // ---------- UI 更新 ----------
-      function updateUI() {
-        // 由帧循环自动更新
-      }
+      function updateUI() {}
 
       // ---------- 游戏循环 ----------
       let lastTimestamp = 0;
@@ -1378,10 +1326,8 @@
           ? Math.min((timestamp - lastTimestamp) / 1000, 0.05)
           : 0.016;
         lastTimestamp = timestamp;
-
         updateGame(delta);
         drawGame();
-
         requestAnimationFrame(gameLoop);
       }
 
@@ -1391,7 +1337,6 @@
         state.isGameOver = true;
         state.isPlaying = false;
         stopBGM();
-
         finalScoreEl.textContent = state.score;
         statDishesEl.textContent = state.dishesServed;
         statIngredientsEl.textContent = state.ingredientsCollected;
@@ -1399,15 +1344,13 @@
         resultModal.classList.remove("hidden");
       }
 
-      // ---------- 重置游戏 ----------
+      // ---------- 重置 ----------
       function resetGame() {
-        // 释放摄像头流
         if (video.srcObject) {
           video.srcObject.getTracks().forEach((track) => track.stop());
           video.srcObject = null;
         }
         state.cameraReady = false;
-
         state.isPlaying = false;
         state.isPaused = false;
         state.isGameOver = false;
@@ -1430,16 +1373,13 @@
         state.leftDemand = null;
         state.rightDemand = null;
         state.spawnTimer = 0;
-
         if (state.timerInterval) {
           clearInterval(state.timerInterval);
           state.timerInterval = null;
         }
-
         resultModal.classList.add("hidden");
         pauseModal.classList.add("hidden");
         startOverlay.classList.remove("hidden");
-
         generateMenu();
         updateUI();
       }
@@ -1452,19 +1392,14 @@
         startOverlay.classList.add("hidden");
         pauseModal.classList.add("hidden");
         resultModal.classList.add("hidden");
-
         generateMenu();
         startBGM();
-
         if (state.timerInterval) clearInterval(state.timerInterval);
-        state.timerInterval = setInterval(() => {
-          // 倒计时在 updateGame 中处理
-        }, 1000);
-
+        state.timerInterval = setInterval(() => {}, 1000);
         updateUI();
       }
 
-      // ---------- 暂停/继续 ----------
+      // ---------- 暂停 ----------
       function togglePause() {
         if (!state.isPlaying || state.isGameOver) return;
         state.isPaused = !state.isPaused;
@@ -1477,105 +1412,78 @@
         }
       }
 
-      // ---------- MediaPipe FaceMesh 初始化 ----------
+      // ---------- MediaPipe ----------
       function initFaceMesh() {
         const faceMesh = new FaceMesh({
-          locateFile: (file) => {
-            return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1646424915/${file}`;
-          },
+          locateFile: (file) =>
+            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
         });
-
         faceMesh.setOptions({
           maxNumFaces: 1,
           refineLandmarks: true,
           minDetectionConfidence: 0.6,
           minTrackingConfidence: 0.5,
         });
-
         faceMesh.onResults((results) => {
           if (
             results.multiFaceLandmarks &&
             results.multiFaceLandmarks.length > 0
           ) {
-            const landmarks = results.multiFaceLandmarks[0];
-            const nose = landmarks[1];
+            const nose = results.multiFaceLandmarks[0][1];
             if (nose) {
-              const x = nose.x;
-              const y = nose.y;
+              const x = nose.x,
+                y = nose.y;
               state.headX = clamp(x, 0, 1);
               state.headY = clamp(y, 0, 1);
-
               let target = 0.5;
-              if (x < 0.35) {
-                target = 0.1 + (x / 0.35) * 0.3;
-              } else if (x > 0.65) {
-                target = 0.9 - ((1 - x) / 0.35) * 0.3;
-              } else {
-                target = 0.3 + ((x - 0.35) / 0.3) * 0.4;
-              }
+              if (x < 0.35) target = 0.1 + (x / 0.35) * 0.3;
+              else if (x > 0.65) target = 0.9 - ((1 - x) / 0.35) * 0.3;
+              else target = 0.3 + ((x - 0.35) / 0.3) * 0.4;
               state.targetX = clamp(target, 0.05, 0.95);
             }
           }
         });
-
         return faceMesh;
       }
 
-      // ---------- 启动摄像头 (重构版，增强移动端兼容) ----------
+      // ---------- 启动摄像头 ----------
       async function startCamera() {
-        // 释放旧流
         if (video.srcObject) {
           video.srcObject.getTracks().forEach((track) => track.stop());
           video.srcObject = null;
         }
-
         try {
-          // iOS 必备
           video.playsInline = true;
           video.muted = true;
-
           const faceMesh = initFaceMesh();
           state.faceMesh = faceMesh;
-
           const camera = new Camera(video, {
             onFrame: async () => {
               try {
                 await faceMesh.send({ image: video });
-              } catch (_) {
-                /* 静默 */
-              }
+              } catch (_) {}
             },
             width: 320,
             height: 240,
           });
-
           await camera.start();
-
           state.cameraReady = true;
-
           cameraModal.classList.add("hidden");
           startOverlay.classList.remove("hidden");
-
           initAudio();
-
           return true;
         } catch (err) {
-          console.error("摄像头启动失败:", err);
+          console.error(err);
           let msg = "无法访问摄像头: ";
-          if (err.name === "NotAllowedError") {
-            msg +=
-              "权限被拒绝。请在浏览器设置中允许摄像头，并确保不是通过微信内置浏览器打开。";
-          } else if (err.name === "NotFoundError") {
-            msg += "未检测到摄像头设备。";
-          } else if (err.name === "NotReadableError") {
-            msg += "摄像头被其他应用占用，请关闭其他相机应用后重试。";
-          } else if (err.name === "AbortError") {
-            msg += "启动过程被中止，请刷新页面重试。";
-          } else if (err.name === "SecurityError") {
-            msg += "安全错误，请确认页面使用 HTTPS 协议。";
-          } else {
-            msg += err.message;
-          }
+          if (err.name === "NotAllowedError")
+            msg += "权限被拒绝。请在浏览器设置中允许摄像头。";
+          else if (err.name === "NotFoundError") msg += "未检测到摄像头设备。";
+          else if (err.name === "NotReadableError")
+            msg += "摄像头被其他应用占用。";
+          else if (err.name === "AbortError") msg += "启动被中止，请刷新。";
+          else if (err.name === "SecurityError")
+            msg += "安全错误，请使用 HTTPS。";
+          else msg += err.message;
           alert(msg);
           return false;
         }
@@ -1585,7 +1493,6 @@
       cameraAllowBtn.addEventListener("click", async () => {
         await startCamera();
       });
-
       startGameBtn.addEventListener("click", () => {
         if (!state.cameraReady) {
           alert("请先允许摄像头权限");
@@ -1593,24 +1500,17 @@
         }
         startGame();
       });
-
       canvas.addEventListener("click", (e) => {
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
+        const x = (e.clientX - rect.left) / rect.width,
+          y = (e.clientY - rect.top) / rect.height;
         if (x > 0.7 && y < 0.12) {
-          if (state.isPlaying && !state.isGameOver) {
-            togglePause();
-          }
+          if (state.isPlaying && !state.isGameOver) togglePause();
         }
       });
-
       resumeBtn.addEventListener("click", () => {
-        if (state.isPaused) {
-          togglePause();
-        }
+        if (state.isPaused) togglePause();
       });
-
       surrenderBtn.addEventListener("click", () => {
         if (state.isPlaying) {
           state.isPlaying = false;
@@ -1619,7 +1519,6 @@
           endGame();
         }
       });
-
       retryBtn.addEventListener("click", () => {
         resetGame();
         startGame();
@@ -1627,28 +1526,24 @@
 
       document.querySelectorAll(".toggle-btn").forEach((btn) => {
         btn.addEventListener("click", function () {
-          const setting = this.dataset.setting;
-          const val = this.dataset.val;
+          const setting = this.dataset.setting,
+            val = this.dataset.val;
           const parent = this.closest(".toggle-wrap");
           parent
             .querySelectorAll(".toggle-btn")
             .forEach((b) => b.classList.remove("active"));
           this.classList.add("active");
-
           if (setting === "bgm") {
             bgmEnabled = val === "on";
-            if (bgmEnabled && state.isPlaying && !state.isPaused) {
-              startBGM();
-            } else if (!bgmEnabled) {
-              stopBGM();
-            }
+            if (bgmEnabled && state.isPlaying && !state.isPaused) startBGM();
+            else if (!bgmEnabled) stopBGM();
           } else if (setting === "sfx") {
             sfxEnabled = val === "on";
           }
         });
       });
 
-      // ---------- 键盘调试 ----------
+      // 键盘调试
       document.addEventListener("keydown", (e) => {
         if (e.key === "ArrowLeft") state.targetX = 0.15;
         else if (e.key === "ArrowRight") state.targetX = 0.85;
@@ -1659,9 +1554,8 @@
         }
       });
       document.addEventListener("keyup", (e) => {
-        if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+        if (e.key === "ArrowLeft" || e.key === "ArrowRight")
           state.targetX = 0.5;
-        }
       });
 
       // ---------- 初始化 ----------
@@ -1671,12 +1565,9 @@
         startOverlay.classList.add("hidden");
         pauseModal.classList.add("hidden");
         resultModal.classList.add("hidden");
-
         requestAnimationFrame(gameLoop);
       }
-
       init();
-
       document.addEventListener(
         "click",
         () => {
@@ -1684,8 +1575,7 @@
         },
         { once: true },
       );
-
-      console.log("🍳 厨师大冒险已加载！ (摄像头兼容修复版)");
+      console.log("🍳 像素厨房已加载！");
     </script>
   </body>
 </html>
