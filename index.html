@@ -7,11 +7,13 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>厨师大冒险 · 头部控菜</title>
-    <!-- 使用 MediaPipe FaceMesh 进行人脸关键点检测 -->
+
+    <!-- MediaPipe FaceMesh 库 -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1646424915/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029078/camera_utils.js"></script>
+
     <style>
-      /* ===== 全局重置 & 字体 ===== */
+      /* ===== 全局重置 ===== */
       * {
         margin: 0;
         padding: 0;
@@ -29,7 +31,7 @@
         touch-action: none;
       }
 
-      /* ===== 游戏主容器 —— 模拟手机竖屏 ===== */
+      /* ===== 游戏容器（手机竖屏比例） ===== */
       #game-wrapper {
         position: relative;
         width: 100%;
@@ -42,7 +44,7 @@
         margin: 12px;
       }
 
-      /* 画布 —— 所有游戏内容绘制在此 */
+      /* ===== 画布（游戏主渲染层） ===== */
       #gameCanvas {
         position: absolute;
         top: 0;
@@ -50,20 +52,21 @@
         width: 100%;
         height: 100%;
         display: block;
-        background: #3d3d5c;
+        z-index: 2; /* 盖住视频 */
         touch-action: none;
       }
 
-      /* ===== 摄像头视频 (隐藏, 仅用于MediaPipe) ===== */
+      /* ===== 摄像头视频流（必须可见且渲染） ===== */
       #webcam {
         position: absolute;
         top: 0;
         left: 0;
-        width: 1px;
-        height: 1px;
-        opacity: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1; /* 画布下方 */
+        opacity: 0.01; /* 肉眼几乎看不见，但系统认为正在渲染 */
         pointer-events: none;
-        z-index: 0;
       }
 
       /* ===== 通用弹窗遮罩 ===== */
@@ -163,7 +166,7 @@
         margin-top: 6px;
       }
 
-      /* ===== 暂停弹窗内的选项 ===== */
+      /* ===== 暂停弹窗内的设置项 ===== */
       .settings-row {
         display: flex;
         justify-content: space-between;
@@ -196,7 +199,7 @@
         border-color: #f9d976;
       }
 
-      /* ===== 结算分数 ===== */
+      /* ===== 结算分数样式 ===== */
       .score-number {
         font-size: 64px;
         font-weight: 900;
@@ -230,7 +233,7 @@
         color: #8a8272;
       }
 
-      /* ===== 响应式微调 ===== */
+      /* 响应式微调 */
       @media (max-width: 440px) {
         .modal-card {
           padding: 22px 16px 26px;
@@ -246,13 +249,13 @@
   </head>
   <body>
     <div id="game-wrapper">
-      <!-- 画布 -->
+      <!-- 画布（游戏渲染） -->
       <canvas id="gameCanvas"></canvas>
 
-      <!-- 隐藏的摄像头视频流 -->
-      <video id="webcam" playsinline></video>
+      <!-- 摄像头视频流（隐藏但渲染） -->
+      <video id="webcam" playsinline muted></video>
 
-      <!-- ====== 弹窗1: 摄像头权限 ====== -->
+      <!-- ==================== 弹窗1: 摄像头权限 ==================== -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -270,7 +273,7 @@
         </div>
       </div>
 
-      <!-- ====== 弹窗2: 暂停菜单 ====== -->
+      <!-- ==================== 弹窗2: 暂停菜单 ==================== -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -313,7 +316,7 @@
         </div>
       </div>
 
-      <!-- ====== 弹窗3: 游戏结算 ====== -->
+      <!-- ==================== 弹窗3: 游戏结算 ==================== -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -337,7 +340,7 @@
         </div>
       </div>
 
-      <!-- ====== 弹窗4: 开始游戏按钮 (悬浮在游戏界面之上) ====== -->
+      <!-- ==================== 弹窗4: 开始游戏 ==================== -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -355,11 +358,11 @@
     </div>
 
     <script>
-      // ============================================================
-      //  厨师大冒险 · 完整游戏逻辑
+      // ================================================================
+      //  厨师大冒险 · 完整游戏逻辑 (已修复摄像头移动端兼容性)
       //  技术：MediaPipe FaceMesh + Canvas 2D + Web Audio API
-      //  作者：AI 助手
-      // ============================================================
+      //  注释：每个功能区块已标明
+      // ================================================================
 
       // ---------- DOM 引用 ----------
       const canvas = document.getElementById("gameCanvas");
@@ -405,11 +408,9 @@
         }
       }
 
-      // 设置开关
       let bgmEnabled = true;
       let sfxEnabled = true;
 
-      // 简单的音效生成
       function playTone(freq, duration, type = "sine", volume = 0.2) {
         if (!sfxEnabled || !audioCtx) return;
         try {
@@ -455,13 +456,11 @@
         setTimeout(() => playTone(1400, 0.06, "sine", 0.12), 160);
       }
 
-      // 背景音乐（简易循环）
       let bgmInterval = null;
 
       function startBGM() {
         if (!bgmEnabled) return;
         stopBGM();
-        let note = 440;
         bgmInterval = setInterval(() => {
           if (!bgmEnabled || !audioCtx) return;
           const freqs = [440, 494, 554, 587, 659, 740, 830, 880];
@@ -479,7 +478,6 @@
 
       // ---------- 游戏状态 ----------
       const state = {
-        // 游戏流程
         isPlaying: false,
         isPaused: false,
         isGameOver: false,
@@ -490,40 +488,27 @@
         combo: 0,
         maxCombo: 0,
 
-        // 厨师位置 (0~1 归一化, 0=最左, 1=最右)
         chefX: 0.5,
-        // 目标位置 (平滑跟随)
         targetX: 0.5,
 
-        // 头部姿态
-        headX: 0.5, // 鼻尖水平位置 0~1
-        headY: 0.5, // 鼻尖垂直位置 0~1
-        isHeadUp: false, // 是否抬头
+        headX: 0.5,
+        headY: 0.5,
+        isHeadUp: false,
 
-        // 食材列表
         ingredients: [],
-        // 锅中的食材 (按类型计数)
         pot: {},
-        // 当前菜单 (需要收集的食材)
         menu: [],
-        // 菜单是否已完成
         menuComplete: false,
-        // 当前菜名
         dishName: "",
 
-        // 餐厅需求 (显示在左右两侧)
-        leftDemand: null, // { dish, emoji }
+        leftDemand: null,
         rightDemand: null,
 
-        // 计时器
         timerInterval: null,
-
-        // 帧率控制
         lastFrameTime: 0,
         spawnTimer: 0,
         demandTimer: 0,
 
-        // 摄像头
         cameraReady: false,
         faceMesh: null,
       };
@@ -576,7 +561,6 @@
         },
       ];
 
-      // ---------- 菜谱 ----------
       const RECIPES = [
         {
           name: "番茄炒蛋",
@@ -650,7 +634,6 @@
         return a + (b - a) * t;
       }
 
-      // 根据行/列获取像素坐标
       function getPos(row, col) {
         const w = canvas.width;
         const h = canvas.height;
@@ -676,22 +659,18 @@
         }));
         state.menuComplete = false;
         state.pot = {};
-        // 清空锅
         INGREDIENT_TYPES.forEach((ing) => {
           state.pot[ing.id] = 0;
         });
-        // 初始化菜单需要收集的食材
         state.menu.forEach((item) => {
           state.pot[item.id] = 0;
         });
-        // 设定餐厅需求
         state.leftDemand = {
           dish: recipe.name,
           emoji: recipe.emoji,
           side: "left",
         };
         state.rightDemand = null;
-        // 有时右边也显示另一个需求（作为可选挑战）
         if (Math.random() > 0.5) {
           const other = RECIPES[randInt(0, RECIPES.length - 1)];
           if (other.name !== recipe.name) {
@@ -704,7 +683,6 @@
         }
       }
 
-      // 检查菜单是否完成
       function checkMenuComplete() {
         if (state.menuComplete) return true;
         let allDone = true;
@@ -723,19 +701,15 @@
       function serveDish() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
         if (!state.menuComplete) {
-          // 食材不齐，不能出餐
           sfxMiss();
           return;
         }
 
-        // 出餐成功！
         state.dishesServed++;
         state.combo++;
         if (state.combo > state.maxCombo) state.maxCombo = state.combo;
 
-        // 计算得分：基础分 + 连击加成
         let points = 10 + Math.min(state.combo, 10) * 2;
-        // 如果匹配了餐厅需求，额外加分
         let matched = false;
         if (state.leftDemand && state.leftDemand.dish === state.dishName) {
           points += 15;
@@ -750,27 +724,19 @@
           sfxCombo();
         }
         if (!matched) {
-          // 没有匹配需求，但依然出餐成功
           sfxServe();
         } else {
           sfxServe();
         }
 
         state.score += points;
-
-        // 生成新菜单
         generateMenu();
-
-        // 重置连击（如果没匹配需求，连击重置，但这里我们保留连击，但为了平衡，如果不匹配需求连击减半）
         if (!matched) {
           state.combo = Math.floor(state.combo / 2);
         }
-
-        // 播放音效
         if (matched) sfxCombo();
         else sfxServe();
 
-        // 更新UI
         updateUI();
       }
 
@@ -778,22 +744,18 @@
       function spawnIngredient() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
 
-        // 选择轨道: 0=左, 1=右
         const lane = Math.random() > 0.5 ? 0 : 1;
         const typeIdx = randInt(0, INGREDIENT_TYPES.length - 1);
         const type = INGREDIENT_TYPES[typeIdx];
 
-        // 计算起始位置 (第1行)
         const cellW = canvas.width / COLS;
         const cellH = canvas.height / ROWS;
 
         let startX, endX;
         if (lane === 0) {
-          // 左轨道: 从第1列到第2列之间
           startX = cellW * 0.5 + rand(0, cellW * 0.8);
           endX = cellW * 0.5 + rand(0, cellW * 0.8);
         } else {
-          // 右轨道: 从第3列到第4列之间
           startX = cellW * 2.5 + rand(0, cellW * 0.8);
           endX = cellW * 2.5 + rand(0, cellW * 0.8);
         }
@@ -805,15 +767,13 @@
           emoji: type.emoji,
           lane: lane,
           x: startX,
-          y: cellH * 0.5, // 从第1行开始
+          y: cellH * 0.5,
           startX: startX,
           endX: endX,
-          speed: 0.8 + rand(0, 0.6), // 下落速度
+          speed: 0.8 + rand(0, 0.6),
           size: 14 + rand(0, 8),
           alive: true,
-          // 透视放大：从上方到下方逐渐变大
           scale: 0.5,
-          // 目标Y: 第6.5行
           targetY: cellH * 6.2,
         };
         state.ingredients.push(ingredient);
@@ -831,9 +791,7 @@
             continue;
           }
 
-          // 下落
           ing.y += ing.speed * 1.2;
-          // 缩放 (透视效果)
           const progress = clamp(
             (ing.y - cellH * 0.5) / (cellH * 6.5 - cellH * 0.5),
             0,
@@ -841,14 +799,11 @@
           );
           ing.scale = 0.4 + progress * 0.8;
 
-          // 左右微飘动
           const drift = Math.sin(ing.y * 0.02 + Date.now() * 0.001) * 3;
           ing.x = ing.startX + drift;
 
-          // 检查是否超出底部 (消失)
           if (ing.y > cellH * 7.0) {
             ing.alive = false;
-            // 未接取，连击中断
             if (state.combo > 0) {
               state.combo = 0;
               updateUI();
@@ -857,35 +812,29 @@
             continue;
           }
 
-          // 碰撞检测: 厨师接取
           const chefPixelX = state.chefX * canvas.width;
-          const chefPixelY = canvas.height * 0.55; // 厨师大约在5-6行
+          const chefPixelY = canvas.height * 0.55;
           const dist = Math.abs(ing.x - chefPixelX);
           const threshold = 40 + ing.size * 0.6;
 
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
-            // 接到食材！
             ing.alive = false;
             state.ingredientsCollected++;
-            // 加入锅中
             if (state.pot[ing.id] !== undefined) {
               state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
             } else {
               state.pot[ing.id] = 1;
             }
             sfxPickup();
-            // 检查菜单是否完成
             checkMenuComplete();
             updateUI();
             state.ingredients.splice(i, 1);
             continue;
           }
 
-          // 如果食材到了底部还没被接取，消失
           if (ing.y > cellH * 6.8) {
             ing.alive = false;
             state.ingredients.splice(i, 1);
-            // 连击中断
             if (state.combo > 0) {
               state.combo = 0;
               updateUI();
@@ -898,7 +847,6 @@
       function updateGame(deltaTime) {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
 
-        // 计时
         state.timeLeft -= deltaTime;
         if (state.timeLeft <= 0) {
           state.timeLeft = 0;
@@ -906,36 +854,26 @@
           return;
         }
 
-        // 生成食材 (每0.8~1.5秒生成一个)
         state.spawnTimer += deltaTime;
         if (state.spawnTimer > 0.7 + rand(0, 0.8)) {
           state.spawnTimer = 0;
           spawnIngredient();
-          // 有时一次生成两个
           if (Math.random() > 0.6) spawnIngredient();
         }
 
-        // 更新食材
         updateIngredients();
 
-        // 厨师平滑跟随头部
         state.chefX = lerp(state.chefX, state.targetX, 0.12);
-
-        // 限制厨师范围
         state.chefX = clamp(state.chefX, 0.08, 0.92);
 
-        // 检查抬头 (出餐)
-        // 使用鼻尖y坐标: 小于0.4 视为抬头 (y向上)
         const headUp = state.headY < 0.35;
         if (headUp && !state.isHeadUp) {
-          // 抬头触发出餐
           state.isHeadUp = true;
           serveDish();
         } else if (!headUp) {
           state.isHeadUp = false;
         }
 
-        // 更新UI (倒计时)
         updateUI();
       }
 
@@ -949,7 +887,6 @@
         ctx.clearRect(0, 0, W, H);
 
         // ---- 背景 ----
-        // 渐变背景
         const grad = ctx.createLinearGradient(0, 0, 0, H);
         grad.addColorStop(0, "#2c2c4a");
         grad.addColorStop(0.35, "#3d3d5c");
@@ -958,30 +895,11 @@
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, W, H);
 
-        // ---- 绘制隐形网格 (辅助线, 调试时可取消注释) ----
-        // for (let r = 0; r <= ROWS; r++) {
-        //     ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-        //     ctx.lineWidth = 1;
-        //     ctx.beginPath();
-        //     ctx.moveTo(0, r * cellH);
-        //     ctx.lineTo(W, r * cellH);
-        //     ctx.stroke();
-        // }
-        // for (let c = 0; c <= COLS; c++) {
-        //     ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-        //     ctx.lineWidth = 1;
-        //     ctx.beginPath();
-        //     ctx.moveTo(c * cellW, 0);
-        //     ctx.lineTo(c * cellW, H);
-        //     ctx.stroke();
-        // }
-
         // ---- 传输带区域 (第2行~第6.5行) ----
         const beltY1 = cellH * 1.8;
         const beltY2 = cellH * 6.8;
         ctx.fillStyle = "rgba(60, 55, 45, 0.3)";
         ctx.fillRect(0, beltY1, W, beltY2 - beltY1);
-        // 传输带条纹
         for (let y = beltY1; y < beltY2; y += 12) {
           ctx.strokeStyle = "rgba(200, 180, 160, 0.06)";
           ctx.lineWidth = 2;
@@ -992,14 +910,11 @@
         }
 
         // ---- 轨道指示 (左右) ----
-        // 左轨道 (第1-2列)
         ctx.fillStyle = "rgba(231, 76, 60, 0.05)";
         ctx.fillRect(cellW * 0.3, beltY1, cellW * 1.6, beltY2 - beltY1);
-        // 右轨道 (第3-4列)
         ctx.fillStyle = "rgba(52, 152, 219, 0.05)";
         ctx.fillRect(cellW * 2.3, beltY1, cellW * 1.6, beltY2 - beltY1);
 
-        // ---- 轨道箭头 ----
         ctx.fillStyle = "rgba(255,255,255,0.06)";
         for (let y = beltY1 + 20; y < beltY2 - 20; y += 50) {
           ctx.font = "16px sans-serif";
@@ -1014,7 +929,6 @@
           const x = ing.x;
           const y = ing.y;
 
-          // 发光效果
           const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 1.8);
           glow.addColorStop(0, ing.color + "60");
           glow.addColorStop(1, ing.color + "00");
@@ -1023,7 +937,6 @@
           ctx.arc(x, y, size * 1.8, 0, Math.PI * 2);
           ctx.fill();
 
-          // 食材圆形
           ctx.shadowColor = "rgba(0,0,0,0.3)";
           ctx.shadowBlur = 12;
           ctx.beginPath();
@@ -1032,12 +945,10 @@
           ctx.fill();
           ctx.shadowBlur = 0;
 
-          // 边框
           ctx.strokeStyle = "rgba(255,255,255,0.2)";
           ctx.lineWidth = 1.5;
           ctx.stroke();
 
-          // Emoji
           ctx.font = `${size * 1.2}px serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
@@ -1053,11 +964,9 @@
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
 
-        // 厨师身体 (围裙)
         ctx.shadowColor = "rgba(0,0,0,0.4)";
         ctx.shadowBlur = 20;
 
-        // 身体
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -1070,7 +979,6 @@
         );
         ctx.fillStyle = "#4a6fa5";
         ctx.fill();
-        // 围裙
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -1084,13 +992,11 @@
         ctx.fillStyle = "#ecf0f1";
         ctx.fill();
 
-        // 头 (厨师帽)
         ctx.shadowBlur = 12;
         ctx.beginPath();
         ctx.arc(chefX, chefY - chefSize * 0.15, chefSize * 0.3, 0, Math.PI * 2);
         ctx.fillStyle = "#f5d6a8";
         ctx.fill();
-        // 帽子
         ctx.beginPath();
         ctx.ellipse(
           chefX,
@@ -1116,7 +1022,6 @@
         );
         ctx.fill();
 
-        // 眼睛 (跟随头部方向)
         const eyeOffset = (state.chefX - 0.5) * 12;
         ctx.fillStyle = "#2c3e50";
         ctx.beginPath();
@@ -1157,7 +1062,6 @@
         );
         ctx.fill();
 
-        // 微笑
         ctx.strokeStyle = "#c0392b";
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -1172,7 +1076,6 @@
         const potW = cellW * 1.0;
         const potH = cellH * 0.7;
 
-        // 锅体
         ctx.shadowBlur = 15;
         ctx.shadowColor = "rgba(0,0,0,0.3)";
         ctx.beginPath();
@@ -1183,7 +1086,6 @@
         ctx.lineWidth = 2;
         ctx.stroke();
 
-        // 锅边
         ctx.beginPath();
         ctx.ellipse(
           potX,
@@ -1198,7 +1100,6 @@
         ctx.fill();
         ctx.stroke();
 
-        // 锅中食材 (显示已收集的)
         const potItems = Object.keys(state.pot).filter(
           (key) => state.pot[key] > 0,
         );
@@ -1240,14 +1141,12 @@
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // 边框
         ctx.strokeStyle = "rgba(255,215,140,0.2)";
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.roundRect(menuX, menuY, menuW, menuH, 12);
         ctx.stroke();
 
-        // 菜单标题
         ctx.font = "bold 14px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
@@ -1255,18 +1154,15 @@
         ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 6);
 
         if (state.menuComplete) {
-          // 已完成: 显示勾
           ctx.font = "48px sans-serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#2ecc71";
           ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2 + 4);
-          // 提示抬头出餐
           ctx.font = "12px sans-serif";
           ctx.fillStyle = "#f39c12";
           ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 18);
         } else {
-          // 显示食材进度
           let yOff = 28;
           state.menu.forEach((item) => {
             const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
@@ -1278,7 +1174,6 @@
             ctx.fillStyle = "#c8c0b0";
             const label = `${ing ? ing.emoji : "🍽"} ${ing ? ing.name : ""}`;
             ctx.fillText(label, menuX + 12, menuY + yOff);
-            // 进度条
             const barX = menuX + 80;
             const barY = menuY + yOff + 4;
             const barW = menuW - 96;
@@ -1306,7 +1201,6 @@
         }
 
         // ---- 餐厅 (第5.5-9行, 左右两张桌子) ----
-        // 左餐厅 (第1-2列)
         const restY = cellH * 5.2;
         const restH = cellH * 3.5;
         const restW = cellW * 1.6;
@@ -1318,7 +1212,6 @@
         ctx.beginPath();
         ctx.roundRect(cellW * 0.2, restY + restH * 0.3, restW, restH * 0.6, 16);
         ctx.fill();
-        // 桌布
         ctx.fillStyle = "rgba(180, 80, 60, 0.15)";
         ctx.beginPath();
         ctx.roundRect(
@@ -1330,7 +1223,6 @@
         );
         ctx.fill();
 
-        // 左需求
         if (state.leftDemand) {
           ctx.font = "28px serif";
           ctx.textAlign = "center";
@@ -1346,12 +1238,10 @@
           ctx.font = "12px sans-serif";
           ctx.fillStyle = "#f0eede";
           ctx.fillText(state.leftDemand.dish, cellW * 1.0, restY + restH * 0.7);
-          // 气泡
           ctx.font = "18px sans-serif";
           ctx.fillStyle = "#f39c12";
           ctx.fillText("💬", cellW * 0.5, restY + restH * 0.15);
         } else {
-          // 空桌
           ctx.font = "20px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
@@ -1359,7 +1249,7 @@
           ctx.fillText("🪑", cellW * 1.0, restY + restH * 0.5);
         }
 
-        // 右餐厅 (第3-4列)
+        // 右桌
         ctx.shadowBlur = 10;
         ctx.shadowColor = "rgba(0,0,0,0.2)";
         ctx.fillStyle = "rgba(60, 50, 40, 0.5)";
@@ -1410,7 +1300,6 @@
         ctx.shadowBlur = 0;
 
         // ---- 顶部信息栏 (第1行) ----
-        // 倒计时 (左)
         const minutes = Math.floor(state.timeLeft / 60);
         const seconds = Math.floor(state.timeLeft % 60);
         const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -1423,20 +1312,17 @@
         ctx.shadowColor = "rgba(0,0,0,0.5)";
         ctx.fillText("⏱ " + timeStr, 14, 10);
 
-        // 分数 (中间)
         ctx.textAlign = "center";
         ctx.font = "bold 18px sans-serif";
         ctx.fillStyle = "#f9d976";
         ctx.fillText("⭐ " + state.score, canvas.width / 2, 12);
 
-        // 暂停按钮 (右)
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
         ctx.font = "26px sans-serif";
         ctx.fillStyle = "#f0eede";
         ctx.fillText("⏸", canvas.width - 16, 6);
 
-        // 连击显示
         if (state.combo > 1) {
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
@@ -1445,7 +1331,6 @@
           ctx.fillText("🔥 x" + state.combo, canvas.width / 2, 38);
         }
 
-        // 食材收集数
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
         ctx.font = "13px sans-serif";
@@ -1454,7 +1339,6 @@
 
         ctx.shadowBlur = 0;
 
-        // ---- 左下角: 提示操作 ----
         ctx.textAlign = "left";
         ctx.textBaseline = "bottom";
         ctx.font = "11px sans-serif";
@@ -1462,7 +1346,7 @@
         ctx.fillText("←歪头  ·  抬头→", 10, canvas.height - 8);
       }
 
-      // ---- roundRect polyfill for Canvas ----
+      // ---- roundRect polyfill ----
       if (!CanvasRenderingContext2D.prototype.roundRect) {
         CanvasRenderingContext2D.prototype.roundRect = function (
           x,
@@ -1483,10 +1367,10 @@
 
       // ---------- UI 更新 ----------
       function updateUI() {
-        // 倒计时在canvas中显示，不需要额外操作
+        // 由帧循环自动更新
       }
 
-      // ---------- 游戏循环 (帧驱动) ----------
+      // ---------- 游戏循环 ----------
       let lastTimestamp = 0;
 
       function gameLoop(timestamp) {
@@ -1495,10 +1379,7 @@
           : 0.016;
         lastTimestamp = timestamp;
 
-        // 更新游戏逻辑
         updateGame(delta);
-
-        // 绘制
         drawGame();
 
         requestAnimationFrame(gameLoop);
@@ -1511,7 +1392,6 @@
         state.isPlaying = false;
         stopBGM();
 
-        // 显示结算
         finalScoreEl.textContent = state.score;
         statDishesEl.textContent = state.dishesServed;
         statIngredientsEl.textContent = state.ingredientsCollected;
@@ -1521,6 +1401,13 @@
 
       // ---------- 重置游戏 ----------
       function resetGame() {
+        // 释放摄像头流
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach((track) => track.stop());
+          video.srcObject = null;
+        }
+        state.cameraReady = false;
+
         state.isPlaying = false;
         state.isPaused = false;
         state.isGameOver = false;
@@ -1566,18 +1453,12 @@
         pauseModal.classList.add("hidden");
         resultModal.classList.add("hidden");
 
-        // 生成初始菜单
         generateMenu();
-
-        // 启动BGM
         startBGM();
 
-        // 启动计时器（每秒更新倒计时）
         if (state.timerInterval) clearInterval(state.timerInterval);
         state.timerInterval = setInterval(() => {
-          if (state.isPlaying && !state.isPaused && !state.isGameOver) {
-            // 倒计时在update中处理
-          }
+          // 倒计时在 updateGame 中处理
         }, 1000);
 
         updateUI();
@@ -1617,18 +1498,13 @@
             results.multiFaceLandmarks.length > 0
           ) {
             const landmarks = results.multiFaceLandmarks[0];
-            // 鼻尖 index = 1
             const nose = landmarks[1];
             if (nose) {
-              // x: 0~1, y: 0~1
               const x = nose.x;
               const y = nose.y;
               state.headX = clamp(x, 0, 1);
               state.headY = clamp(y, 0, 1);
 
-              // 映射到目标位置 (左右)
-              // 头部偏左 -> chef左移, 头部偏右 -> chef右移
-              // 设置死区: 0.3~0.7 之间为中性区
               let target = 0.5;
               if (x < 0.35) {
                 target = 0.1 + (x / 0.35) * 0.3;
@@ -1638,9 +1514,6 @@
                 target = 0.3 + ((x - 0.35) / 0.3) * 0.4;
               }
               state.targetX = clamp(target, 0.05, 0.95);
-
-              // 抬头检测: y < 0.35 视为抬头
-              // 但为了防止抖动，使用阈值
             }
           }
         });
@@ -1648,21 +1521,19 @@
         return faceMesh;
       }
 
-      // ---------- 启动摄像头 ----------
+      // ---------- 启动摄像头 (重构版，增强移动端兼容) ----------
       async function startCamera() {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: {
-              facingMode: "user",
-              width: { ideal: 320 },
-              height: { ideal: 240 },
-            },
-            audio: false,
-          });
-          video.srcObject = stream;
-          await video.play();
+        // 释放旧流
+        if (video.srcObject) {
+          video.srcObject.getTracks().forEach((track) => track.stop());
+          video.srcObject = null;
+        }
 
-          // 初始化 FaceMesh
+        try {
+          // iOS 必备
+          video.playsInline = true;
+          video.muted = true;
+
           const faceMesh = initFaceMesh();
           state.faceMesh = faceMesh;
 
@@ -1677,30 +1548,44 @@
             width: 320,
             height: 240,
           });
+
           await camera.start();
 
           state.cameraReady = true;
+
           cameraModal.classList.add("hidden");
           startOverlay.classList.remove("hidden");
 
-          // 初始化音效上下文 (需要用户交互)
           initAudio();
 
           return true;
         } catch (err) {
           console.error("摄像头启动失败:", err);
-          alert("无法访问摄像头，请检查权限设置后重试。");
+          let msg = "无法访问摄像头: ";
+          if (err.name === "NotAllowedError") {
+            msg +=
+              "权限被拒绝。请在浏览器设置中允许摄像头，并确保不是通过微信内置浏览器打开。";
+          } else if (err.name === "NotFoundError") {
+            msg += "未检测到摄像头设备。";
+          } else if (err.name === "NotReadableError") {
+            msg += "摄像头被其他应用占用，请关闭其他相机应用后重试。";
+          } else if (err.name === "AbortError") {
+            msg += "启动过程被中止，请刷新页面重试。";
+          } else if (err.name === "SecurityError") {
+            msg += "安全错误，请确认页面使用 HTTPS 协议。";
+          } else {
+            msg += err.message;
+          }
+          alert(msg);
           return false;
         }
       }
 
       // ---------- 事件绑定 ----------
-      // 摄像头授权
       cameraAllowBtn.addEventListener("click", async () => {
         await startCamera();
       });
 
-      // 开始游戏
       startGameBtn.addEventListener("click", () => {
         if (!state.cameraReady) {
           alert("请先允许摄像头权限");
@@ -1709,21 +1594,17 @@
         startGame();
       });
 
-      // 暂停按钮 (点击canvas右上角区域)
       canvas.addEventListener("click", (e) => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width;
         const y = (e.clientY - rect.top) / rect.height;
-        // 点击右上角暂停区域 (第1行, 第4列)
         if (x > 0.7 && y < 0.12) {
           if (state.isPlaying && !state.isGameOver) {
             togglePause();
           }
         }
-        // 点击厨师区域可以触发接取 (调试备用)
       });
 
-      // 暂停菜单按钮
       resumeBtn.addEventListener("click", () => {
         if (state.isPaused) {
           togglePause();
@@ -1744,7 +1625,6 @@
         startGame();
       });
 
-      // 暂停菜单设置开关
       document.querySelectorAll(".toggle-btn").forEach((btn) => {
         btn.addEventListener("click", function () {
           const setting = this.dataset.setting;
@@ -1768,7 +1648,7 @@
         });
       });
 
-      // ---------- 键盘快捷键 (PC调试) ----------
+      // ---------- 键盘调试 ----------
       document.addEventListener("keydown", (e) => {
         if (e.key === "ArrowLeft") state.targetX = 0.15;
         else if (e.key === "ArrowRight") state.targetX = 0.85;
@@ -1787,23 +1667,16 @@
       // ---------- 初始化 ----------
       function init() {
         resetGame();
-        // 显示摄像头弹窗
         cameraModal.classList.remove("hidden");
         startOverlay.classList.add("hidden");
         pauseModal.classList.add("hidden");
         resultModal.classList.add("hidden");
 
-        // 启动游戏循环
         requestAnimationFrame(gameLoop);
-
-        // 预生成一些食材 (测试)
-        // 在开始游戏后才会生成
       }
 
-      // ---------- 启动 ----------
       init();
 
-      // 当用户点击页面时，初始化音频上下文
       document.addEventListener(
         "click",
         () => {
@@ -1812,9 +1685,7 @@
         { once: true },
       );
 
-      // 暴露一些变量到控制台方便调试
-      console.log("🍳 厨师大冒险已加载！");
-      console.log("可使用键盘: ← → 移动, ↑ 出餐, Space 暂停");
+      console.log("🍳 厨师大冒险已加载！ (摄像头兼容修复版)");
     </script>
   </body>
 </html>
