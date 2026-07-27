@@ -336,7 +336,7 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 视频可见修复版（简化视频绘制）
+      //  厨师大冒险 - 最终稳定版（传送带向下 + 视频可见 + 触发修复）
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
@@ -471,7 +471,7 @@
         queueTimer: 0,
         cameraReady: false,
         faceMesh: null,
-        beltOffset: 0, // 无限累加
+        beltOffset: 0,
       };
 
       // ---------- 食材库 ----------
@@ -748,6 +748,7 @@
           return;
         }
 
+        // 传送带向下滚动（累加）
         state.beltOffset += deltaTime * 35;
 
         state.queueTimer += deltaTime;
@@ -801,7 +802,7 @@
         images.pot.onload = onLoad;
         images.pot.onerror = onLoad;
         images.pot.src =
-          "https://pic.pngsucai.com/00/81/64/6303326196b523d4.webp";
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
         images.dish = new Image();
         images.dish.crossOrigin = "anonymous";
@@ -862,17 +863,22 @@
         ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
         ctx.fillRect(0, beltTop, W, beltHeight);
 
+        // 传送带图片向下滚动
         if (
           images.belt &&
           images.belt.complete &&
           images.belt.naturalWidth > 0
         ) {
           const imgH = beltHeight;
+          // 取模得到当前偏移（0 ~ imgH）
           const offset = state.beltOffset % imgH;
+          // 绘制第一张（从 beltTop - offset 开始，向下移动）
           ctx.drawImage(images.belt, 0, beltTop - offset, W, imgH);
+          // 绘制第二张接在后面
           ctx.drawImage(images.belt, 0, beltTop - offset + imgH, W, imgH);
         }
 
+        // 滚动条纹（与图片同步）
         const stripeOffset = state.beltOffset % 30;
         for (
           let y = beltTop - 30 + stripeOffset;
@@ -901,24 +907,6 @@
           ctx.fillText("▼", leftTrackX + cellW * 0.7, y);
           ctx.fillText("▼", rightTrackX + cellW * 0.7, y);
         }
-
-        // ---------- 红点 ----------
-        const redPointY = cellH * 5.5;
-        ctx.shadowBlur = 0;
-        ctx.beginPath();
-        ctx.arc(leftTrackX + cellW * 0.7, redPointY, 12, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-        ctx.fill();
-        ctx.strokeStyle = "#ff0000";
-        ctx.lineWidth = 3;
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.arc(rightTrackX + cellW * 0.7, redPointY, 12, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
-        ctx.fill();
-        ctx.strokeStyle = "#ff0000";
-        ctx.lineWidth = 3;
-        ctx.stroke();
 
         // ---------- 食材 ----------
         state.ingredients.forEach((ing) => {
@@ -953,89 +941,59 @@
           ctx.shadowBlur = 0;
         });
 
-        // ---------- 厨师：视频面具（简化版） ----------
+        // ---------- 厨师位置：直接显示摄像头视频 ----------
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
-        const tiltAngle = (state.chefX - 0.5) * 0.6;
 
-        ctx.save();
-        ctx.translate(chefX, chefY + chefSize * 0.4);
-        ctx.rotate(tiltAngle);
-
-        // 绘制视频（直接绘制矩形，确保可见）
+        // 绘制视频画面（矩形）
         if (video.readyState >= 2 && video.videoWidth > 0) {
-          // 直接绘制一个矩形视频，填满厨师区域，便于调试
-          const drawW = chefSize * 1.1;
-          const drawH = drawW * (video.videoHeight / video.videoWidth);
-          const dx = -drawW / 2;
-          const dy = -chefSize * 0.5 - drawH / 2;
+          // 计算比例，使视频填充厨师区域
+          const aspect = video.videoWidth / video.videoHeight;
+          let drawW, drawH, dx, dy;
+          // 适应 chefSize 大小
+          const targetW = chefSize * 0.9;
+          const targetH = chefSize * 1.1;
+          if (aspect > 1) {
+            drawW = targetW;
+            drawH = drawW / aspect;
+            dx = -drawW / 2;
+            dy = -chefSize * 0.5 - drawH / 2;
+          } else {
+            drawH = targetH;
+            drawW = drawH * aspect;
+            dx = -drawW / 2;
+            dy = -chefSize * 0.5 - drawH / 2;
+          }
+          // 为了更清晰，适当放大
+          const scale = 1.2;
+          drawW *= scale;
+          drawH *= scale;
+          dx = -drawW / 2;
+          dy = -chefSize * 0.5 - drawH / 2;
+
+          ctx.save();
+          ctx.translate(chefX, chefY + chefSize * 0.4);
           ctx.drawImage(video, dx, dy, drawW, drawH);
+          ctx.restore();
         } else {
-          // 占位
+          // 视频未就绪，显示占位
+          ctx.save();
+          ctx.translate(chefX, chefY + chefSize * 0.4);
           ctx.beginPath();
-          ctx.arc(0, -chefSize * 0.25, chefSize * 0.5, 0, Math.PI * 2);
+          ctx.arc(0, -chefSize * 0.25, chefSize * 0.4, 0, Math.PI * 2);
           ctx.fillStyle = "#d5d5d5";
           ctx.fill();
           ctx.strokeStyle = "#b0a898";
           ctx.lineWidth = 2;
           ctx.stroke();
-          ctx.font = "30px serif";
+          ctx.font = "24px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#7a7268";
           ctx.fillText("📷", 0, -chefSize * 0.25);
+          ctx.restore();
         }
-
-        // 叠加帽子与围裙
-        ctx.shadowColor = "rgba(0,0,0,0.1)";
-        ctx.shadowBlur = 6;
-        ctx.beginPath();
-        ctx.ellipse(
-          0,
-          chefSize * 0.15,
-          chefSize * 0.4,
-          chefSize * 0.5,
-          0,
-          0,
-          Math.PI * 2,
-        );
-        ctx.fillStyle = "rgba(255,255,255,0.8)";
-        ctx.fill();
-        ctx.strokeStyle = "#d0c8b8";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.shadowBlur = 4;
-        ctx.beginPath();
-        ctx.ellipse(
-          0,
-          -chefSize * 0.85,
-          chefSize * 0.35,
-          chefSize * 0.25,
-          0,
-          0,
-          Math.PI * 2,
-        );
-        ctx.fillStyle = "#ffffff";
-        ctx.fill();
-        ctx.strokeStyle = "#b0a898";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.fillStyle = "#e74c3c";
-        ctx.beginPath();
-        ctx.ellipse(
-          0,
-          -chefSize * 0.9,
-          chefSize * 0.25,
-          chefSize * 0.12,
-          0,
-          0,
-          Math.PI * 2,
-        );
-        ctx.fill();
-
-        ctx.shadowBlur = 0;
-        ctx.restore();
 
         // ---------- 抬头时显示“一盘菜” ----------
         if (state.menuComplete && state.isPlaying) {
@@ -1151,16 +1109,20 @@
             ctx.fillStyle = "#3d3a36";
             const label = `${ing ? ing.emoji : "🍽"} ${ing ? ing.name : ""}`;
             ctx.fillText(label, menuX + 6, menuY + yOff);
+            // 进度条：只显示彩色条 + 边框，无灰色背景
             const barX = menuX + 62;
             const barY = menuY + yOff + 2;
             const barW = menuW - 74;
             const barH = 8;
-            const fillW = (collected / needed) * barW;
-            ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
-            ctx.fillRect(barX, barY, Math.min(fillW, barW), barH);
+            // 先画边框（充当背景）
             ctx.strokeStyle = "#bdc3c7";
             ctx.lineWidth = 1.5;
             ctx.strokeRect(barX, barY, barW, barH);
+            // 再画彩色填充
+            const fillW = (collected / needed) * barW;
+            ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
+            ctx.fillRect(barX, barY, Math.min(fillW, barW), barH);
+            // 数字
             ctx.fillStyle = "#3d3a36";
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
@@ -1671,7 +1633,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已加载（视频可见修复版）");
+      console.log("🍳 像素厨房已加载（传送带向下 + 视频可见 + 触发修复）");
     </script>
   </body>
 </html>
