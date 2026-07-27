@@ -228,6 +228,59 @@
           font-size: 40px;
         }
       }
+
+      /* 校准弹窗布局 */
+      .calibrate-grid {
+        display: flex;
+        gap: 16px;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .calibrate-video-wrap {
+        position: relative;
+        width: 120px;
+        height: 90px;
+        border-radius: 8px;
+        overflow: hidden;
+        border: 2px solid #d0c8b8;
+        flex-shrink: 0;
+        background: #000;
+      }
+      .calibrate-video-wrap video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .calibrate-video-wrap canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .calibrate-text {
+        flex: 1;
+        text-align: left;
+        font-size: 10px;
+        line-height: 1.6;
+        color: #5a5248;
+      }
+      .calibrate-text .highlight {
+        color: #e67e22;
+        font-weight: bold;
+      }
+      @media (max-width: 400px) {
+        .calibrate-grid {
+          flex-direction: column;
+          align-items: center;
+        }
+        .calibrate-video-wrap {
+          width: 160px;
+          height: 120px;
+        }
+      }
     </style>
   </head>
   <body>
@@ -247,6 +300,27 @@
           <div style="margin-top: 14px; font-size: 9px; color: #7a7268">
             仅用于头部追踪
           </div>
+        </div>
+      </div>
+
+      <!-- 弹窗：鼻尖校准 -->
+      <div id="calibrateModal" class="modal-overlay hidden">
+        <div class="modal-card" style="max-width: 400px">
+          <h2>🎯 鼻尖校准</h2>
+          <div class="calibrate-grid">
+            <div class="calibrate-video-wrap" id="calibrateVideoWrap">
+              <video id="calibrateVideo" playsinline muted></video>
+              <canvas id="calibrateOverlay" width="160" height="120"></canvas>
+            </div>
+            <div class="calibrate-text">
+              <p>请将头部摆正，<br />眼睛直视屏幕中心。</p>
+              <p>
+                <span class="highlight">🔴 红圈</span>
+                将追踪你的鼻尖，<br />摆正后点击下方按钮。
+              </p>
+            </div>
+          </div>
+          <button class="btn" id="calibrateBtn">✅ 已摆正，开始游戏</button>
         </div>
       </div>
 
@@ -336,7 +410,7 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 最终稳定版（传送带向下 + 视频可见 + 触发修复）
+      //  厨师大冒险 - 最终修复版（摄像头可见 + 菜单右移 + 校准恢复 + 传送带向下）
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
@@ -348,13 +422,18 @@
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
       const video = document.getElementById("webcam");
+      const calibrateVideo = document.getElementById("calibrateVideo");
+      const calibrateOverlay = document.getElementById("calibrateOverlay");
+      const overlayCtx = calibrateOverlay.getContext("2d");
 
       const cameraModal = document.getElementById("cameraModal");
+      const calibrateModal = document.getElementById("calibrateModal");
       const pauseModal = document.getElementById("pauseModal");
       const resultModal = document.getElementById("resultModal");
       const startOverlay = document.getElementById("startOverlay");
 
       const cameraAllowBtn = document.getElementById("cameraAllowBtn");
+      const calibrateBtn = document.getElementById("calibrateBtn");
       const startGameBtn = document.getElementById("startGameBtn");
       const resumeBtn = document.getElementById("resumeBtn");
       const surrenderBtn = document.getElementById("surrenderBtn");
@@ -370,6 +449,8 @@
         const rect = canvas.parentElement.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
+        calibrateOverlay.width = 160;
+        calibrateOverlay.height = 120;
       }
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
@@ -460,6 +541,8 @@
         headX: 0.5,
         headY: 0.5,
         isHeadUp: false,
+        calibrateOffsetX: 0,
+        isCalibrated: false,
         ingredients: [],
         pot: {},
         menu: [],
@@ -809,21 +892,21 @@
         images.dish.onload = onLoad;
         images.dish.onerror = onLoad;
         images.dish.src =
-          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3 "; // 替换为成品菜链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为成品菜链接
 
         images.leftTable = new Image();
         images.leftTable.crossOrigin = "anonymous";
         images.leftTable.onload = onLoad;
         images.leftTable.onerror = onLoad;
         images.leftTable.src =
-          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3 "; // 替换为左桌链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为左桌链接
 
         images.rightTable = new Image();
         images.rightTable.crossOrigin = "anonymous";
         images.rightTable.onload = onLoad;
         images.rightTable.onerror = onLoad;
         images.rightTable.src =
-          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3 "; // 替换为右桌链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为右桌链接
       }
 
       // ---------- 绘制函数 ----------
@@ -870,11 +953,8 @@
           images.belt.naturalWidth > 0
         ) {
           const imgH = beltHeight;
-          // 取模得到当前偏移（0 ~ imgH）
           const offset = state.beltOffset % imgH;
-          // 绘制第一张（从 beltTop - offset 开始，向下移动）
           ctx.drawImage(images.belt, 0, beltTop - offset, W, imgH);
-          // 绘制第二张接在后面
           ctx.drawImage(images.belt, 0, beltTop - offset + imgH, W, imgH);
         }
 
@@ -889,23 +969,6 @@
           ctx.fillRect(0, y, W, 4);
           ctx.fillStyle = "rgba(180, 170, 155, 0.10)";
           ctx.fillRect(0, y + 15, W, 4);
-        }
-
-        // ---------- 左右轨道 ----------
-        const leftTrackX = cellW * 0.7;
-        const rightTrackX = cellW * 2.7;
-        ctx.fillStyle = "rgba(231, 76, 60, 0.08)";
-        ctx.fillRect(leftTrackX, beltTop, cellW * 1.4, beltHeight);
-        ctx.fillStyle = "rgba(52, 152, 219, 0.08)";
-        ctx.fillRect(rightTrackX, beltTop, cellW * 1.4, beltHeight);
-
-        ctx.fillStyle = "#e67e22";
-        ctx.font = '16px "Press Start 2P", monospace';
-        for (let y = beltTop + 30; y < beltBottom - 20; y += 50) {
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("▼", leftTrackX + cellW * 0.7, y);
-          ctx.fillText("▼", rightTrackX + cellW * 0.7, y);
         }
 
         // ---------- 食材 ----------
@@ -948,10 +1011,8 @@
 
         // 绘制视频画面（矩形）
         if (video.readyState >= 2 && video.videoWidth > 0) {
-          // 计算比例，使视频填充厨师区域
           const aspect = video.videoWidth / video.videoHeight;
           let drawW, drawH, dx, dy;
-          // 适应 chefSize 大小
           const targetW = chefSize * 0.9;
           const targetH = chefSize * 1.1;
           if (aspect > 1) {
@@ -965,7 +1026,6 @@
             dx = -drawW / 2;
             dy = -chefSize * 0.5 - drawH / 2;
           }
-          // 为了更清晰，适当放大
           const scale = 1.2;
           drawW *= scale;
           drawH *= scale;
@@ -1022,20 +1082,20 @@
           ctx.restore();
         }
 
-        // ---------- 锅 ----------
+        // ---------- 锅（图片放大） ----------
         const potX = chefX;
         const potY = cellH * 6.2;
-        const potW = cellW * 1.0;
-        const potH = cellH * 0.7;
+        const potW = cellW * 1.2; // 放大
+        const potH = cellH * 0.85; // 放大
 
         ctx.shadowColor = "rgba(0,0,0,0.08)";
         ctx.shadowBlur = 12;
         if (images.pot && images.pot.complete && images.pot.naturalWidth > 0) {
           ctx.drawImage(
             images.pot,
-            potX - potW * 0.6,
-            potY - potH * 0.5,
-            potW * 1.2,
+            potX - potW / 2,
+            potY - potH / 2,
+            potW,
             potH,
           );
         }
@@ -1063,10 +1123,10 @@
           ctx.fillText("🥘", potX, potY - potH * 0.05);
         }
 
-        // ---------- 菜单 ----------
-        const menuX = cellW * 2.6;
+        // ---------- 菜单（右移靠近边缘） ----------
+        const menuX = cellW * 2.8; // 更靠右
         const menuY = cellH * 5.2;
-        const menuW = cellW * 1.0;
+        const menuW = cellW * 0.9;
         const menuH = cellH * 1.6;
 
         ctx.fillStyle = "rgba(255, 248, 240, 0.95)";
@@ -1109,16 +1169,11 @@
             ctx.fillStyle = "#3d3a36";
             const label = `${ing ? ing.emoji : "🍽"} ${ing ? ing.name : ""}`;
             ctx.fillText(label, menuX + 6, menuY + yOff);
-            // 进度条：只显示彩色条 + 边框，无灰色背景
-            const barX = menuX + 62;
+            // 进度条：只有彩色条，无边框无灰色背景
+            const barX = menuX + 58;
             const barY = menuY + yOff + 2;
-            const barW = menuW - 74;
+            const barW = menuW - 68;
             const barH = 8;
-            // 先画边框（充当背景）
-            ctx.strokeStyle = "#bdc3c7";
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(barX, barY, barW, barH);
-            // 再画彩色填充
             const fillW = (collected / needed) * barW;
             ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
             ctx.fillRect(barX, barY, Math.min(fillW, barW), barH);
@@ -1393,6 +1448,10 @@
           video.srcObject.getTracks().forEach((track) => track.stop());
           video.srcObject = null;
         }
+        if (calibrateVideo.srcObject) {
+          calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
+          calibrateVideo.srcObject = null;
+        }
         state.cameraReady = false;
         state.isPlaying = false;
         state.isPaused = false;
@@ -1417,6 +1476,7 @@
         state.rightDemand = null;
         state.queueTimer = 0;
         state.beltOffset = 0;
+        state.isCalibrated = false;
         if (state.timerInterval) {
           clearInterval(state.timerInterval);
           state.timerInterval = null;
@@ -1456,6 +1516,39 @@
         }
       }
 
+      // ---------- 校准覆盖层 ----------
+      function updateCalibrateOverlay(noseX, noseY) {
+        const cw = calibrateOverlay.width;
+        const ch = calibrateOverlay.height;
+        overlayCtx.clearRect(0, 0, cw, ch);
+        const x = noseX * cw;
+        const y = noseY * ch;
+        overlayCtx.beginPath();
+        overlayCtx.arc(x, y, 12, 0, Math.PI * 2);
+        overlayCtx.strokeStyle = "#ff4444";
+        overlayCtx.lineWidth = 3;
+        overlayCtx.stroke();
+        overlayCtx.fillStyle = "rgba(255,68,68,0.2)";
+        overlayCtx.fill();
+        overlayCtx.beginPath();
+        overlayCtx.moveTo(x - 20, y);
+        overlayCtx.lineTo(x + 20, y);
+        overlayCtx.moveTo(x, y - 20);
+        overlayCtx.lineTo(x, y + 20);
+        overlayCtx.strokeStyle = "rgba(255,255,255,0.7)";
+        overlayCtx.lineWidth = 1.5;
+        overlayCtx.stroke();
+      }
+
+      function clearCalibrateOverlay() {
+        overlayCtx.clearRect(
+          0,
+          0,
+          calibrateOverlay.width,
+          calibrateOverlay.height,
+        );
+      }
+
       // ---------- MediaPipe 初始化 ----------
       function initFaceMesh() {
         const faceMesh = new FaceMesh({
@@ -1475,10 +1568,18 @@
           ) {
             const nose = results.multiFaceLandmarks[0][1];
             if (nose) {
-              const rawX = nose.x;
-              const rawY = nose.y;
+              let rawX = nose.x;
+              let rawY = nose.y;
+              if (state.isCalibrated) {
+                rawX = clamp(rawX - state.calibrateOffsetX, 0, 1);
+              }
               state.headX = clamp(rawX, 0, 1);
               state.headY = clamp(rawY, 0, 1);
+
+              // 更新校准预览
+              if (!calibrateModal.classList.contains("hidden")) {
+                updateCalibrateOverlay(nose.x, nose.y);
+              }
 
               let target = 0.5;
               const x = state.headX;
@@ -1491,9 +1592,38 @@
               }
               state.targetX = clamp(target, 0.05, 0.95);
             }
+          } else {
+            if (!calibrateModal.classList.contains("hidden")) {
+              clearCalibrateOverlay();
+            }
           }
         });
         return faceMesh;
+      }
+
+      // ---------- 校准 ----------
+      let calibrationCount = 0;
+      let calibXSum = 0;
+
+      function performCalibration() {
+        if (state.headX > 0.1 && state.headX < 0.9) {
+          calibXSum += state.headX;
+          calibrationCount++;
+        }
+        if (calibrationCount >= 10) {
+          const avgX = calibXSum / calibrationCount;
+          state.calibrateOffsetX = avgX - 0.5;
+          state.isCalibrated = true;
+          calibrateModal.classList.add("hidden");
+          // 停止校准视频流
+          if (calibrateVideo.srcObject) {
+            calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
+            calibrateVideo.srcObject = null;
+          }
+          startGame();
+        } else {
+          setTimeout(performCalibration, 100);
+        }
       }
 
       // ---------- 启动摄像头 ----------
@@ -1502,12 +1632,18 @@
           video.srcObject.getTracks().forEach((track) => track.stop());
           video.srcObject = null;
         }
+        if (calibrateVideo.srcObject) {
+          calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
+          calibrateVideo.srcObject = null;
+        }
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: "user", width: 320, height: 240 },
           });
           video.srcObject = stream;
+          calibrateVideo.srcObject = stream;
           await video.play();
+          await calibrateVideo.play();
 
           const faceMesh = initFaceMesh();
           state.faceMesh = faceMesh;
@@ -1523,9 +1659,9 @@
           await camera.start();
           state.cameraReady = true;
           cameraModal.classList.add("hidden");
-          startOverlay.classList.remove("hidden");
+          calibrateModal.classList.remove("hidden");
           initAudio();
-          console.log("✅ 摄像头启动成功，头部追踪已启用");
+          console.log("✅ 摄像头启动成功，请进行鼻尖校准");
           return true;
         } catch (err) {
           console.error(err);
@@ -1547,9 +1683,19 @@
         await startCamera();
       });
 
+      calibrateBtn.addEventListener("click", () => {
+        calibrationCount = 0;
+        calibXSum = 0;
+        performCalibration();
+      });
+
       startGameBtn.addEventListener("click", () => {
         if (!state.cameraReady) {
           alert("请先允许摄像头权限");
+          return;
+        }
+        if (!state.isCalibrated) {
+          calibrateModal.classList.remove("hidden");
           return;
         }
         startGame();
@@ -1622,6 +1768,7 @@
           startOverlay.classList.add("hidden");
           pauseModal.classList.add("hidden");
           resultModal.classList.add("hidden");
+          calibrateModal.classList.add("hidden");
           requestAnimationFrame(gameLoop);
         });
       }
@@ -1633,7 +1780,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已加载（传送带向下 + 视频可见 + 触发修复）");
+      console.log("🍳 像素厨房已加载（所有问题已修复）");
     </script>
   </body>
 </html>
