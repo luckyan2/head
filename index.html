@@ -66,7 +66,7 @@
         opacity: 0.01;
         pointer-events: none;
       }
-      /* ===== 弹窗样式（像素风） ===== */
+      /* 弹窗样式（同之前，略……保持原有弹窗样式） */
       .modal-overlay {
         position: absolute;
         top: 0;
@@ -236,7 +236,7 @@
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
 
-      <!-- 弹窗：摄像头 -->
+      <!-- ===== 弹窗1：摄像头权限 ===== -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -250,7 +250,22 @@
           </div>
         </div>
       </div>
-      <!-- 暂停 -->
+
+      <!-- ===== 弹窗2：鼻尖校准 ===== -->
+      <div id="calibrateModal" class="modal-overlay hidden">
+        <div class="modal-card">
+          <h2>🎯 鼻尖校准</h2>
+          <p>
+            请将头部摆正，眼睛直视屏幕中心<br /><span
+              style="font-size: 10px; color: #e67e22"
+              >校准后头部控制会更精准</span
+            >
+          </p>
+          <button class="btn" id="calibrateBtn">✅ 已摆正，开始游戏</button>
+        </div>
+      </div>
+
+      <!-- ===== 弹窗3：暂停 ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -292,7 +307,8 @@
           </div>
         </div>
       </div>
-      <!-- 结算 -->
+
+      <!-- ===== 弹窗4：结算 ===== -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -315,7 +331,8 @@
           <button class="btn" id="retryBtn">🔄 再来一局</button>
         </div>
       </div>
-      <!-- 开始 -->
+
+      <!-- ===== 弹窗5：开始游戏 ===== -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -334,7 +351,8 @@
 
     <script>
       // ================================================================
-      // 厨师大冒险 - 明亮像素风（修正头部追踪 + 重排下半部分）
+      //  厨师大冒险 - 完整修复版
+      //  修复：头部绑定 + 校准弹窗 + 队列式食材 + 倾斜动作
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
@@ -348,11 +366,13 @@
       const video = document.getElementById("webcam");
 
       const cameraModal = document.getElementById("cameraModal");
+      const calibrateModal = document.getElementById("calibrateModal");
       const pauseModal = document.getElementById("pauseModal");
       const resultModal = document.getElementById("resultModal");
       const startOverlay = document.getElementById("startOverlay");
 
       const cameraAllowBtn = document.getElementById("cameraAllowBtn");
+      const calibrateBtn = document.getElementById("calibrateBtn");
       const startGameBtn = document.getElementById("startGameBtn");
       const resumeBtn = document.getElementById("resumeBtn");
       const surrenderBtn = document.getElementById("surrenderBtn");
@@ -377,7 +397,7 @@
         COLS = 4,
         GAME_DURATION = 90;
 
-      // ---------- 音效 ----------
+      // ---------- 音效（同之前） ----------
       let audioCtx = null;
       function initAudio() {
         if (!audioCtx)
@@ -458,6 +478,10 @@
         headX: 0.5,
         headY: 0.5,
         isHeadUp: false,
+        // 校准偏移量
+        calibrateOffsetX: 0,
+        isCalibrated: false,
+        // 食材队列
         ingredients: [],
         pot: {},
         menu: [],
@@ -469,9 +493,6 @@
         spawnTimer: 0,
         cameraReady: false,
         faceMesh: null,
-        // 调试用
-        debugHeadX: 0.5,
-        debugHeadY: 0.5,
       };
 
       // ---------- 食材库 ----------
@@ -656,17 +677,21 @@
         updateUI();
       }
 
-      // ---------- 食材生成（保持大小不变，排队下落） ----------
-      function spawnIngredient() {
+      // ---------- 食材队列式生成 ----------
+      let ingredientQueue = [];
+      let queueTimer = 0;
+
+      function queueIngredient() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-        const lane = Math.random() > 0.5 ? 0 : 1;
+        // 每0.8~1.2秒生成一个，交替左右轨道
+        const lane = state.ingredients.length % 2 === 0 ? 0 : 1;
         const typeIdx = randInt(0, INGREDIENT_TYPES.length - 1);
         const type = INGREDIENT_TYPES[typeIdx];
         const cellW = canvas.width / COLS;
         const cellH = canvas.height / ROWS;
         let startX;
-        if (lane === 0) startX = cellW * 0.5 + rand(0, cellW * 0.6);
-        else startX = cellW * 2.5 + rand(0, cellW * 0.6);
+        if (lane === 0) startX = cellW * 0.5 + rand(0, cellW * 0.4);
+        else startX = cellW * 2.5 + rand(0, cellW * 0.4);
 
         const ingredient = {
           id: type.id,
@@ -675,10 +700,10 @@
           emoji: type.emoji,
           lane: lane,
           x: startX,
-          y: cellH * 0.2, // 从顶部出现
+          y: cellH * 0.2,
           startX: startX,
-          speed: 1.0 + rand(0, 0.4),
-          size: 18 + rand(0, 6), // 固定大小（不缩放）
+          speed: 1.2 + rand(0, 0.3),
+          size: 32 + rand(0, 8), // 增大尺寸
           alive: true,
         };
         state.ingredients.push(ingredient);
@@ -695,8 +720,8 @@
           }
 
           ing.y += ing.speed * 1.2;
-          // 轻微左右飘动模拟传送带
-          ing.x = ing.startX + Math.sin(ing.y * 0.03 + Date.now() * 0.001) * 2;
+          // 轻微左右摆动模拟传送带
+          ing.x = ing.startX + Math.sin(ing.y * 0.02 + Date.now() * 0.0005) * 2;
 
           if (ing.y > cellH * 7.2) {
             ing.alive = false;
@@ -710,9 +735,8 @@
 
           const chefPixelX = state.chefX * canvas.width;
           const dist = Math.abs(ing.x - chefPixelX);
-          const threshold = 35 + ing.size * 0.5;
+          const threshold = 40 + ing.size * 0.4;
 
-          // 检测区域：第4行到第6.5行之间
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
             ing.alive = false;
             state.ingredientsCollected++;
@@ -726,7 +750,6 @@
             continue;
           }
 
-          // 超出底部消失
           if (ing.y > cellH * 7.0) {
             ing.alive = false;
             state.ingredients.splice(i, 1);
@@ -748,20 +771,20 @@
           return;
         }
 
-        state.spawnTimer += deltaTime;
-        if (state.spawnTimer > 0.5 + rand(0, 0.6)) {
-          state.spawnTimer = 0;
-          spawnIngredient();
-          if (Math.random() > 0.6) spawnIngredient();
+        // 队列生成：每0.8~1.2秒生成一个
+        queueTimer += deltaTime;
+        if (queueTimer > 0.8 + rand(0, 0.4)) {
+          queueTimer = 0;
+          queueIngredient();
         }
 
         updateIngredients();
 
-        // 厨师平滑跟随头部
+        // 厨师平滑跟随头部（使用校准偏移）
         state.chefX = lerp(state.chefX, state.targetX, 0.15);
         state.chefX = clamp(state.chefX, 0.08, 0.92);
 
-        // 抬头检测（headY < 0.35 视为抬头）
+        // 抬头检测
         const headUp = state.headY < 0.35;
         if (headUp && !state.isHeadUp) {
           state.isHeadUp = true;
@@ -773,7 +796,7 @@
         updateUI();
       }
 
-      // ---------- 绘制（重新布局下半部分） ----------
+      // ---------- 绘制（含倾斜厨师 + 传送带动画） ----------
       function drawGame() {
         const W = canvas.width,
           H = canvas.height;
@@ -787,7 +810,7 @@
         ctx.fillRect(0, 0, W, H);
 
         // ---- 网格装饰 ----
-        ctx.strokeStyle = "rgba(200, 190, 175, 0.25)";
+        ctx.strokeStyle = "rgba(200, 190, 175, 0.2)";
         ctx.lineWidth = 1;
         for (let r = 0; r <= ROWS; r++) {
           ctx.beginPath();
@@ -805,24 +828,28 @@
         // ---- 传输带区域 ----
         const beltTop = cellH * 1.5;
         const beltBottom = cellH * 6.8;
-        ctx.fillStyle = "rgba(230, 220, 205, 0.5)";
+
+        // 传送带背景（模拟图片占位）
+        ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
         ctx.fillRect(0, beltTop, W, beltBottom - beltTop);
-        // 条纹
-        for (let y = beltTop; y < beltBottom; y += 14) {
-          ctx.strokeStyle = "rgba(180, 170, 155, 0.2)";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(0, y);
-          ctx.lineTo(W, y + 8);
-          ctx.stroke();
+
+        // 传送带滚动条纹（模拟图片头尾相连动画）
+        const scrollOffset = (Date.now() * 0.03) % 30;
+        for (
+          let y = beltTop - 30 + scrollOffset;
+          y < beltBottom + 30;
+          y += 30
+        ) {
+          ctx.fillStyle = "rgba(160, 150, 135, 0.15)";
+          ctx.fillRect(0, y, W, 4);
+          ctx.fillStyle = "rgba(180, 170, 155, 0.10)";
+          ctx.fillRect(0, y + 15, W, 4);
         }
 
         // ---- 轨道 ----
-        // 左轨道（第1-2列）
-        ctx.fillStyle = "rgba(231, 76, 60, 0.1)";
+        ctx.fillStyle = "rgba(231, 76, 60, 0.08)";
         ctx.fillRect(cellW * 0.3, beltTop, cellW * 1.6, beltBottom - beltTop);
-        // 右轨道（第3-4列）
-        ctx.fillStyle = "rgba(52, 152, 219, 0.1)";
+        ctx.fillStyle = "rgba(52, 152, 219, 0.08)";
         ctx.fillRect(cellW * 2.3, beltTop, cellW * 1.6, beltBottom - beltTop);
 
         // 箭头
@@ -835,7 +862,7 @@
           ctx.fillText("▼", cellW * 2.9, y);
         }
 
-        // ---- 食材（固定大小） ----
+        // ---- 食材（大尺寸，排队整齐） ----
         state.ingredients.forEach((ing) => {
           if (!ing.alive) return;
           const size = ing.size;
@@ -843,12 +870,12 @@
             y = ing.y;
 
           // 发光
-          const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 1.8);
-          glow.addColorStop(0, ing.color + "80");
+          const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 1.6);
+          glow.addColorStop(0, ing.color + "60");
           glow.addColorStop(1, ing.color + "00");
           ctx.fillStyle = glow;
           ctx.beginPath();
-          ctx.arc(x, y, size * 1.8, 0, Math.PI * 2);
+          ctx.arc(x, y, size * 1.6, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.shadowColor = "rgba(0,0,0,0.1)";
@@ -858,11 +885,11 @@
           ctx.fillStyle = ing.color;
           ctx.fill();
           ctx.shadowBlur = 0;
-          ctx.strokeStyle = "rgba(255,255,255,0.6)";
+          ctx.strokeStyle = "rgba(255,255,255,0.5)";
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          ctx.font = `${size * 1.2}px serif`;
+          ctx.font = `${size * 1.0}px serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#fff";
@@ -872,18 +899,25 @@
           ctx.shadowBlur = 0;
         });
 
-        // ---- 厨师 ----
+        // ---- 厨师（带倾斜） ----
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
 
+        // 计算倾斜角度：头偏左 -> 左倾，头偏右 -> 右倾
+        const tiltAngle = (state.chefX - 0.5) * 0.3; // 最大 ±0.15 弧度 (~8.6°)
+
+        ctx.save();
+        ctx.translate(chefX, chefY + chefSize * 0.4); // 以底部中心为轴
+        ctx.rotate(tiltAngle);
+
+        // 身体（亮蓝色）
         ctx.shadowColor = "rgba(0,0,0,0.1)";
         ctx.shadowBlur = 10;
-        // 身体
         ctx.beginPath();
         ctx.ellipse(
-          chefX,
-          chefY + chefSize * 0.1,
+          0,
+          -chefSize * 0.3,
           chefSize * 0.5,
           chefSize * 0.6,
           0,
@@ -892,10 +926,11 @@
         );
         ctx.fillStyle = "#3498db";
         ctx.fill();
+        // 围裙（白色）
         ctx.beginPath();
         ctx.ellipse(
-          chefX,
-          chefY + chefSize * 0.25,
+          0,
+          -chefSize * 0.15,
           chefSize * 0.4,
           chefSize * 0.5,
           0,
@@ -904,17 +939,18 @@
         );
         ctx.fillStyle = "#ffffff";
         ctx.fill();
+
         // 头
         ctx.shadowBlur = 6;
         ctx.beginPath();
-        ctx.arc(chefX, chefY - chefSize * 0.15, chefSize * 0.3, 0, Math.PI * 2);
+        ctx.arc(0, -chefSize * 0.55, chefSize * 0.3, 0, Math.PI * 2);
         ctx.fillStyle = "#f5d6a8";
         ctx.fill();
         // 帽子
         ctx.beginPath();
         ctx.ellipse(
-          chefX,
-          chefY - chefSize * 0.45,
+          0,
+          -chefSize * 0.85,
           chefSize * 0.35,
           chefSize * 0.25,
           0,
@@ -926,8 +962,8 @@
         ctx.fillStyle = "#e74c3c";
         ctx.beginPath();
         ctx.ellipse(
-          chefX,
-          chefY - chefSize * 0.5,
+          0,
+          -chefSize * 0.9,
           chefSize * 0.25,
           chefSize * 0.12,
           0,
@@ -935,55 +971,49 @@
           Math.PI * 2,
         );
         ctx.fill();
-        // 眼睛
-        const eyeOffset = (state.chefX - 0.5) * 12;
+
+        // 眼睛（跟随头部方向）
+        const eyeOffset = (state.chefX - 0.5) * 10;
         ctx.fillStyle = "#2c3e50";
         ctx.beginPath();
-        ctx.arc(
-          chefX - 10 + eyeOffset,
-          chefY - chefSize * 0.2,
-          4,
-          0,
-          Math.PI * 2,
-        );
+        ctx.arc(-10 + eyeOffset, -chefSize * 0.6, 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(
-          chefX + 10 + eyeOffset,
-          chefY - chefSize * 0.2,
-          4,
-          0,
-          Math.PI * 2,
-        );
+        ctx.arc(10 + eyeOffset, -chefSize * 0.6, 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = "#fff";
         ctx.beginPath();
-        ctx.arc(
-          chefX - 8 + eyeOffset,
-          chefY - chefSize * 0.24,
-          1.8,
-          0,
-          Math.PI * 2,
-        );
+        ctx.arc(-8 + eyeOffset, -chefSize * 0.64, 1.8, 0, Math.PI * 2);
         ctx.fill();
         ctx.beginPath();
-        ctx.arc(
-          chefX + 12 + eyeOffset,
-          chefY - chefSize * 0.24,
-          1.8,
-          0,
-          Math.PI * 2,
-        );
+        ctx.arc(12 + eyeOffset, -chefSize * 0.64, 1.8, 0, Math.PI * 2);
         ctx.fill();
+
         // 微笑
         ctx.strokeStyle = "#c0392b";
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.arc(chefX, chefY - chefSize * 0.05, 10, 0.1, Math.PI - 0.1);
+        ctx.arc(0, -chefSize * 0.45, 10, 0.1, Math.PI - 0.1);
         ctx.stroke();
         ctx.shadowBlur = 0;
 
-        // ---- 锅（第6-7行） ----
+        ctx.restore();
+
+        // ---- 抬头时显示"一盘菜" ----
+        if (state.menuComplete && state.isPlaying) {
+          ctx.save();
+          ctx.font = "48px serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = "rgba(0,0,0,0.2)";
+          ctx.shadowBlur = 20;
+          // 用 emoji 占位，你可以替换为图片
+          ctx.fillText("🍳", chefX, chefY - chefSize * 1.2);
+          ctx.shadowBlur = 0;
+          ctx.restore();
+        }
+
+        // ---- 锅 ----
         const potX = chefX;
         const potY = cellH * 6.2;
         const potW = cellW * 1.0;
@@ -991,9 +1021,10 @@
 
         ctx.shadowColor = "rgba(0,0,0,0.08)";
         ctx.shadowBlur = 12;
+        // 锅体（占位用灰底，你替换为锅图片）
         ctx.beginPath();
         ctx.ellipse(potX, potY, potW * 0.6, potH * 0.5, 0, 0, Math.PI * 2);
-        ctx.fillStyle = "#ecf0f1";
+        ctx.fillStyle = "#d5dbdb";
         ctx.fill();
         ctx.strokeStyle = "#bdc3c7";
         ctx.lineWidth = 3;
@@ -1008,7 +1039,7 @@
           0,
           Math.PI * 2,
         );
-        ctx.fillStyle = "#d5dbdb";
+        ctx.fillStyle = "#ecf0f1";
         ctx.fill();
         ctx.stroke();
 
@@ -1037,7 +1068,7 @@
         }
         ctx.shadowBlur = 0;
 
-        // ---- 菜单（锅的右边，第3-4列，第6.5-7.5行） ----
+        // ---- 菜单（锅的右边） ----
         const menuX = cellW * 2.4;
         const menuY = cellH * 6.4;
         const menuW = cellW * 1.4;
@@ -1083,7 +1114,6 @@
             ctx.fillStyle = "#3d3a36";
             const label = `${ing ? ing.emoji : "🍽"} ${ing ? ing.name : ""}`;
             ctx.fillText(label, menuX + 6, menuY + yOff);
-            // 像素进度条
             const barX = menuX + 80;
             const barY = menuY + yOff + 2;
             const barW = menuW - 94;
@@ -1109,12 +1139,11 @@
           });
         }
 
-        // ---- 餐厅区域（锅的下方，第7.5行～第9.5行） ----
+        // ---- 餐厅区域 ----
         const restaurantTop = cellH * 7.3;
         const restaurantBottom = cellH * 9.8;
         const restaurantH = restaurantBottom - restaurantTop;
 
-        // 餐厅背景盒子（半透明）
         ctx.fillStyle = "rgba(240, 235, 220, 0.5)";
         ctx.shadowBlur = 6;
         ctx.shadowColor = "rgba(0,0,0,0.05)";
@@ -1128,7 +1157,6 @@
         ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
         ctx.stroke();
 
-        // 左右分割线
         ctx.strokeStyle = "#d0c8b8";
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
@@ -1138,7 +1166,7 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // ---- 左桌 ----
+        // 左桌
         const leftTableX = cellW * 0.2;
         const leftTableW = cellW * 1.6;
         const leftTableY = restaurantTop + restaurantH * 0.2;
@@ -1157,21 +1185,19 @@
         ctx.roundRect(leftTableX, leftTableY, leftTableW, leftTableH, 8);
         ctx.stroke();
 
-        // 左桌客人（四个椅子）
+        // 左桌客人
         const chairSize = 20;
         const chairY = leftTableY + leftTableH + 6;
-        // 左边两个
         ctx.font = "20px serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillStyle = "#7f8c8d";
         ctx.fillText("🪑", leftTableX + 20, chairY);
         ctx.fillText("🪑", leftTableX + 20, chairY + 24);
-        // 右边两个
         ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY);
         ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY + 24);
 
-        // 左桌需求气泡（在桌子左上方）
+        // 左桌需求
         if (state.leftDemand) {
           const bubbleX = leftTableX + 10;
           const bubbleY = leftTableY - 30;
@@ -1197,7 +1223,7 @@
           ctx.fillText(state.leftDemand.dish, bubbleX + 30, bubbleY + 34);
         }
 
-        // ---- 右桌 ----
+        // 右桌
         const rightTableX = cellW * 2.2;
         const rightTableW = cellW * 1.6;
         const rightTableY = restaurantTop + restaurantH * 0.2;
@@ -1226,7 +1252,6 @@
         ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY);
         ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY + 24);
 
-        // 右桌需求气泡
         if (state.rightDemand) {
           const bubbleX = rightTableX + rightTableW - 70;
           const bubbleY = rightTableY - 30;
@@ -1252,7 +1277,7 @@
           ctx.fillText(state.rightDemand.dish, bubbleX + 30, bubbleY + 34);
         }
 
-        // ---- 顶部信息栏 ----
+        // ---- 顶部信息 ----
         const minutes = Math.floor(state.timeLeft / 60);
         const seconds = Math.floor(state.timeLeft % 60);
         const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -1288,16 +1313,11 @@
         ctx.fillStyle = "#7a7268";
         ctx.fillText("🧺 " + state.ingredientsCollected, W - 14, 38);
 
-        // 底部提示
         ctx.textAlign = "left";
         ctx.textBaseline = "bottom";
         ctx.font = '7px "Press Start 2P", monospace';
         ctx.fillStyle = "#b0a898";
         ctx.fillText("←歪头  ·  抬头→", 10, H - 8);
-
-        // 调试：显示头部坐标（可注释掉）
-        // ctx.fillStyle = 'red'; ctx.font = '10px monospace';
-        // ctx.fillText(`hX:${state.headX.toFixed(2)} hY:${state.headY.toFixed(2)}`, 10, 60);
       }
 
       // ---- roundRect polyfill ----
@@ -1374,7 +1394,7 @@
         state.dishName = "";
         state.leftDemand = null;
         state.rightDemand = null;
-        state.spawnTimer = 0;
+        queueTimer = 0;
         if (state.timerInterval) {
           clearInterval(state.timerInterval);
           state.timerInterval = null;
@@ -1414,7 +1434,10 @@
         }
       }
 
-      // ---------- MediaPipe 初始化（添加调试日志） ----------
+      // ---------- MediaPipe 初始化（含校准） ----------
+      let calibrationCount = 0;
+      let calibXSum = 0;
+
       function initFaceMesh() {
         const faceMesh = new FaceMesh({
           locateFile: (file) =>
@@ -1433,25 +1456,59 @@
           ) {
             const nose = results.multiFaceLandmarks[0][1];
             if (nose) {
-              const x = nose.x,
-                y = nose.y;
-              state.headX = clamp(x, 0, 1);
-              state.headY = clamp(y, 0, 1);
-              // 映射到目标位置
+              let rawX = nose.x;
+              let rawY = nose.y;
+
+              // 如果已校准，应用偏移
+              if (state.isCalibrated) {
+                rawX = clamp(rawX - state.calibrateOffsetX, 0, 1);
+              }
+
+              state.headX = clamp(rawX, 0, 1);
+              state.headY = clamp(rawY, 0, 1);
+
+              // 映射到目标位置（死区优化）
               let target = 0.5;
-              if (x < 0.35) target = 0.1 + (x / 0.35) * 0.3;
-              else if (x > 0.65) target = 0.9 - ((1 - x) / 0.35) * 0.3;
-              else target = 0.3 + ((x - 0.35) / 0.3) * 0.4;
+              const x = state.headX;
+              if (x < 0.38) {
+                target = 0.1 + (x / 0.38) * 0.25;
+              } else if (x > 0.62) {
+                target = 0.9 - ((1 - x) / 0.38) * 0.25;
+              } else {
+                target = 0.3 + ((x - 0.38) / 0.24) * 0.4;
+              }
               state.targetX = clamp(target, 0.05, 0.95);
-              // 调试
-              // console.log(`head: (${x.toFixed(2)}, ${y.toFixed(2)}) -> targetX: ${state.targetX.toFixed(2)}`);
             }
-          } else {
-            // 未检测到人脸，可能摄像头没拍到
-            // console.log('No face detected');
           }
         });
         return faceMesh;
+      }
+
+      // ---------- 校准函数 ----------
+      function startCalibration() {
+        calibrateModal.classList.remove("hidden");
+        calibrationCount = 0;
+        calibXSum = 0;
+        state.isCalibrated = false;
+      }
+
+      function performCalibration() {
+        // 取当前帧的鼻尖X值，累计10帧取平均
+        if (state.headX > 0.1 && state.headX < 0.9) {
+          calibXSum += state.headX;
+          calibrationCount++;
+        }
+
+        if (calibrationCount >= 10) {
+          const avgX = calibXSum / calibrationCount;
+          state.calibrateOffsetX = avgX - 0.5;
+          state.isCalibrated = true;
+          calibrateModal.classList.add("hidden");
+          startGame();
+        } else {
+          // 继续采集
+          setTimeout(performCalibration, 100);
+        }
       }
 
       // ---------- 启动摄像头 ----------
@@ -1477,9 +1534,10 @@
           await camera.start();
           state.cameraReady = true;
           cameraModal.classList.add("hidden");
-          startOverlay.classList.remove("hidden");
+          // 显示校准弹窗
+          calibrateModal.classList.remove("hidden");
           initAudio();
-          console.log("✅ 摄像头启动成功，头部追踪已开启");
+          console.log("✅ 摄像头启动成功，请进行鼻尖校准");
           return true;
         } catch (err) {
           console.error(err);
@@ -1500,13 +1558,27 @@
       cameraAllowBtn.addEventListener("click", async () => {
         await startCamera();
       });
+
+      calibrateBtn.addEventListener("click", () => {
+        // 开始校准：采集10帧鼻尖位置
+        calibrationCount = 0;
+        calibXSum = 0;
+        performCalibration();
+      });
+
       startGameBtn.addEventListener("click", () => {
         if (!state.cameraReady) {
           alert("请先允许摄像头权限");
           return;
         }
+        // 如果未校准，显示校准弹窗
+        if (!state.isCalibrated) {
+          calibrateModal.classList.remove("hidden");
+          return;
+        }
         startGame();
       });
+
       canvas.addEventListener("click", (e) => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width,
@@ -1515,6 +1587,7 @@
           if (state.isPlaying && !state.isGameOver) togglePause();
         }
       });
+
       resumeBtn.addEventListener("click", () => {
         if (state.isPaused) togglePause();
       });
@@ -1572,6 +1645,7 @@
         startOverlay.classList.add("hidden");
         pauseModal.classList.add("hidden");
         resultModal.classList.add("hidden");
+        calibrateModal.classList.add("hidden");
         requestAnimationFrame(gameLoop);
       }
       init();
@@ -1582,7 +1656,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已加载（头部追踪已修复）");
+      console.log("🍳 像素厨房已加载（含校准 + 队列食材 + 倾斜动作）");
     </script>
   </body>
 </html>
