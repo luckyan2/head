@@ -63,7 +63,7 @@
         height: 100%;
         object-fit: cover;
         z-index: 1;
-        opacity: 0.01; /* 不可见但保留渲染 */
+        opacity: 0.01;
         pointer-events: none;
       }
       .modal-overlay {
@@ -336,7 +336,7 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 最终修复版（视频可见 + 触发修复 + 红点 + 实色桌子 + 无缝传送带）
+      //  厨师大冒险 - 视频可见修复版（简化视频绘制）
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
@@ -659,7 +659,6 @@
       // ---------- 食材生成 ----------
       function queueIngredient() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-        // 检查最后一个食材位置，防止重叠
         const last = state.ingredients[state.ingredients.length - 1];
         const cellH = canvas.height / ROWS;
         if (last && last.y < cellH * 2.0) return;
@@ -668,7 +667,6 @@
         const typeIdx = randInt(0, INGREDIENT_TYPES.length - 1);
         const type = INGREDIENT_TYPES[typeIdx];
         const cellW = canvas.width / COLS;
-        // 左轨道右移，右轨道也相应右移
         let startX;
         if (lane === 0) startX = cellW * 0.85 + rand(0, cellW * 0.2);
         else startX = cellW * 2.85 + rand(0, cellW * 0.2);
@@ -714,7 +712,7 @@
 
           const chefPixelX = state.chefX * canvas.width;
           const dist = Math.abs(ing.x - chefPixelX);
-          const threshold = 55; // 增大碰撞范围
+          const threshold = 55;
 
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
             ing.alive = false;
@@ -750,8 +748,7 @@
           return;
         }
 
-        // 传送带滚动（向下）
-        state.beltOffset += deltaTime * 35; // 速度
+        state.beltOffset += deltaTime * 35;
 
         state.queueTimer += deltaTime;
         if (state.queueTimer > 0.9 + rand(0, 0.4)) {
@@ -811,21 +808,21 @@
         images.dish.onload = onLoad;
         images.dish.onerror = onLoad;
         images.dish.src =
-          "https://ts4.tc.mm.bing.net/th/id/OIP-C.tiGBnI2prUFVrx5kguyEhAHaHa?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为成品菜链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3 "; // 替换为成品菜链接
 
         images.leftTable = new Image();
         images.leftTable.crossOrigin = "anonymous";
         images.leftTable.onload = onLoad;
         images.leftTable.onerror = onLoad;
         images.leftTable.src =
-          "https://pic.616pic.com/ys_bnew_img/00/01/70/HVfMC0mxoE.jpg"; // 替换为左桌链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3 "; // 替换为左桌链接
 
         images.rightTable = new Image();
         images.rightTable.crossOrigin = "anonymous";
         images.rightTable.onload = onLoad;
         images.rightTable.onerror = onLoad;
         images.rightTable.src =
-          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为右桌链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3 "; // 替换为右桌链接
       }
 
       // ---------- 绘制函数 ----------
@@ -841,7 +838,7 @@
         ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
-        // 网格线（辅助）
+        // 网格线
         ctx.strokeStyle = "rgba(200, 190, 175, 0.2)";
         ctx.lineWidth = 1;
         for (let r = 0; r <= ROWS; r++) {
@@ -857,7 +854,7 @@
           ctx.stroke();
         }
 
-        // ---------- 传输带区域（滚动，向下） ----------
+        // ---------- 传输带区域 ----------
         const beltTop = cellH * 1.5;
         const beltBottom = cellH * 6.8;
         const beltHeight = beltBottom - beltTop;
@@ -865,22 +862,17 @@
         ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
         ctx.fillRect(0, beltTop, W, beltHeight);
 
-        // 传送带图片滚动（向下滚动）
         if (
           images.belt &&
           images.belt.complete &&
           images.belt.naturalWidth > 0
         ) {
           const imgH = beltHeight;
-          // 取模得到当前偏移（0 ~ imgH）
           const offset = state.beltOffset % imgH;
-          // 绘制第一张（从 beltTop - offset 开始，即向下移动）
           ctx.drawImage(images.belt, 0, beltTop - offset, W, imgH);
-          // 绘制第二张接在后面（如果 offset > 0，则第二张从 beltTop + imgH - offset 开始）
           ctx.drawImage(images.belt, 0, beltTop - offset + imgH, W, imgH);
         }
 
-        // 滚动条纹（与图片同步）
         const stripeOffset = state.beltOffset % 30;
         for (
           let y = beltTop - 30 + stripeOffset;
@@ -893,7 +885,7 @@
           ctx.fillRect(0, y + 15, W, 4);
         }
 
-        // ---------- 左右轨道（位置右移） ----------
+        // ---------- 左右轨道 ----------
         const leftTrackX = cellW * 0.7;
         const rightTrackX = cellW * 2.7;
         ctx.fillStyle = "rgba(231, 76, 60, 0.08)";
@@ -910,10 +902,9 @@
           ctx.fillText("▼", rightTrackX + cellW * 0.7, y);
         }
 
-        // ---------- 红点指示器（接食材点位） ----------
-        const redPointY = cellH * 5.5; // 在厨师位置附近
+        // ---------- 红点 ----------
+        const redPointY = cellH * 5.5;
         ctx.shadowBlur = 0;
-        // 左红点
         ctx.beginPath();
         ctx.arc(leftTrackX + cellW * 0.7, redPointY, 12, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
@@ -921,7 +912,6 @@
         ctx.strokeStyle = "#ff0000";
         ctx.lineWidth = 3;
         ctx.stroke();
-        // 右红点
         ctx.beginPath();
         ctx.arc(rightTrackX + cellW * 0.7, redPointY, 12, 0, Math.PI * 2);
         ctx.fillStyle = "rgba(255, 0, 0, 0.7)";
@@ -963,7 +953,7 @@
           ctx.shadowBlur = 0;
         });
 
-        // ---------- 厨师：用摄像头视频作为面具（带倾斜） ----------
+        // ---------- 厨师：视频面具（简化版） ----------
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
@@ -973,37 +963,16 @@
         ctx.translate(chefX, chefY + chefSize * 0.4);
         ctx.rotate(tiltAngle);
 
-        // 1. 绘制摄像头视频帧（圆形裁剪）
+        // 绘制视频（直接绘制矩形，确保可见）
         if (video.readyState >= 2 && video.videoWidth > 0) {
-          // 创建一个圆形裁剪区域
-          ctx.beginPath();
-          ctx.arc(0, -chefSize * 0.25, chefSize * 0.55, 0, Math.PI * 2);
-          ctx.closePath();
-          ctx.clip();
-
-          // 绘制视频帧，让脸部居中
-          const aspect = video.videoWidth / video.videoHeight;
-          let drawW, drawH, dx, dy;
-          const scale = 1.4; // 放大一点
-          if (aspect > 1) {
-            drawH = chefSize * 1.2 * scale;
-            drawW = drawH * aspect;
-            dx = -drawW / 2;
-            dy = -chefSize * 0.25 - drawH / 2;
-          } else {
-            drawW = chefSize * 1.2 * scale;
-            drawH = drawW / aspect;
-            dx = -drawW / 2;
-            dy = -chefSize * 0.25 - drawH / 2;
-          }
+          // 直接绘制一个矩形视频，填满厨师区域，便于调试
+          const drawW = chefSize * 1.1;
+          const drawH = drawW * (video.videoHeight / video.videoWidth);
+          const dx = -drawW / 2;
+          const dy = -chefSize * 0.5 - drawH / 2;
           ctx.drawImage(video, dx, dy, drawW, drawH);
-          // 恢复裁剪状态
-          ctx.restore();
-          ctx.save();
-          ctx.translate(chefX, chefY + chefSize * 0.4);
-          ctx.rotate(tiltAngle);
         } else {
-          // 如果视频未就绪，绘制一个占位头像
+          // 占位
           ctx.beginPath();
           ctx.arc(0, -chefSize * 0.25, chefSize * 0.5, 0, Math.PI * 2);
           ctx.fillStyle = "#d5d5d5";
@@ -1018,10 +987,9 @@
           ctx.fillText("📷", 0, -chefSize * 0.25);
         }
 
-        // 2. 叠加厨师帽和围裙
+        // 叠加帽子与围裙
         ctx.shadowColor = "rgba(0,0,0,0.1)";
         ctx.shadowBlur = 6;
-        // 围裙
         ctx.beginPath();
         ctx.ellipse(
           0,
@@ -1037,7 +1005,6 @@
         ctx.strokeStyle = "#d0c8b8";
         ctx.lineWidth = 2;
         ctx.stroke();
-        // 帽子
         ctx.shadowBlur = 4;
         ctx.beginPath();
         ctx.ellipse(
@@ -1097,7 +1064,7 @@
           ctx.restore();
         }
 
-        // ---------- 锅（图片 + 阴影） ----------
+        // ---------- 锅 ----------
         const potX = chefX;
         const potY = cellH * 6.2;
         const potW = cellW * 1.0;
@@ -1116,7 +1083,6 @@
         }
         ctx.shadowBlur = 0;
 
-        // 锅中食材图标
         const potItems = Object.keys(state.pot).filter(
           (key) => state.pot[key] > 0,
         );
@@ -1139,8 +1105,8 @@
           ctx.fillText("🥘", potX, potY - potH * 0.05);
         }
 
-        // ---------- 菜单（锅的右侧，上移） ----------
-        const menuX = cellW * 2.6; // 再右移
+        // ---------- 菜单 ----------
+        const menuX = cellW * 2.6;
         const menuY = cellH * 5.2;
         const menuW = cellW * 1.0;
         const menuH = cellH * 1.6;
@@ -1208,12 +1174,11 @@
           });
         }
 
-        // ---------- 餐厅区域（实色背景） ----------
+        // ---------- 餐厅区域（实色） ----------
         const restaurantTop = cellH * 7.3;
         const restaurantBottom = cellH * 9.8;
         const restaurantH = restaurantBottom - restaurantTop;
 
-        // 去掉透明度，实色
         ctx.fillStyle = "#e8ddd0";
         ctx.shadowBlur = 6;
         ctx.shadowColor = "rgba(0,0,0,0.05)";
@@ -1553,7 +1518,6 @@
               state.headX = clamp(rawX, 0, 1);
               state.headY = clamp(rawY, 0, 1);
 
-              // 映射目标位置（增大死区范围，提高灵敏度）
               let target = 0.5;
               const x = state.headX;
               if (x < 0.4) {
@@ -1707,7 +1671,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已加载（视频可见 + 红点 + 触发修复 + 实色桌子）");
+      console.log("🍳 像素厨房已加载（视频可见修复版）");
     </script>
   </body>
 </html>
