@@ -14,7 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
-      /* ... 样式与之前相同，此处省略以节省篇幅 ... */
+      /* ===== 样式与之前相同 ===== */
       * {
         margin: 0;
         padding: 0;
@@ -250,7 +250,7 @@
         height: 100%;
         object-fit: cover;
         display: block;
-        transform: scaleX(-1); /* 水平镜像 */
+        transform: scaleX(-1);
       }
       .calibrate-video-wrap canvas {
         position: absolute;
@@ -259,7 +259,7 @@
         width: 100%;
         height: 100%;
         pointer-events: none;
-        transform: scaleX(-1); /* 保持与视频同步镜像 */
+        transform: scaleX(-1);
       }
       .calibrate-text {
         flex: 1;
@@ -304,7 +304,7 @@
         </div>
       </div>
 
-      <!-- 弹窗：鼻尖校准（改为鼻梁竖线） -->
+      <!-- 弹窗：鼻尖校准（竖线） -->
       <div id="calibrateModal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 400px">
           <h2>🎯 鼻梁校准</h2>
@@ -317,7 +317,7 @@
               <p>请将头部摆正，<br />眼睛直视屏幕中心。</p>
               <p>
                 <span class="highlight">🔴 红线</span>
-                追踪鼻梁倾斜和长度，<br />摆正后点击下方按钮。
+                追踪鼻梁倾斜，<br />摆正后点击下方按钮。
               </p>
             </div>
           </div>
@@ -411,7 +411,7 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 完整头控版（鼻梁校准+触控保留）
+      //  厨师大冒险 - 头控优先版（暂停修复+头控增强）
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
@@ -548,10 +548,8 @@
         headX: 0.5,
         headY: 0.5,
         isHeadUp: false,
-        // 校准偏移
         calibrateOffsetX: 0,
         isCalibrated: false,
-        // 食材
         ingredients: [],
         pot: {},
         menu: [],
@@ -566,6 +564,8 @@
         cameraReady: false,
         faceMesh: null,
         beltOffset: 0,
+        // 头控专用
+        headTilt: 0, // 鼻梁倾斜度（-1~1）
       };
 
       // ---------- 食材库 ----------
@@ -831,7 +831,7 @@
           const threshold = 55;
 
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
-            if (state.gold < ing.cost) continue; // 金币不足
+            if (state.gold < ing.cost) continue;
             state.gold -= ing.cost;
             ing.alive = false;
             state.ingredientsCollected++;
@@ -874,11 +874,13 @@
         }
         updateIngredients();
 
-        // 平滑跟随头部（或触控）
+        // 头控优先：使用 headTilt 控制 targetX，触控不再覆盖（触控改为直接设置 chefX？为了不冲突，头控设置 targetX，触控也设置 targetX，但头控是持续更新的）
+        // 我们让头控直接设置 targetX，触控也设置 targetX，但头控每帧更新，所以头控优先级高。
+        // 为了更平滑，我们使用 lerp 让 chefX 跟随 targetX
         state.chefX = lerp(state.chefX, state.targetX, 0.18);
         state.chefX = clamp(state.chefX, 0.08, 0.92);
 
-        // 抬头检测：鼻梁变短（headY 变小）
+        // 抬头检测：使用 headY 或鼻梁长度
         const headUp = state.headY < 0.35;
         if (headUp && !state.isHeadUp) {
           state.isHeadUp = true;
@@ -1041,7 +1043,6 @@
         ctx.translate(chefX, chefY + chefSize * 0.4);
         ctx.rotate(tiltAngle);
 
-        // 身体
         ctx.shadowColor = "rgba(0,0,0,0.1)";
         ctx.shadowBlur = 10;
         ctx.beginPath();
@@ -1068,13 +1069,11 @@
         );
         ctx.fillStyle = "#ffffff";
         ctx.fill();
-        // 头
         ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.arc(0, -chefSize * 0.55, chefSize * 0.3, 0, Math.PI * 2);
         ctx.fillStyle = "#f5d6a8";
         ctx.fill();
-        // 帽子
         ctx.beginPath();
         ctx.ellipse(
           0,
@@ -1099,7 +1098,6 @@
           Math.PI * 2,
         );
         ctx.fill();
-        // 眼睛
         const eyeOffset = (state.chefX - 0.5) * 10;
         ctx.fillStyle = "#2c3e50";
         ctx.beginPath();
@@ -1536,6 +1534,7 @@
         state.queueTimer = 0;
         state.beltOffset = 0;
         state.isCalibrated = false;
+        state.headTilt = 0;
         if (state.timerInterval) {
           clearInterval(state.timerInterval);
           state.timerInterval = null;
@@ -1581,19 +1580,16 @@
         const ch = calibrateOverlay.height;
         overlayCtx.clearRect(0, 0, cw, ch);
         if (!noseTip || !noseRoot) return;
-        // 映射到画布坐标
         const x1 = noseRoot.x * cw;
         const y1 = noseRoot.y * ch;
         const x2 = noseTip.x * cw;
         const y2 = noseTip.y * ch;
-        // 绘制鼻梁竖线（红色）
         overlayCtx.beginPath();
         overlayCtx.moveTo(x1, y1);
         overlayCtx.lineTo(x2, y2);
         overlayCtx.strokeStyle = "#ff4444";
         overlayCtx.lineWidth = 3;
         overlayCtx.stroke();
-        // 绘制两端的小圆点
         overlayCtx.beginPath();
         overlayCtx.arc(x1, y1, 4, 0, Math.PI * 2);
         overlayCtx.fillStyle = "#ff4444";
@@ -1602,7 +1598,6 @@
         overlayCtx.arc(x2, y2, 4, 0, Math.PI * 2);
         overlayCtx.fillStyle = "#ff4444";
         overlayCtx.fill();
-        // 显示倾斜角度和长度提示（可选）
       }
 
       function clearCalibrateOverlay() {
@@ -1632,38 +1627,30 @@
             results.multiFaceLandmarks.length > 0
           ) {
             const landmarks = results.multiFaceLandmarks[0];
-            // 鼻尖：landmark 1，鼻根（鼻梁上端）：landmark 168（或 0？168 较稳定）
             const noseTip = landmarks[1];
-            const noseRoot = landmarks[168] || landmarks[0]; // 如果168不存在则用0
+            const noseRoot = landmarks[168] || landmarks[0];
             if (noseTip && noseRoot) {
-              // 计算鼻梁倾斜角度和长度
+              // 计算鼻梁倾斜度
               const dx = noseTip.x - noseRoot.x;
               const dy = noseTip.y - noseRoot.y;
-              // 头部左右倾斜：dx 正负
-              // 头部上下：dy 大小（抬头时 dy 变小）
-              let rawX = noseTip.x;
+              // 倾斜度映射到 -1~1
+              let tilt = clamp(dx * 15, -1, 1);
+              state.headTilt = tilt;
+              // 设置目标位置（头控优先）
+              let target = 0.5 + tilt * 0.45;
+              state.targetX = clamp(target, 0.05, 0.95);
+
+              // 更新头部坐标（用于抬头检测）
               let rawY = noseTip.y;
               if (state.isCalibrated) {
-                rawX = clamp(rawX - state.calibrateOffsetX, 0, 1);
+                // 不校准偏移，因为我们是绝对倾斜
               }
-              state.headX = clamp(rawX, 0, 1);
               state.headY = clamp(rawY, 0, 1);
 
-              // 更新校准预览（竖线）
+              // 更新校准预览
               if (!calibrateModal.classList.contains("hidden")) {
                 updateCalibrateOverlay(noseTip, noseRoot);
               }
-
-              // 映射到目标位置：使用 dx 作为倾斜指标
-              // dx 范围大约 -0.05 ~ 0.05，映射到 -1~1
-              let tilt = clamp(dx * 12, -1, 1); // 放大系数
-              let target = 0.5 + tilt * 0.4;
-              state.targetX = clamp(target, 0.05, 0.95);
-
-              // 抬头检测：dy 变短（鼻尖接近鼻根）
-              const noseLength = Math.sqrt(dx * dx + dy * dy);
-              // 根据长度变化判断抬头，这里简单用 y 坐标
-              // 我们使用 rawY 即可
             }
           } else {
             if (!calibrateModal.classList.contains("hidden")) {
@@ -1674,28 +1661,19 @@
         return faceMesh;
       }
 
-      // ---------- 校准 ----------
+      // ---------- 校准（简化：仅用于开始游戏） ----------
       let calibrationCount = 0;
       let calibXSum = 0;
 
       function performCalibration() {
-        if (state.headX > 0.1 && state.headX < 0.9) {
-          calibXSum += state.headX;
-          calibrationCount++;
+        // 我们不再需要校准偏移，因为使用绝对倾斜
+        state.isCalibrated = true;
+        calibrateModal.classList.add("hidden");
+        if (calibrateVideo.srcObject) {
+          calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
+          calibrateVideo.srcObject = null;
         }
-        if (calibrationCount >= 10) {
-          const avgX = calibXSum / calibrationCount;
-          state.calibrateOffsetX = avgX - 0.5;
-          state.isCalibrated = true;
-          calibrateModal.classList.add("hidden");
-          if (calibrateVideo.srcObject) {
-            calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
-            calibrateVideo.srcObject = null;
-          }
-          startGame();
-        } else {
-          setTimeout(performCalibration, 100);
-        }
+        startGame();
       }
 
       // ---------- 启动摄像头 ----------
@@ -1750,7 +1728,9 @@
         }
       }
 
-      // ---------- 触控和鼠标拖拽（保留） ----------
+      // ---------- 触控和鼠标拖拽（保留，但头控优先） ----------
+      // 我们让触控也设置 targetX，但头控每帧都会覆盖，所以触控只有在头控未检测到人脸时起作用
+      // 但为了不干扰，我们让触控直接设置 targetX，头控也设置 targetX，头控频率高，所以头控优先。
       let isDragging = false;
       let lastTouchX = 0;
 
@@ -1783,6 +1763,17 @@
 
       // 点击抬头（简单点击即可触发）
       function handleCanvasClick(e) {
+        // 先检查是否点击了暂停区域
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        if (x > 0.7 && y < 0.12) {
+          if (state.isPlaying && !state.isGameOver) {
+            togglePause();
+          }
+          return; // 阻止出餐
+        }
+        // 否则出餐
         if (state.isPlaying && !state.isPaused && !state.isGameOver) {
           serveDish();
         }
@@ -1821,24 +1812,13 @@
         }
       });
 
-      // 暂停按钮（点击右上角区域）
-      canvas.addEventListener("click", (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
-        if (x > 0.7 && y < 0.12) {
-          if (state.isPlaying && !state.isGameOver) togglePause();
-        }
-      });
-
       // ---------- 事件绑定 ----------
       cameraAllowBtn.addEventListener("click", async () => {
         await startCamera();
       });
 
       calibrateBtn.addEventListener("click", () => {
-        calibrationCount = 0;
-        calibXSum = 0;
+        // 直接完成校准，因为我们不需要偏移校准
         performCalibration();
       });
 
@@ -1871,8 +1851,7 @@
         resetGame();
         if (state.cameraReady) {
           calibrateModal.classList.remove("hidden");
-          calibrationCount = 0;
-          calibXSum = 0;
+          // 重新校准
           setTimeout(performCalibration, 500);
         } else {
           startCamera();
@@ -1918,7 +1897,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已启动（鼻梁校准+触控保留）");
+      console.log("🍳 像素厨房已启动（头控优先+暂停修复）");
     </script>
   </body>
 </html>
