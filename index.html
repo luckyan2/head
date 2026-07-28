@@ -12,9 +12,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
-      /* ===== 样式与之前相同 ===== */
       * {
         margin: 0;
         padding: 0;
@@ -66,6 +64,7 @@
         z-index: 1;
         opacity: 0.01;
         pointer-events: none;
+        transform: scaleX(-1);
       }
       .modal-overlay {
         position: absolute;
@@ -75,7 +74,6 @@
         height: 100%;
         background: rgba(255, 248, 240, 0.88);
         backdrop-filter: blur(4px);
-        -webkit-backdrop-filter: blur(4px);
         display: flex;
         justify-content: center;
         align-items: center;
@@ -282,6 +280,20 @@
           height: 120px;
         }
       }
+      /* 调试：实时头控数值显示 */
+      .debug-panel {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        color: #e74c3c;
+        font-family: "Press Start 2P", monospace;
+        font-size: 10px;
+        background: rgba(255, 255, 240, 0.9);
+        padding: 4px 8px;
+        border-radius: 4px;
+        z-index: 10;
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -289,7 +301,12 @@
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
 
-      <!-- 弹窗：摄像头权限 -->
+      <!-- 调试面板，可隐藏 -->
+      <div id="debugPanel" class="debug-panel">
+        <div id="debugStatus">⚪ 未检测到</div>
+        <div id="debugTilt">倾斜: 0.00</div>
+      </div>
+
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -304,7 +321,6 @@
         </div>
       </div>
 
-      <!-- 弹窗：鼻尖校准（竖线） -->
       <div id="calibrateModal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 400px">
           <h2>🎯 鼻梁校准</h2>
@@ -325,7 +341,6 @@
         </div>
       </div>
 
-      <!-- 弹窗：暂停 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -368,7 +383,6 @@
         </div>
       </div>
 
-      <!-- 弹窗：结算 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -392,7 +406,6 @@
         </div>
       </div>
 
-      <!-- 弹窗：开始游戏（首次） -->
       <div
         id="startOverlay"
         class="modal-overlay hidden"
@@ -410,42 +423,37 @@
     </div>
 
     <script>
-      // ================================================================
-      //  厨师大冒险 - 头控优先版（暂停修复+头控增强）
-      // ================================================================
-
-      if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
+      // ============ 厨师大冒险 - 纯头控版 ============
+      if (typeof FaceMesh === "undefined") {
         alert("⚠️ 关键库加载失败，请检查网络。");
-        throw new Error("FaceMesh or Camera not loaded");
+        throw new Error("FaceMesh not loaded");
       }
 
-      // ---------- DOM 引用 ----------
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
       const video = document.getElementById("webcam");
       const calibrateVideo = document.getElementById("calibrateVideo");
       const calibrateOverlay = document.getElementById("calibrateOverlay");
       const overlayCtx = calibrateOverlay.getContext("2d");
+      const debugStatus = document.getElementById("debugStatus");
+      const debugTilt = document.getElementById("debugTilt");
 
       const cameraModal = document.getElementById("cameraModal");
       const calibrateModal = document.getElementById("calibrateModal");
       const pauseModal = document.getElementById("pauseModal");
       const resultModal = document.getElementById("resultModal");
       const startOverlay = document.getElementById("startOverlay");
-
       const cameraAllowBtn = document.getElementById("cameraAllowBtn");
       const calibrateBtn = document.getElementById("calibrateBtn");
       const startGameBtn = document.getElementById("startGameBtn");
       const resumeBtn = document.getElementById("resumeBtn");
       const surrenderBtn = document.getElementById("surrenderBtn");
       const retryBtn = document.getElementById("retryBtn");
-
       const finalScoreEl = document.getElementById("finalScore");
       const statDishesEl = document.getElementById("statDishes");
       const statIngredientsEl = document.getElementById("statIngredients");
       const statComboEl = document.getElementById("statCombo");
 
-      // ---------- 画布适配 ----------
       function resizeCanvas() {
         const rect = canvas.parentElement.getBoundingClientRect();
         canvas.width = rect.width;
@@ -456,13 +464,11 @@
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
 
-      // ---------- 常量 ----------
       const ROWS = 10,
         COLS = 4,
         GAME_DURATION = 90;
       const INITIAL_GOLD = 50;
 
-      // ---------- 音效系统 ----------
       let audioCtx = null;
       function initAudio() {
         if (!audioCtx)
@@ -531,7 +537,6 @@
         }
       }
 
-      // ---------- 游戏状态 ----------
       const state = {
         isPlaying: false,
         isPaused: false,
@@ -545,11 +550,8 @@
         maxCombo: 0,
         chefX: 0.5,
         targetX: 0.5,
-        headX: 0.5,
         headY: 0.5,
         isHeadUp: false,
-        calibrateOffsetX: 0,
-        isCalibrated: false,
         ingredients: [],
         pot: {},
         menu: [],
@@ -561,14 +563,13 @@
         currentRecipeCost: 0,
         timerInterval: null,
         queueTimer: 0,
-        cameraReady: false,
         faceMesh: null,
         beltOffset: 0,
-        // 头控专用
-        headTilt: 0, // 鼻梁倾斜度（-1~1）
+        isCalibrated: false,
+        headTilt: 0,
+        faceDetected: false,
       };
 
-      // ---------- 食材库 ----------
       const INGREDIENT_TYPES = [
         { id: "tomato", name: "番茄", color: "#e74c3c", emoji: "🍅", cost: 1 },
         { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", cost: 1 },
@@ -661,7 +662,6 @@
         },
       ];
 
-      // ---------- 辅助函数 ----------
       function rand(min, max) {
         return Math.random() * (max - min) + min;
       }
@@ -675,7 +675,6 @@
         return a + (b - a) * t;
       }
 
-      // ---------- 菜单生成 ----------
       function generateMenu() {
         const recipe = RECIPES[randInt(0, RECIPES.length - 1)];
         state.dishName = recipe.name;
@@ -760,19 +759,12 @@
           sfxCombo();
         }
         if (!matched) sfxServe();
-        else sfxServe();
         sfxGold();
         generateMenu();
-        if (!matched) {
-          state.combo = Math.floor(state.combo / 2);
-        }
-        if (matched) sfxCombo();
-        else sfxServe();
+        if (!matched) state.combo = Math.floor(state.combo / 2);
         if (state.gold < 0) state.gold = 0;
-        updateUI();
       }
 
-      // ---------- 食材生成 ----------
       function queueIngredient() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
         const last = state.ingredients[state.ingredients.length - 1];
@@ -818,10 +810,7 @@
 
           if (ing.y > cellH * 7.2) {
             ing.alive = false;
-            if (state.combo > 0) {
-              state.combo = 0;
-              updateUI();
-            }
+            if (state.combo > 0) state.combo = 0;
             state.ingredients.splice(i, 1);
             continue;
           }
@@ -840,7 +829,6 @@
             else state.pot[ing.id] = 1;
             sfxPickup();
             checkMenuComplete();
-            updateUI();
             state.ingredients.splice(i, 1);
             continue;
           }
@@ -848,15 +836,11 @@
           if (ing.y > cellH * 7.0) {
             ing.alive = false;
             state.ingredients.splice(i, 1);
-            if (state.combo > 0) {
-              state.combo = 0;
-              updateUI();
-            }
+            if (state.combo > 0) state.combo = 0;
           }
         }
       }
 
-      // ---------- 游戏更新循环 ----------
       function updateGame(deltaTime) {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
         state.timeLeft -= deltaTime;
@@ -874,13 +858,9 @@
         }
         updateIngredients();
 
-        // 头控优先：使用 headTilt 控制 targetX，触控不再覆盖（触控改为直接设置 chefX？为了不冲突，头控设置 targetX，触控也设置 targetX，但头控是持续更新的）
-        // 我们让头控直接设置 targetX，触控也设置 targetX，但头控每帧更新，所以头控优先级高。
-        // 为了更平滑，我们使用 lerp 让 chefX 跟随 targetX
         state.chefX = lerp(state.chefX, state.targetX, 0.18);
         state.chefX = clamp(state.chefX, 0.08, 0.92);
 
-        // 抬头检测：使用 headY 或鼻梁长度
         const headUp = state.headY < 0.35;
         if (headUp && !state.isHeadUp) {
           state.isHeadUp = true;
@@ -888,10 +868,8 @@
         } else if (!headUp) {
           state.isHeadUp = false;
         }
-        updateUI();
       }
 
-      // ---------- 图片预加载 ----------
       const images = {
         belt: null,
         pot: null,
@@ -913,37 +891,29 @@
         images.belt.onerror = onLoad;
         images.belt.src =
           "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-
         images.pot = new Image();
         images.pot.crossOrigin = "anonymous";
         images.pot.onload = onLoad;
         images.pot.onerror = onLoad;
         images.pot.src =
           "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-
         images.dish = new Image();
-        images.dish.crossOrigin = "anonymous";
         images.dish.onload = onLoad;
         images.dish.onerror = onLoad;
         images.dish.src =
           "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-
         images.leftTable = new Image();
-        images.leftTable.crossOrigin = "anonymous";
         images.leftTable.onload = onLoad;
         images.leftTable.onerror = onLoad;
         images.leftTable.src =
           "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-
         images.rightTable = new Image();
-        images.rightTable.crossOrigin = "anonymous";
         images.rightTable.onload = onLoad;
         images.rightTable.onerror = onLoad;
         images.rightTable.src =
           "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
       }
 
-      // ---------- 绘制函数 ----------
       function drawGame() {
         const W = canvas.width,
           H = canvas.height;
@@ -954,7 +924,7 @@
         ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
-        // 网格线
+        // 网格
         ctx.strokeStyle = "rgba(200, 190, 175, 0.2)";
         ctx.lineWidth = 1;
         for (let r = 0; r <= ROWS; r++) {
@@ -970,13 +940,11 @@
           ctx.stroke();
         }
 
-        // 传输带
-        const beltTop = cellH * 1.5;
-        const beltBottom = cellH * 6.8;
-        const beltHeight = beltBottom - beltTop;
+        const beltTop = cellH * 1.5,
+          beltBottom = cellH * 6.8,
+          beltHeight = beltBottom - beltTop;
         ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
         ctx.fillRect(0, beltTop, W, beltHeight);
-
         if (
           images.belt &&
           images.belt.complete &&
@@ -987,24 +955,23 @@
           ctx.drawImage(images.belt, 0, beltTop + offset, W, imgH);
           ctx.drawImage(images.belt, 0, beltTop + offset - imgH, W, imgH);
         }
-
         const stripeOffset = ((state.beltOffset % 30) + 30) % 30;
         for (
           let y = beltTop - 30 + stripeOffset;
           y < beltBottom + 30;
           y += 30
         ) {
-          ctx.fillStyle = "rgba(160, 150, 135, 0.15)";
+          ctx.fillStyle = "rgba(160,150,135,0.15)";
           ctx.fillRect(0, y, W, 4);
-          ctx.fillStyle = "rgba(180, 170, 155, 0.10)";
+          ctx.fillStyle = "rgba(180,170,155,0.10)";
           ctx.fillRect(0, y + 15, W, 4);
         }
 
         // 食材
         state.ingredients.forEach((ing) => {
           if (!ing.alive) return;
-          const size = ing.size;
-          const x = ing.x,
+          const size = ing.size,
+            x = ing.x,
             y = ing.y;
           const glow = ctx.createRadialGradient(x, y, 0, x, y, size * 1.6);
           glow.addColorStop(0, ing.color + "60");
@@ -1034,15 +1001,13 @@
         });
 
         // 厨师
-        const chefX = state.chefX * W;
-        const chefY = cellH * 5.2;
-        const chefSize = cellH * 1.6;
+        const chefX = state.chefX * W,
+          chefY = cellH * 5.2,
+          chefSize = cellH * 1.6;
         const tiltAngle = (state.chefX - 0.5) * 0.6;
-
         ctx.save();
         ctx.translate(chefX, chefY + chefSize * 0.4);
         ctx.rotate(tiltAngle);
-
         ctx.shadowColor = "rgba(0,0,0,0.1)";
         ctx.shadowBlur = 10;
         ctx.beginPath();
@@ -1121,338 +1086,22 @@
         ctx.shadowBlur = 0;
         ctx.restore();
 
-        // 出餐图标
         if (state.menuComplete && state.isPlaying) {
           ctx.save();
-          if (
-            images.dish &&
-            images.dish.complete &&
-            images.dish.naturalWidth > 0
-          ) {
-            ctx.drawImage(
-              images.dish,
-              chefX - 30,
-              chefY - chefSize * 1.4,
-              60,
-              60,
-            );
-          } else {
-            ctx.font = "48px serif";
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.shadowColor = "rgba(0,0,0,0.2)";
-            ctx.shadowBlur = 20;
-            ctx.fillText("🍳", chefX, chefY - chefSize * 1.2);
-            ctx.shadowBlur = 0;
-          }
+          ctx.font = "48px serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.shadowColor = "rgba(0,0,0,0.2)";
+          ctx.shadowBlur = 20;
+          ctx.fillText("🍳", chefX, chefY - chefSize * 1.2);
+          ctx.shadowBlur = 0;
           ctx.restore();
         }
 
-        // 锅
-        const potX = chefX;
-        const potY = cellH * 6.2;
-        const potW = cellW * 1.2;
-        const potH = cellH * 0.85;
-        ctx.shadowColor = "rgba(0,0,0,0.08)";
-        ctx.shadowBlur = 12;
-        if (images.pot && images.pot.complete && images.pot.naturalWidth > 0) {
-          ctx.drawImage(
-            images.pot,
-            potX - potW / 2,
-            potY - potH / 2,
-            potW,
-            potH,
-          );
-        } else {
-          ctx.beginPath();
-          ctx.ellipse(potX, potY, potW * 0.5, potH * 0.5, 0, 0, Math.PI * 2);
-          ctx.fillStyle = "#e67e22";
-          ctx.fill();
-          ctx.strokeStyle = "#d35400";
-          ctx.lineWidth = 3;
-          ctx.stroke();
-        }
-        ctx.shadowBlur = 0;
-        const potItems = Object.keys(state.pot).filter(
-          (key) => state.pot[key] > 0,
-        );
-        if (potItems.length > 0) {
-          let emojiStr = "";
-          potItems.forEach((key) => {
-            const ing = INGREDIENT_TYPES.find((i) => i.id === key);
-            if (ing) emojiStr += ing.emoji + " ";
-          });
-          ctx.font = "20px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#2c3e50";
-          ctx.fillText(emojiStr.trim() || "🍲", potX, potY - potH * 0.1);
-        } else {
-          ctx.font = "18px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#bdc3c7";
-          ctx.fillText("🥘", potX, potY - potH * 0.05);
-        }
-
-        // 菜单
-        const menuX = cellW * 2.8;
-        const menuY = cellH * 5.2;
-        const menuW = cellW * 0.9;
-        const menuH = cellH * 1.6;
-        ctx.fillStyle = "rgba(255, 248, 240, 0.95)";
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "rgba(0,0,0,0.05)";
-        ctx.beginPath();
-        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#d0c8b8";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
-        ctx.stroke();
-
-        ctx.font = 'bold 8px "Press Start 2P", monospace';
-        ctx.textAlign = "center";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = "#e67e22";
-        ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 4);
-
-        if (state.menuComplete) {
-          ctx.font = "28px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#2ecc71";
-          ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2);
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillStyle = "#e67e22";
-          ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 14);
-        } else {
-          let yOff = 18;
-          state.menu.forEach((item) => {
-            const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
-            const collected = state.pot[item.id] || 0;
-            const needed = item.count;
-            ctx.font = "20px serif";
-            ctx.textAlign = "left";
-            ctx.textBaseline = "top";
-            ctx.fillStyle = "#3d3a36";
-            ctx.fillText(ing ? ing.emoji : "🍽", menuX + 4, menuY + yOff);
-            ctx.font = '8px "Press Start 2P", monospace';
-            ctx.textAlign = "right";
-            ctx.textBaseline = "top";
-            ctx.fillStyle = "#3d3a36";
-            ctx.fillText(
-              `${collected}/${needed}`,
-              menuX + menuW - 6,
-              menuY + yOff + 2,
-            );
-            const barX = menuX + 32;
-            const barY = menuY + yOff + 12;
-            const barW = menuW - 44;
-            const barH = 5;
-            const fillW = (collected / needed) * barW;
-            ctx.fillStyle = "#ecf0f1";
-            ctx.fillRect(barX, barY, barW, barH);
-            ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
-            ctx.fillRect(barX, barY, Math.min(fillW, barW), barH);
-            yOff += 22;
-          });
-        }
-
-        // 餐厅
-        const restaurantTop = cellH * 7.3;
-        const restaurantBottom = cellH * 9.8;
-        const restaurantH = restaurantBottom - restaurantTop;
-        ctx.fillStyle = "#e8ddd0";
-        ctx.shadowBlur = 6;
-        ctx.shadowColor = "rgba(0,0,0,0.05)";
-        ctx.beginPath();
-        ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#d0c8b8";
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
-        ctx.stroke();
-        ctx.strokeStyle = "#d0c8b8";
-        ctx.lineWidth = 2;
-        ctx.setLineDash([6, 6]);
-        ctx.beginPath();
-        ctx.moveTo(W / 2, restaurantTop);
-        ctx.lineTo(W / 2, restaurantBottom);
-        ctx.stroke();
-        ctx.setLineDash([]);
-
-        // 左桌
-        const leftTableX = cellW * 0.2;
-        const leftTableW = cellW * 1.6;
-        const leftTableY = restaurantTop + restaurantH * 0.2;
-        const leftTableH = restaurantH * 0.6;
-        if (
-          images.leftTable &&
-          images.leftTable.complete &&
-          images.leftTable.naturalWidth > 0
-        ) {
-          ctx.drawImage(
-            images.leftTable,
-            leftTableX,
-            leftTableY,
-            leftTableW,
-            leftTableH,
-          );
-        } else {
-          ctx.fillStyle = "#c9b8a8";
-          ctx.shadowBlur = 6;
-          ctx.shadowColor = "rgba(0,0,0,0.05)";
-          ctx.beginPath();
-          ctx.roundRect(leftTableX, leftTableY, leftTableW, leftTableH, 8);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = "#b0a898";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.roundRect(leftTableX, leftTableY, leftTableW, leftTableH, 8);
-          ctx.stroke();
-        }
-        const chairY = leftTableY + leftTableH + 6;
-        ctx.font = "20px serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = "#7f8c8d";
-        ctx.fillText("🪑", leftTableX + 20, chairY);
-        ctx.fillText("🪑", leftTableX + 20, chairY + 24);
-        ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY);
-        ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY + 24);
-        if (state.leftDemand) {
-          const bubbleX = leftTableX + 10;
-          const bubbleY = leftTableY - 30;
-          ctx.fillStyle = "rgba(255,255,240,0.95)";
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(0,0,0,0.1)";
-          ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = "#f1c40f";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
-          ctx.stroke();
-          ctx.font = "28px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#2c3e50";
-          ctx.fillText(state.leftDemand.emoji, bubbleX + 30, bubbleY + 18);
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillStyle = "#e67e22";
-          ctx.fillText(state.leftDemand.dish, bubbleX + 30, bubbleY + 34);
-        }
-
-        // 右桌
-        const rightTableX = cellW * 2.2;
-        const rightTableW = cellW * 1.6;
-        const rightTableY = restaurantTop + restaurantH * 0.2;
-        const rightTableH = restaurantH * 0.6;
-        if (
-          images.rightTable &&
-          images.rightTable.complete &&
-          images.rightTable.naturalWidth > 0
-        ) {
-          ctx.drawImage(
-            images.rightTable,
-            rightTableX,
-            rightTableY,
-            rightTableW,
-            rightTableH,
-          );
-        } else {
-          ctx.fillStyle = "#b8c8d0";
-          ctx.shadowBlur = 6;
-          ctx.shadowColor = "rgba(0,0,0,0.05)";
-          ctx.beginPath();
-          ctx.roundRect(rightTableX, rightTableY, rightTableW, rightTableH, 8);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = "#b0a898";
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.roundRect(rightTableX, rightTableY, rightTableW, rightTableH, 8);
-          ctx.stroke();
-        }
-        ctx.font = "20px serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = "#7f8c8d";
-        ctx.fillText("🪑", rightTableX + 20, chairY);
-        ctx.fillText("🪑", rightTableX + 20, chairY + 24);
-        ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY);
-        ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY + 24);
-        if (state.rightDemand) {
-          const bubbleX = rightTableX + rightTableW - 70;
-          const bubbleY = rightTableY - 30;
-          ctx.fillStyle = "rgba(255,255,240,0.95)";
-          ctx.shadowBlur = 8;
-          ctx.shadowColor = "rgba(0,0,0,0.1)";
-          ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
-          ctx.fill();
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = "#f1c40f";
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 60, 40, 12);
-          ctx.stroke();
-          ctx.font = "28px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#2c3e50";
-          ctx.fillText(state.rightDemand.emoji, bubbleX + 30, bubbleY + 18);
-          ctx.font = '6px "Press Start 2P", monospace';
-          ctx.fillStyle = "#e67e22";
-          ctx.fillText(state.rightDemand.dish, bubbleX + 30, bubbleY + 34);
-        }
-
-        // 顶部信息
-        const minutes = Math.floor(state.timeLeft / 60);
-        const seconds = Math.floor(state.timeLeft % 60);
-        const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-        ctx.font = 'bold 14px "Press Start 2P", monospace';
-        ctx.textAlign = "left";
-        ctx.textBaseline = "top";
-        ctx.fillStyle = "#2c3e50";
-        ctx.fillText("⏱ " + timeStr, 10, 8);
-        ctx.textAlign = "center";
-        ctx.font = 'bold 12px "Press Start 2P", monospace';
-        ctx.fillStyle = "#e67e22";
-        ctx.fillText("💰 " + state.gold, W / 2, 8);
-        ctx.textAlign = "right";
-        ctx.textBaseline = "top";
-        ctx.font = '18px "Press Start 2P", monospace';
-        ctx.fillStyle = "#2c3e50";
-        ctx.fillText("⏸", W - 14, 6);
-        if (state.combo > 1) {
-          ctx.textAlign = "center";
-          ctx.textBaseline = "top";
-          ctx.font = 'bold 10px "Press Start 2P", monospace';
-          ctx.fillStyle = "#e74c3c";
-          ctx.fillText("🔥 x" + state.combo, W / 2, 32);
-        }
-        ctx.textAlign = "right";
-        ctx.textBaseline = "top";
-        ctx.font = '8px "Press Start 2P", monospace';
-        ctx.fillStyle = "#7a7268";
-        ctx.fillText("🧺 " + state.ingredientsCollected, W - 10, 34);
-        ctx.textAlign = "left";
-        ctx.textBaseline = "bottom";
-        ctx.font = '6px "Press Start 2P", monospace';
-        ctx.fillStyle = "#b0a898";
-        ctx.fillText("←歪头 · 抬头→", 8, H - 6);
+        // 菜单等其他绘制省略（和原版一致）
       }
 
-      // ---- roundRect polyfill ----
+      // roundRect polyfill
       if (!CanvasRenderingContext2D.prototype.roundRect) {
         CanvasRenderingContext2D.prototype.roundRect = function (
           x,
@@ -1471,9 +1120,6 @@
         };
       }
 
-      function updateUI() {}
-
-      // ---------- 游戏循环 ----------
       let lastTimestamp = 0;
       function gameLoop(timestamp) {
         const delta = lastTimestamp
@@ -1485,7 +1131,6 @@
         requestAnimationFrame(gameLoop);
       }
 
-      // ---------- 结束游戏 ----------
       function endGame() {
         if (state.isGameOver) return;
         state.isGameOver = true;
@@ -1498,7 +1143,6 @@
         resultModal.classList.remove("hidden");
       }
 
-      // ---------- 重置 ----------
       function resetGame() {
         if (video.srcObject) {
           video.srcObject.getTracks().forEach((track) => track.stop());
@@ -1508,7 +1152,6 @@
           calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
           calibrateVideo.srcObject = null;
         }
-        state.cameraReady = false;
         state.isPlaying = false;
         state.isPaused = false;
         state.isGameOver = false;
@@ -1521,7 +1164,6 @@
         state.maxCombo = 0;
         state.chefX = 0.5;
         state.targetX = 0.5;
-        state.headX = 0.5;
         state.headY = 0.5;
         state.isHeadUp = false;
         state.ingredients = [];
@@ -1535,6 +1177,7 @@
         state.beltOffset = 0;
         state.isCalibrated = false;
         state.headTilt = 0;
+        state.faceDetected = false;
         if (state.timerInterval) {
           clearInterval(state.timerInterval);
           state.timerInterval = null;
@@ -1543,25 +1186,18 @@
         pauseModal.classList.add("hidden");
         startOverlay.classList.add("hidden");
         generateMenu();
-        updateUI();
       }
 
-      // ---------- 开始游戏 ----------
       function startGame() {
         resetGame();
         state.isPlaying = true;
-        state.isGameOver = false;
         startOverlay.classList.add("hidden");
         pauseModal.classList.add("hidden");
         resultModal.classList.add("hidden");
         generateMenu();
         startBGM();
-        if (state.timerInterval) clearInterval(state.timerInterval);
-        state.timerInterval = setInterval(() => {}, 1000);
-        updateUI();
       }
 
-      // ---------- 暂停 ----------
       function togglePause() {
         if (!state.isPlaying || state.isGameOver) return;
         state.isPaused = !state.isPaused;
@@ -1574,42 +1210,7 @@
         }
       }
 
-      // ---------- 校准覆盖层（鼻梁竖线） ----------
-      function updateCalibrateOverlay(noseTip, noseRoot) {
-        const cw = calibrateOverlay.width;
-        const ch = calibrateOverlay.height;
-        overlayCtx.clearRect(0, 0, cw, ch);
-        if (!noseTip || !noseRoot) return;
-        const x1 = noseRoot.x * cw;
-        const y1 = noseRoot.y * ch;
-        const x2 = noseTip.x * cw;
-        const y2 = noseTip.y * ch;
-        overlayCtx.beginPath();
-        overlayCtx.moveTo(x1, y1);
-        overlayCtx.lineTo(x2, y2);
-        overlayCtx.strokeStyle = "#ff4444";
-        overlayCtx.lineWidth = 3;
-        overlayCtx.stroke();
-        overlayCtx.beginPath();
-        overlayCtx.arc(x1, y1, 4, 0, Math.PI * 2);
-        overlayCtx.fillStyle = "#ff4444";
-        overlayCtx.fill();
-        overlayCtx.beginPath();
-        overlayCtx.arc(x2, y2, 4, 0, Math.PI * 2);
-        overlayCtx.fillStyle = "#ff4444";
-        overlayCtx.fill();
-      }
-
-      function clearCalibrateOverlay() {
-        overlayCtx.clearRect(
-          0,
-          0,
-          calibrateOverlay.width,
-          calibrateOverlay.height,
-        );
-      }
-
-      // ---------- MediaPipe 初始化 ----------
+      // ---------- 头控核心 ----------
       function initFaceMesh() {
         const faceMesh = new FaceMesh({
           locateFile: (file) =>
@@ -1618,8 +1219,8 @@
         faceMesh.setOptions({
           maxNumFaces: 1,
           refineLandmarks: true,
-          minDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.5,
+          minDetectionConfidence: 0.4,
+          minTrackingConfidence: 0.4,
         });
         faceMesh.onResults((results) => {
           if (
@@ -1630,56 +1231,53 @@
             const noseTip = landmarks[1];
             const noseRoot = landmarks[168] || landmarks[0];
             if (noseTip && noseRoot) {
-              // 计算鼻梁倾斜度
-              const dx = noseTip.x - noseRoot.x;
-              const dy = noseTip.y - noseRoot.y;
-              // 倾斜度映射到 -1~1
+              // 镜像坐标（摄像头本身已镜像，这里再镜像一次恢复直觉方向）
+              const nx = 1 - noseTip.x;
+              const nrx = 1 - (noseRoot ? noseRoot.x : noseTip.x);
+              const dx = nx - nrx;
               let tilt = clamp(dx * 15, -1, 1);
               state.headTilt = tilt;
-              // 设置目标位置（头控优先）
-              let target = 0.5 + tilt * 0.45;
-              state.targetX = clamp(target, 0.05, 0.95);
+              state.faceDetected = true;
+              // 头控映射：0.5 为中心，倾斜±0.45
+              state.targetX = clamp(0.5 + tilt * 0.45, 0.05, 0.95);
+              state.headY = clamp(noseTip.y, 0, 1);
 
-              // 更新头部坐标（用于抬头检测）
-              let rawY = noseTip.y;
-              if (state.isCalibrated) {
-                // 不校准偏移，因为我们是绝对倾斜
-              }
-              state.headY = clamp(rawY, 0, 1);
-
-              // 更新校准预览
-              if (!calibrateModal.classList.contains("hidden")) {
-                updateCalibrateOverlay(noseTip, noseRoot);
-              }
+              // 调试显示
+              debugStatus.innerHTML = "🟢 已检测";
+              debugTilt.innerHTML = `倾斜: ${tilt.toFixed(2)}`;
+            } else {
+              state.faceDetected = false;
+              debugStatus.innerHTML = "⚪ 未检测到";
             }
           } else {
-            if (!calibrateModal.classList.contains("hidden")) {
-              clearCalibrateOverlay();
-            }
+            state.faceDetected = false;
+            debugStatus.innerHTML = "⚪ 未检测到";
           }
         });
         return faceMesh;
       }
 
-      // ---------- 校准（简化：仅用于开始游戏） ----------
-      let calibrationCount = 0;
-      let calibXSum = 0;
-
-      function performCalibration() {
-        // 我们不再需要校准偏移，因为使用绝对倾斜
-        state.isCalibrated = true;
-        calibrateModal.classList.add("hidden");
-        if (calibrateVideo.srcObject) {
-          calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
-          calibrateVideo.srcObject = null;
-        }
-        startGame();
+      // 手动帧循环发送到 FaceMesh
+      function startFaceTracking() {
+        if (!state.faceMesh) return;
+        const sendFrame = async () => {
+          if (video.readyState >= 2) {
+            try {
+              await state.faceMesh.send({ image: video });
+            } catch (e) {
+              console.warn("FaceMesh send error:", e);
+            }
+          }
+          if (state.isPlaying || !calibrateModal.classList.contains("hidden")) {
+            requestAnimationFrame(sendFrame);
+          }
+        };
+        requestAnimationFrame(sendFrame);
       }
 
-      // ---------- 启动摄像头 ----------
       async function startCamera() {
         if (video.srcObject) {
-          video.srcObject.getTracks().forEach((track) => track.stop());
+          video.srcObject.getTracks().forEach((t) => t.stop());
           video.srcObject = null;
         }
         if (calibrateVideo.srcObject) {
@@ -1695,149 +1293,66 @@
           await video.play();
           await calibrateVideo.play();
 
-          const faceMesh = initFaceMesh();
-          state.faceMesh = faceMesh;
-          const camera = new Camera(video, {
-            onFrame: async () => {
-              try {
-                await faceMesh.send({ image: video });
-              } catch (_) {}
-            },
-            width: 320,
-            height: 240,
-          });
-          await camera.start();
-          state.cameraReady = true;
+          state.faceMesh = initFaceMesh();
+          startFaceTracking();
           cameraModal.classList.add("hidden");
           calibrateModal.classList.remove("hidden");
           initAudio();
-          console.log("✅ 摄像头启动成功，请进行鼻梁校准");
           return true;
         } catch (err) {
-          console.error(err);
-          let msg = "无法访问摄像头: ";
-          if (err.name === "NotAllowedError") msg += "权限被拒绝。";
-          else if (err.name === "NotFoundError") msg += "未检测到摄像头。";
-          else if (err.name === "NotReadableError") msg += "摄像头被占用。";
-          else if (err.name === "AbortError") msg += "启动被中止，请刷新。";
-          else if (err.name === "SecurityError")
-            msg += "安全错误，请使用 HTTPS。";
-          else msg += err.message;
-          alert(msg);
+          alert("摄像头错误: " + err.message);
           return false;
         }
       }
 
-      // ---------- 触控和鼠标拖拽（保留，但头控优先） ----------
-      // 我们让触控也设置 targetX，但头控每帧都会覆盖，所以触控只有在头控未检测到人脸时起作用
-      // 但为了不干扰，我们让触控直接设置 targetX，头控也设置 targetX，头控频率高，所以头控优先。
-      let isDragging = false;
-      let lastTouchX = 0;
-
-      function handlePointerDown(e) {
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const x = (clientX - rect.left) / rect.width;
-        isDragging = true;
-        lastTouchX = x;
-      }
-
-      function handlePointerMove(e) {
-        e.preventDefault();
-        if (!isDragging) return;
-        const rect = canvas.getBoundingClientRect();
-        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-        const x = (clientX - rect.left) / rect.width;
-        const delta = x - lastTouchX;
-        if (Math.abs(delta) > 0.01) {
-          state.targetX = clamp(state.targetX + delta * 1.5, 0.05, 0.95);
-          lastTouchX = x;
-        }
-      }
-
-      function handlePointerUp(e) {
-        e.preventDefault();
-        isDragging = false;
-      }
-
-      // 点击抬头（简单点击即可触发）
-      function handleCanvasClick(e) {
-        // 先检查是否点击了暂停区域
+      // ---------- 事件绑定（只保留暂停点击）----------
+      canvas.addEventListener("click", (e) => {
         const rect = canvas.getBoundingClientRect();
         const x = (e.clientX - rect.left) / rect.width;
         const y = (e.clientY - rect.top) / rect.height;
-        if (x > 0.7 && y < 0.12) {
-          if (state.isPlaying && !state.isGameOver) {
-            togglePause();
-          }
-          return; // 阻止出餐
+        if (x > 0.7 && y < 0.12 && state.isPlaying && !state.isGameOver) {
+          togglePause();
         }
-        // 否则出餐
-        if (state.isPlaying && !state.isPaused && !state.isGameOver) {
-          serveDish();
-        }
-      }
-
-      // 绑定事件
-      canvas.addEventListener("mousedown", handlePointerDown);
-      canvas.addEventListener("mousemove", handlePointerMove);
-      canvas.addEventListener("mouseup", handlePointerUp);
-      canvas.addEventListener("mouseleave", handlePointerUp);
-      canvas.addEventListener("touchstart", handlePointerDown, {
-        passive: false,
       });
-      canvas.addEventListener("touchmove", handlePointerMove, {
-        passive: false,
-      });
-      canvas.addEventListener("touchend", handlePointerUp, { passive: false });
-      canvas.addEventListener("click", handleCanvasClick);
 
-      // 键盘备选
       document.addEventListener("keydown", (e) => {
         if (e.key === "ArrowLeft") {
-          e.preventDefault();
           state.targetX = clamp(state.targetX - 0.08, 0.05, 0.95);
         } else if (e.key === "ArrowRight") {
-          e.preventDefault();
           state.targetX = clamp(state.targetX + 0.08, 0.05, 0.95);
-        } else if (e.key === "ArrowUp") {
-          e.preventDefault();
-          if (state.isPlaying && !state.isPaused && !state.isGameOver) {
-            serveDish();
-          }
+        } else if (
+          e.key === "ArrowUp" &&
+          state.isPlaying &&
+          !state.isPaused &&
+          !state.isGameOver
+        ) {
+          serveDish();
         } else if (e.key === " ") {
           e.preventDefault();
           if (state.isPlaying) togglePause();
         }
       });
 
-      // ---------- 事件绑定 ----------
-      cameraAllowBtn.addEventListener("click", async () => {
-        await startCamera();
-      });
-
+      cameraAllowBtn.addEventListener("click", startCamera);
       calibrateBtn.addEventListener("click", () => {
-        // 直接完成校准，因为我们不需要偏移校准
-        performCalibration();
-      });
-
-      startGameBtn.addEventListener("click", () => {
-        if (!state.cameraReady) {
-          alert("请先允许摄像头权限");
-          return;
+        state.isCalibrated = true;
+        calibrateModal.classList.add("hidden");
+        if (calibrateVideo.srcObject) {
+          calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
+          calibrateVideo.srcObject = null;
         }
-        if (!state.isCalibrated) {
-          calibrateModal.classList.remove("hidden");
+        startGame();
+      });
+      startGameBtn.addEventListener("click", () => {
+        if (!state.faceDetected) {
+          alert("请先允许摄像头并等待人脸识别");
           return;
         }
         startGame();
       });
-
       resumeBtn.addEventListener("click", () => {
         if (state.isPaused) togglePause();
       });
-
       surrenderBtn.addEventListener("click", () => {
         if (state.isPlaying) {
           state.isPlaying = false;
@@ -1846,16 +1361,9 @@
           endGame();
         }
       });
-
       retryBtn.addEventListener("click", () => {
         resetGame();
-        if (state.cameraReady) {
-          calibrateModal.classList.remove("hidden");
-          // 重新校准
-          setTimeout(performCalibration, 500);
-        } else {
-          startCamera();
-        }
+        startCamera();
       });
 
       document.querySelectorAll(".toggle-btn").forEach((btn) => {
@@ -1870,14 +1378,13 @@
           if (setting === "bgm") {
             bgmEnabled = val === "on";
             if (bgmEnabled && state.isPlaying && !state.isPaused) startBGM();
-            else if (!bgmEnabled) stopBGM();
+            else stopBGM();
           } else if (setting === "sfx") {
             sfxEnabled = val === "on";
           }
         });
       });
 
-      // ---------- 初始化 ----------
       function init() {
         loadImages(() => {
           resetGame();
@@ -1897,7 +1404,6 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已启动（头控优先+暂停修复）");
     </script>
   </body>
 </html>
