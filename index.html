@@ -6,15 +6,12 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头部控菜</title>
+    <title>像素厨房 · 厨师控菜</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
-      /* 样式保持不变（省略，与之前相同） */
       * {
         margin: 0;
         padding: 0;
@@ -55,17 +52,7 @@
         z-index: 2;
         image-rendering: pixelated;
         touch-action: none;
-      }
-      #webcam {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        z-index: 1;
-        opacity: 0.01;
-        pointer-events: none;
+        cursor: grab;
       }
       .modal-overlay {
         position: absolute;
@@ -229,102 +216,27 @@
           font-size: 40px;
         }
       }
-
-      .calibrate-grid {
-        display: flex;
-        gap: 16px;
-        align-items: center;
-        margin-bottom: 16px;
-      }
-      .calibrate-video-wrap {
-        position: relative;
-        width: 120px;
-        height: 90px;
-        border-radius: 8px;
-        overflow: hidden;
-        border: 2px solid #d0c8b8;
-        flex-shrink: 0;
-        background: #000;
-      }
-      .calibrate-video-wrap video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      .calibrate-video-wrap canvas {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        pointer-events: none;
-      }
-      .calibrate-text {
-        flex: 1;
-        text-align: left;
-        font-size: 10px;
-        line-height: 1.6;
-        color: #5a5248;
-      }
-      .calibrate-text .highlight {
-        color: #e67e22;
-        font-weight: bold;
-      }
-      @media (max-width: 400px) {
-        .calibrate-grid {
-          flex-direction: column;
-          align-items: center;
-        }
-        .calibrate-video-wrap {
-          width: 160px;
-          height: 120px;
-        }
-      }
     </style>
   </head>
   <body>
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
-      <video id="webcam" playsinline muted></video>
 
-      <!-- 弹窗：摄像头权限 -->
-      <div id="cameraModal" class="modal-overlay">
+      <!-- 开始弹窗 -->
+      <div id="startOverlay" class="modal-overlay">
         <div class="modal-card">
-          <h2>📷 开启摄像头</h2>
-          <p>
-            向左歪头 → 接左道食材<br />向右歪头 → 接右道食材<br />抬头 →
-            出餐上菜
+          <h2>👨‍🍳 像素厨房</h2>
+          <p style="font-size: 11px">
+            ← 在屏幕上左右滑动移动厨师 →<br />点击屏幕任意处 = 抬头出餐
           </p>
-          <button class="btn" id="cameraAllowBtn">📸 允许并开始</button>
+          <button class="btn" id="startGameBtn">🔥 开始游戏</button>
           <div style="margin-top: 14px; font-size: 9px; color: #7a7268">
-            仅用于头部追踪
+            键盘 ← → 移动，↑ 出餐
           </div>
         </div>
       </div>
 
-      <!-- 弹窗：鼻尖校准 -->
-      <div id="calibrateModal" class="modal-overlay hidden">
-        <div class="modal-card" style="max-width: 400px">
-          <h2>🎯 鼻尖校准</h2>
-          <div class="calibrate-grid">
-            <div class="calibrate-video-wrap" id="calibrateVideoWrap">
-              <video id="calibrateVideo" playsinline muted></video>
-              <canvas id="calibrateOverlay" width="160" height="120"></canvas>
-            </div>
-            <div class="calibrate-text">
-              <p>请将头部摆正，<br />眼睛直视屏幕中心。</p>
-              <p>
-                <span class="highlight">🔴 红圈</span>
-                将追踪你的鼻尖，<br />摆正后点击下方按钮。
-              </p>
-            </div>
-          </div>
-          <button class="btn" id="calibrateBtn">✅ 已摆正，开始游戏</button>
-        </div>
-      </div>
-
-      <!-- 弹窗：暂停 -->
+      <!-- 暂停 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -367,7 +279,7 @@
         </div>
       </div>
 
-      <!-- 弹窗：结算 -->
+      <!-- 结算 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -390,50 +302,21 @@
           <button class="btn" id="retryBtn">🔄 再来一局</button>
         </div>
       </div>
-
-      <!-- 弹窗：开始游戏 -->
-      <div
-        id="startOverlay"
-        class="modal-overlay"
-        style="background: rgba(255, 248, 240, 0.75)"
-      >
-        <div class="modal-card" style="background: #fffefc">
-          <h2>👨‍🍳 像素厨房</h2>
-          <p style="font-size: 11px">头部控制 · 接食材 · 做菜上桌</p>
-          <button class="btn" id="startGameBtn">🔥 开始游戏</button>
-          <div style="margin-top: 14px; font-size: 9px; color: #7a7268">
-            ←歪头移动 · 抬头出餐→
-          </div>
-        </div>
-      </div>
     </div>
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 最终修复版（摄像头强制可见 + 传送带方向调整 + 菜单简化）
+      //  厨师大冒险 - 触摸+键盘控制，传送带无缝滚动，锅显示
       // ================================================================
-
-      if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
-        alert("⚠️ 关键库加载失败，请检查网络。");
-        throw new Error("FaceMesh or Camera not loaded");
-      }
 
       // ---------- DOM 引用 ----------
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
-      const video = document.getElementById("webcam");
-      const calibrateVideo = document.getElementById("calibrateVideo");
-      const calibrateOverlay = document.getElementById("calibrateOverlay");
-      const overlayCtx = calibrateOverlay.getContext("2d");
 
-      const cameraModal = document.getElementById("cameraModal");
-      const calibrateModal = document.getElementById("calibrateModal");
+      const startOverlay = document.getElementById("startOverlay");
       const pauseModal = document.getElementById("pauseModal");
       const resultModal = document.getElementById("resultModal");
-      const startOverlay = document.getElementById("startOverlay");
 
-      const cameraAllowBtn = document.getElementById("cameraAllowBtn");
-      const calibrateBtn = document.getElementById("calibrateBtn");
       const startGameBtn = document.getElementById("startGameBtn");
       const resumeBtn = document.getElementById("resumeBtn");
       const surrenderBtn = document.getElementById("surrenderBtn");
@@ -449,8 +332,6 @@
         const rect = canvas.parentElement.getBoundingClientRect();
         canvas.width = rect.width;
         canvas.height = rect.height;
-        calibrateOverlay.width = 160;
-        calibrateOverlay.height = 120;
       }
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
@@ -538,11 +419,7 @@
         maxCombo: 0,
         chefX: 0.5,
         targetX: 0.5,
-        headX: 0.5,
-        headY: 0.5,
         isHeadUp: false,
-        calibrateOffsetX: 0,
-        isCalibrated: false,
         ingredients: [],
         pot: {},
         menu: [],
@@ -552,8 +429,6 @@
         rightDemand: null,
         timerInterval: null,
         queueTimer: 0,
-        cameraReady: false,
-        faceMesh: null,
         beltOffset: 0,
       };
 
@@ -637,20 +512,6 @@
       }
       function lerp(a, b, t) {
         return a + (b - a) * t;
-      }
-      function getPos(row, col) {
-        const w = canvas.width,
-          h = canvas.height;
-        const cellH = h / ROWS,
-          cellW = w / COLS;
-        return {
-          x: col * cellW,
-          y: row * cellH,
-          w: cellW,
-          h: cellH,
-          cx: col * cellW + cellW / 2,
-          cy: row * cellH + cellH / 2,
-        };
       }
 
       // ---------- 菜单生成 ----------
@@ -831,7 +692,7 @@
           return;
         }
 
-        // 传送带向下滚动（offset 累加，绘制时 y = beltTop + offset % imgH 实现向下）
+        // 传送带滚动（向下，累积偏移）
         state.beltOffset += deltaTime * 35;
 
         state.queueTimer += deltaTime;
@@ -842,16 +703,9 @@
 
         updateIngredients();
 
+        // 平滑跟随目标位置
         state.chefX = lerp(state.chefX, state.targetX, 0.18);
         state.chefX = clamp(state.chefX, 0.08, 0.92);
-
-        const headUp = state.headY < 0.35;
-        if (headUp && !state.isHeadUp) {
-          state.isHeadUp = true;
-          serveDish();
-        } else if (!headUp) {
-          state.isHeadUp = false;
-        }
 
         updateUI();
       }
@@ -885,28 +739,28 @@
         images.pot.onload = onLoad;
         images.pot.onerror = onLoad;
         images.pot.src =
-          "https://pic.pngsucai.com/00/81/64/6303326196b523d4.webp";
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
         images.dish = new Image();
         images.dish.crossOrigin = "anonymous";
         images.dish.onload = onLoad;
         images.dish.onerror = onLoad;
         images.dish.src =
-          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为成品菜链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
         images.leftTable = new Image();
         images.leftTable.crossOrigin = "anonymous";
         images.leftTable.onload = onLoad;
         images.leftTable.onerror = onLoad;
         images.leftTable.src =
-          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为左桌链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
         images.rightTable = new Image();
         images.rightTable.crossOrigin = "anonymous";
         images.rightTable.onload = onLoad;
         images.rightTable.onerror = onLoad;
         images.rightTable.src =
-          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 替换为右桌链接
+          "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
       }
 
       // ---------- 绘制函数 ----------
@@ -922,7 +776,7 @@
         ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
-        // 网格线
+        // 网格线（浅）
         ctx.strokeStyle = "rgba(200, 190, 175, 0.2)";
         ctx.lineWidth = 1;
         for (let r = 0; r <= ROWS; r++) {
@@ -946,22 +800,23 @@
         ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
         ctx.fillRect(0, beltTop, W, beltHeight);
 
-        // 传送带图片向下滚动（使用 + offset 实现向下）
+        // 传送带图片向下滚动（无缝拼接）
         if (
           images.belt &&
           images.belt.complete &&
           images.belt.naturalWidth > 0
         ) {
           const imgH = beltHeight;
-          const offset = state.beltOffset % imgH;
-          // 第一张从 beltTop + offset 开始（向下移动）
+          // 取模确保 offset 在 [0, imgH) 范围内
+          const offset = ((state.beltOffset % imgH) + imgH) % imgH;
+          // 绘制第一张（从 beltTop + offset 开始，向下移动）
           ctx.drawImage(images.belt, 0, beltTop + offset, W, imgH);
-          // 第二张从 beltTop + offset - imgH 开始（如果 offset 不为0，则第二张在下方）
+          // 绘制第二张（接在下方，即 beltTop + offset - imgH）
           ctx.drawImage(images.belt, 0, beltTop + offset - imgH, W, imgH);
         }
 
-        // 滚动条纹
-        const stripeOffset = state.beltOffset % 30;
+        // 滚动条纹（与图片同步）
+        const stripeOffset = ((state.beltOffset % 30) + 30) % 30;
         for (
           let y = beltTop - 30 + stripeOffset;
           y < beltBottom + 30;
@@ -1006,67 +861,100 @@
           ctx.shadowBlur = 0;
         });
 
-        // ---------- 厨师位置：直接显示摄像头视频（强制可见） ----------
+        // ---------- 厨师（带倾斜） ----------
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
+        const tiltAngle = (state.chefX - 0.5) * 0.6;
 
-        // 先绘制一个半透明背景，以便确认区域
-        ctx.fillStyle = "rgba(0, 255, 0, 0.1)"; // 调试用
-        ctx.fillRect(
-          chefX - chefSize / 2,
-          chefY - chefSize / 2,
-          chefSize,
-          chefSize,
+        ctx.save();
+        ctx.translate(chefX, chefY + chefSize * 0.4);
+        ctx.rotate(tiltAngle);
+
+        // 身体（亮蓝色）
+        ctx.shadowColor = "rgba(0,0,0,0.1)";
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          -chefSize * 0.3,
+          chefSize * 0.5,
+          chefSize * 0.6,
+          0,
+          0,
+          Math.PI * 2,
         );
+        ctx.fillStyle = "#3498db";
+        ctx.fill();
+        // 围裙
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          -chefSize * 0.15,
+          chefSize * 0.4,
+          chefSize * 0.5,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        // 头
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(0, -chefSize * 0.55, chefSize * 0.3, 0, Math.PI * 2);
+        ctx.fillStyle = "#f5d6a8";
+        ctx.fill();
+        // 帽子
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          -chefSize * 0.85,
+          chefSize * 0.35,
+          chefSize * 0.25,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.fillStyle = "#e74c3c";
+        ctx.beginPath();
+        ctx.ellipse(
+          0,
+          -chefSize * 0.9,
+          chefSize * 0.25,
+          chefSize * 0.12,
+          0,
+          0,
+          Math.PI * 2,
+        );
+        ctx.fill();
+        // 眼睛
+        const eyeOffset = (state.chefX - 0.5) * 10;
+        ctx.fillStyle = "#2c3e50";
+        ctx.beginPath();
+        ctx.arc(-10 + eyeOffset, -chefSize * 0.6, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(10 + eyeOffset, -chefSize * 0.6, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "#fff";
+        ctx.beginPath();
+        ctx.arc(-8 + eyeOffset, -chefSize * 0.64, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(12 + eyeOffset, -chefSize * 0.64, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+        // 微笑
+        ctx.strokeStyle = "#c0392b";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(0, -chefSize * 0.45, 10, 0.1, Math.PI - 0.1);
+        ctx.stroke();
 
-        // 绘制视频画面
-        if (video.readyState >= 2 && video.videoWidth > 0) {
-          // 视频已就绪，直接绘制在厨师区域
-          const aspect = video.videoWidth / video.videoHeight;
-          let drawW, drawH, dx, dy;
-          const targetW = chefSize * 0.9;
-          const targetH = chefSize * 1.1;
-          if (aspect > 1) {
-            drawW = targetW;
-            drawH = drawW / aspect;
-            dx = -drawW / 2;
-            dy = -chefSize * 0.5 - drawH / 2;
-          } else {
-            drawH = targetH;
-            drawW = drawH * aspect;
-            dx = -drawW / 2;
-            dy = -chefSize * 0.5 - drawH / 2;
-          }
-          const scale = 1.2;
-          drawW *= scale;
-          drawH *= scale;
-          dx = -drawW / 2;
-          dy = -chefSize * 0.5 - drawH / 2;
-
-          ctx.save();
-          ctx.translate(chefX, chefY + chefSize * 0.4);
-          ctx.drawImage(video, dx, dy, drawW, drawH);
-          ctx.restore();
-        } else {
-          // 视频未就绪，显示占位
-          ctx.save();
-          ctx.translate(chefX, chefY + chefSize * 0.4);
-          ctx.beginPath();
-          ctx.arc(0, -chefSize * 0.25, chefSize * 0.4, 0, Math.PI * 2);
-          ctx.fillStyle = "#ff0000"; // 红色表示未就绪
-          ctx.fill();
-          ctx.strokeStyle = "#b0a898";
-          ctx.lineWidth = 2;
-          ctx.stroke();
-          ctx.font = "24px serif";
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillStyle = "#fff";
-          ctx.fillText("⏳", 0, -chefSize * 0.25);
-          ctx.restore();
-          console.log("视频未就绪", video.readyState);
-        }
+        ctx.shadowBlur = 0;
+        ctx.restore();
 
         // ---------- 抬头时显示“一盘菜” ----------
         if (state.menuComplete && state.isPlaying) {
@@ -1095,7 +983,7 @@
           ctx.restore();
         }
 
-        // ---------- 锅（图片放大） ----------
+        // ---------- 锅（确保显示） ----------
         const potX = chefX;
         const potY = cellH * 6.2;
         const potW = cellW * 1.2;
@@ -1111,9 +999,24 @@
             potW,
             potH,
           );
+        } else {
+          // 占位锅（橙色）
+          ctx.beginPath();
+          ctx.ellipse(potX, potY, potW * 0.5, potH * 0.5, 0, 0, Math.PI * 2);
+          ctx.fillStyle = "#e67e22";
+          ctx.fill();
+          ctx.strokeStyle = "#d35400";
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.fillStyle = "#fff";
+          ctx.font = "14px sans-serif";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText("锅", potX, potY);
         }
         ctx.shadowBlur = 0;
 
+        // 锅中食材图标
         const potItems = Object.keys(state.pot).filter(
           (key) => state.pot[key] > 0,
         );
@@ -1136,7 +1039,7 @@
           ctx.fillText("🥘", potX, potY - potH * 0.05);
         }
 
-        // ---------- 菜单（右移，只显示图标和数字，无文字） ----------
+        // ---------- 菜单 ----------
         const menuX = cellW * 2.8;
         const menuY = cellH * 5.2;
         const menuW = cellW * 0.9;
@@ -1155,7 +1058,6 @@
         ctx.roundRect(menuX, menuY, menuW, menuH, 8);
         ctx.stroke();
 
-        // 菜名显示（保留）
         ctx.font = 'bold 9px "Press Start 2P", monospace';
         ctx.textAlign = "center";
         ctx.textBaseline = "top";
@@ -1177,35 +1079,37 @@
             const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
             const collected = state.pot[item.id] || 0;
             const needed = item.count;
-            // 只显示图标，不显示文字
-            ctx.font = "20px serif"; // 图标放大
+            // 图标
+            ctx.font = "22px serif";
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
             ctx.fillStyle = "#3d3a36";
             ctx.fillText(ing ? ing.emoji : "🍽", menuX + 6, menuY + yOff);
-            // 数字（0/1 等）紧挨着图标，间距缩小
-            ctx.font = '7px "Press Start 2P", monospace';
-            ctx.textAlign = "left";
+            // 数字（右对齐，字号放大）
+            ctx.font = '9px "Press Start 2P", monospace';
+            ctx.textAlign = "right";
             ctx.textBaseline = "top";
             ctx.fillStyle = "#3d3a36";
             ctx.fillText(
               `${collected}/${needed}`,
-              menuX + 30,
-              menuY + yOff + 6,
+              menuX + menuW - 8,
+              menuY + yOff + 2,
             );
-            // 进度条（没有灰色背景，只画彩色条）
-            const barX = menuX + 64;
-            const barY = menuY + yOff + 8;
-            const barW = menuW - 76;
+            // 进度条
+            const barX = menuX + 34;
+            const barY = menuY + yOff + 12;
+            const barW = menuW - 46;
             const barH = 6;
             const fillW = (collected / needed) * barW;
+            ctx.fillStyle = "#ecf0f1";
+            ctx.fillRect(barX, barY, barW, barH);
             ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
             ctx.fillRect(barX, barY, Math.min(fillW, barW), barH);
             yOff += 24;
           });
         }
 
-        // ---------- 餐厅区域（实色） ----------
+        // ---------- 餐厅区域 ----------
         const restaurantTop = cellH * 7.3;
         const restaurantBottom = cellH * 9.8;
         const restaurantH = restaurantBottom - restaurantTop;
@@ -1407,7 +1311,7 @@
         ctx.textBaseline = "bottom";
         ctx.font = '7px "Press Start 2P", monospace';
         ctx.fillStyle = "#b0a898";
-        ctx.fillText("←歪头  ·  抬头→", 10, H - 8);
+        ctx.fillText("←滑动  ·  点击出餐→", 10, H - 8);
       }
 
       // ---- roundRect polyfill ----
@@ -1458,15 +1362,6 @@
 
       // ---------- 重置 ----------
       function resetGame() {
-        if (video.srcObject) {
-          video.srcObject.getTracks().forEach((track) => track.stop());
-          video.srcObject = null;
-        }
-        if (calibrateVideo.srcObject) {
-          calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
-          calibrateVideo.srcObject = null;
-        }
-        state.cameraReady = false;
         state.isPlaying = false;
         state.isPaused = false;
         state.isGameOver = false;
@@ -1478,8 +1373,6 @@
         state.maxCombo = 0;
         state.chefX = 0.5;
         state.targetX = 0.5;
-        state.headX = 0.5;
-        state.headY = 0.5;
         state.isHeadUp = false;
         state.ingredients = [];
         state.pot = {};
@@ -1490,7 +1383,6 @@
         state.rightDemand = null;
         state.queueTimer = 0;
         state.beltOffset = 0;
-        state.isCalibrated = false;
         if (state.timerInterval) {
           clearInterval(state.timerInterval);
           state.timerInterval = null;
@@ -1530,201 +1422,96 @@
         }
       }
 
-      // ---------- 校准覆盖层 ----------
-      function updateCalibrateOverlay(noseX, noseY) {
-        const cw = calibrateOverlay.width;
-        const ch = calibrateOverlay.height;
-        overlayCtx.clearRect(0, 0, cw, ch);
-        const x = noseX * cw;
-        const y = noseY * ch;
-        overlayCtx.beginPath();
-        overlayCtx.arc(x, y, 12, 0, Math.PI * 2);
-        overlayCtx.strokeStyle = "#ff4444";
-        overlayCtx.lineWidth = 3;
-        overlayCtx.stroke();
-        overlayCtx.fillStyle = "rgba(255,68,68,0.2)";
-        overlayCtx.fill();
-        overlayCtx.beginPath();
-        overlayCtx.moveTo(x - 20, y);
-        overlayCtx.lineTo(x + 20, y);
-        overlayCtx.moveTo(x, y - 20);
-        overlayCtx.lineTo(x, y + 20);
-        overlayCtx.strokeStyle = "rgba(255,255,255,0.7)";
-        overlayCtx.lineWidth = 1.5;
-        overlayCtx.stroke();
-      }
+      // ---------- 控制：触摸/鼠标拖拽 ----------
+      let isDragging = false;
+      let lastTouchX = 0;
 
-      function clearCalibrateOverlay() {
-        overlayCtx.clearRect(
-          0,
-          0,
-          calibrateOverlay.width,
-          calibrateOverlay.height,
-        );
-      }
-
-      // ---------- MediaPipe 初始化 ----------
-      function initFaceMesh() {
-        const faceMesh = new FaceMesh({
-          locateFile: (file) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
-        });
-        faceMesh.setOptions({
-          maxNumFaces: 1,
-          refineLandmarks: true,
-          minDetectionConfidence: 0.6,
-          minTrackingConfidence: 0.5,
-        });
-        faceMesh.onResults((results) => {
-          if (
-            results.multiFaceLandmarks &&
-            results.multiFaceLandmarks.length > 0
-          ) {
-            const nose = results.multiFaceLandmarks[0][1];
-            if (nose) {
-              let rawX = nose.x;
-              let rawY = nose.y;
-              if (state.isCalibrated) {
-                rawX = clamp(rawX - state.calibrateOffsetX, 0, 1);
-              }
-              state.headX = clamp(rawX, 0, 1);
-              state.headY = clamp(rawY, 0, 1);
-
-              if (!calibrateModal.classList.contains("hidden")) {
-                updateCalibrateOverlay(nose.x, nose.y);
-              }
-
-              let target = 0.5;
-              const x = state.headX;
-              if (x < 0.4) {
-                target = 0.1 + (x / 0.4) * 0.3;
-              } else if (x > 0.6) {
-                target = 0.9 - ((1 - x) / 0.4) * 0.3;
-              } else {
-                target = 0.3 + ((x - 0.4) / 0.2) * 0.4;
-              }
-              state.targetX = clamp(target, 0.05, 0.95);
-            }
-          } else {
-            if (!calibrateModal.classList.contains("hidden")) {
-              clearCalibrateOverlay();
-            }
+      function handlePointerDown(e) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const x = (clientX - rect.left) / rect.width;
+        isDragging = true;
+        lastTouchX = x;
+        // 点击即为抬头
+        if (!isDragging) {
+          // 只点击不拖动时触发抬头
+          if (state.isPlaying && !state.isPaused && !state.isGameOver) {
+            serveDish();
           }
-        });
-        return faceMesh;
+        }
       }
 
-      // ---------- 校准 ----------
-      let calibrationCount = 0;
-      let calibXSum = 0;
-
-      function performCalibration() {
-        if (state.headX > 0.1 && state.headX < 0.9) {
-          calibXSum += state.headX;
-          calibrationCount++;
+      function handlePointerMove(e) {
+        e.preventDefault();
+        if (!isDragging) return;
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const x = (clientX - rect.left) / rect.width;
+        const delta = x - lastTouchX;
+        if (Math.abs(delta) > 0.01) {
+          // 移动厨师
+          state.targetX = clamp(state.targetX + delta * 1.5, 0.05, 0.95);
+          lastTouchX = x;
         }
-        if (calibrationCount >= 10) {
-          const avgX = calibXSum / calibrationCount;
-          state.calibrateOffsetX = avgX - 0.5;
-          state.isCalibrated = true;
-          calibrateModal.classList.add("hidden");
-          if (calibrateVideo.srcObject) {
-            calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
-            calibrateVideo.srcObject = null;
+      }
+
+      function handlePointerUp(e) {
+        e.preventDefault();
+        isDragging = false;
+        // 如果几乎没移动，视为点击（抬头）
+        // 但为了简化，我们使用单独的点击事件
+      }
+
+      // 点击抬头（独立于拖拽）
+      function handleCanvasClick(e) {
+        if (state.isPlaying && !state.isPaused && !state.isGameOver) {
+          serveDish();
+        }
+      }
+
+      // 绑定事件
+      canvas.addEventListener("mousedown", handlePointerDown);
+      canvas.addEventListener("mousemove", handlePointerMove);
+      canvas.addEventListener("mouseup", handlePointerUp);
+      canvas.addEventListener("mouseleave", handlePointerUp);
+      canvas.addEventListener("touchstart", handlePointerDown, {
+        passive: false,
+      });
+      canvas.addEventListener("touchmove", handlePointerMove, {
+        passive: false,
+      });
+      canvas.addEventListener("touchend", handlePointerUp, { passive: false });
+      canvas.addEventListener("click", handleCanvasClick);
+
+      // ---------- 键盘控制 ----------
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          state.targetX = clamp(state.targetX - 0.08, 0.05, 0.95);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          state.targetX = clamp(state.targetX + 0.08, 0.05, 0.95);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          if (state.isPlaying && !state.isPaused && !state.isGameOver) {
+            serveDish();
           }
-          startGame();
-        } else {
-          setTimeout(performCalibration, 100);
+        } else if (e.key === " ") {
+          e.preventDefault();
+          if (state.isPlaying) togglePause();
         }
-      }
-
-      // ---------- 启动摄像头 ----------
-      async function startCamera() {
-        if (video.srcObject) {
-          video.srcObject.getTracks().forEach((track) => track.stop());
-          video.srcObject = null;
-        }
-        if (calibrateVideo.srcObject) {
-          calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
-          calibrateVideo.srcObject = null;
-        }
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: "user", width: 320, height: 240 },
-          });
-          video.srcObject = stream;
-          calibrateVideo.srcObject = stream;
-          await video.play();
-          await calibrateVideo.play();
-
-          const faceMesh = initFaceMesh();
-          state.faceMesh = faceMesh;
-          const camera = new Camera(video, {
-            onFrame: async () => {
-              try {
-                await faceMesh.send({ image: video });
-              } catch (_) {}
-            },
-            width: 320,
-            height: 240,
-          });
-          await camera.start();
-          state.cameraReady = true;
-          cameraModal.classList.add("hidden");
-          calibrateModal.classList.remove("hidden");
-          initAudio();
-          console.log("✅ 摄像头启动成功，请进行鼻尖校准");
-          return true;
-        } catch (err) {
-          console.error(err);
-          let msg = "无法访问摄像头: ";
-          if (err.name === "NotAllowedError") msg += "权限被拒绝。";
-          else if (err.name === "NotFoundError") msg += "未检测到摄像头。";
-          else if (err.name === "NotReadableError") msg += "摄像头被占用。";
-          else if (err.name === "AbortError") msg += "启动被中止，请刷新。";
-          else if (err.name === "SecurityError")
-            msg += "安全错误，请使用 HTTPS。";
-          else msg += err.message;
-          alert(msg);
-          return false;
-        }
-      }
+      });
 
       // ---------- 事件绑定 ----------
-      cameraAllowBtn.addEventListener("click", async () => {
-        await startCamera();
-      });
-
-      calibrateBtn.addEventListener("click", () => {
-        calibrationCount = 0;
-        calibXSum = 0;
-        performCalibration();
-      });
-
       startGameBtn.addEventListener("click", () => {
-        if (!state.cameraReady) {
-          alert("请先允许摄像头权限");
-          return;
-        }
-        if (!state.isCalibrated) {
-          calibrateModal.classList.remove("hidden");
-          return;
-        }
         startGame();
-      });
-
-      canvas.addEventListener("click", (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width,
-          y = (e.clientY - rect.top) / rect.height;
-        if (x > 0.7 && y < 0.12) {
-          if (state.isPlaying && !state.isGameOver) togglePause();
-        }
       });
 
       resumeBtn.addEventListener("click", () => {
         if (state.isPaused) togglePause();
       });
+
       surrenderBtn.addEventListener("click", () => {
         if (state.isPlaying) {
           state.isPlaying = false;
@@ -1733,6 +1520,7 @@
           endGame();
         }
       });
+
       retryBtn.addEventListener("click", () => {
         resetGame();
         startGame();
@@ -1757,30 +1545,10 @@
         });
       });
 
-      // 键盘调试
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowLeft") state.targetX = 0.15;
-        else if (e.key === "ArrowRight") state.targetX = 0.85;
-        else if (e.key === "ArrowUp") serveDish();
-        else if (e.key === " ") {
-          e.preventDefault();
-          togglePause();
-        }
-      });
-      document.addEventListener("keyup", (e) => {
-        if (e.key === "ArrowLeft" || e.key === "ArrowRight")
-          state.targetX = 0.5;
-      });
-
       // ---------- 初始化 ----------
       function init() {
         loadImages(() => {
           resetGame();
-          cameraModal.classList.remove("hidden");
-          startOverlay.classList.add("hidden");
-          pauseModal.classList.add("hidden");
-          resultModal.classList.add("hidden");
-          calibrateModal.classList.add("hidden");
           requestAnimationFrame(gameLoop);
         });
       }
@@ -1792,9 +1560,7 @@
         },
         { once: true },
       );
-      console.log(
-        "🍳 像素厨房已加载（摄像头强制可见 + 传送带方向修正 + 菜单简化）",
-      );
+      console.log("🍳 像素厨房已启动（触摸+键盘控制）");
     </script>
   </body>
 </html>
