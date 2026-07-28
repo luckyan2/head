@@ -1697,7 +1697,9 @@
             const noseRoot = landmarks[168] || landmarks[0];
             if (noseTip && noseRoot) {
               // 计算鼻尖相对于鼻根的偏移（水平方向）
-              const dx = noseTip.x - noseRoot.x;
+              // 修复：前置摄像头镜像下，鼻尖坐标需要反转方向
+              // 使用鼻根减鼻尖，使左歪头时厨师向左移动
+              const dx = noseRoot.x - noseTip.x;
               // 使用偏移量控制厨师目标位置
               // 偏移量范围大约 -0.05 ~ 0.05，映射到 -1~1
               let tilt = clamp(dx * 20, -1, 1);
