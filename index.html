@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
+      /* ... 样式与之前相同，此处省略以节省篇幅 ... */
       * {
         margin: 0;
         padding: 0;
@@ -228,8 +229,6 @@
           font-size: 40px;
         }
       }
-
-      /* 校准弹窗布局 */
       .calibrate-grid {
         display: flex;
         gap: 16px;
@@ -251,6 +250,7 @@
         height: 100%;
         object-fit: cover;
         display: block;
+        transform: scaleX(-1); /* 水平镜像 */
       }
       .calibrate-video-wrap canvas {
         position: absolute;
@@ -259,6 +259,7 @@
         width: 100%;
         height: 100%;
         pointer-events: none;
+        transform: scaleX(-1); /* 保持与视频同步镜像 */
       }
       .calibrate-text {
         flex: 1;
@@ -303,10 +304,10 @@
         </div>
       </div>
 
-      <!-- 弹窗：鼻尖校准 -->
+      <!-- 弹窗：鼻尖校准（改为鼻梁竖线） -->
       <div id="calibrateModal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 400px">
-          <h2>🎯 鼻尖校准</h2>
+          <h2>🎯 鼻梁校准</h2>
           <div class="calibrate-grid">
             <div class="calibrate-video-wrap" id="calibrateVideoWrap">
               <video id="calibrateVideo" playsinline muted></video>
@@ -315,8 +316,8 @@
             <div class="calibrate-text">
               <p>请将头部摆正，<br />眼睛直视屏幕中心。</p>
               <p>
-                <span class="highlight">🔴 红圈</span>
-                将追踪你的鼻尖，<br />摆正后点击下方按钮。
+                <span class="highlight">🔴 红线</span>
+                追踪鼻梁倾斜和长度，<br />摆正后点击下方按钮。
               </p>
             </div>
           </div>
@@ -410,7 +411,7 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 完整头控版（校准+经济系统）
+      //  厨师大冒险 - 完整头控版（鼻梁校准+触控保留）
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
@@ -459,7 +460,7 @@
       const ROWS = 10,
         COLS = 4,
         GAME_DURATION = 90;
-      const INITIAL_GOLD = 50; // 初始金币
+      const INITIAL_GOLD = 50;
 
       // ---------- 音效系统 ----------
       let audioCtx = null;
@@ -536,8 +537,8 @@
         isPaused: false,
         isGameOver: false,
         timeLeft: GAME_DURATION,
-        gold: INITIAL_GOLD, // 当前金币
-        score: 0, // 总金币（最终结算）
+        gold: INITIAL_GOLD,
+        score: 0,
         dishesServed: 0,
         ingredientsCollected: 0,
         combo: 0,
@@ -547,8 +548,10 @@
         headX: 0.5,
         headY: 0.5,
         isHeadUp: false,
+        // 校准偏移
         calibrateOffsetX: 0,
         isCalibrated: false,
+        // 食材
         ingredients: [],
         pot: {},
         menu: [],
@@ -556,6 +559,8 @@
         dishName: "",
         leftDemand: null,
         rightDemand: null,
+        currentRecipeReward: 0,
+        currentRecipeCost: 0,
         timerInterval: null,
         queueTimer: 0,
         cameraReady: false,
@@ -589,7 +594,6 @@
         { id: "oil", name: "油", color: "#f39c12", emoji: "🫒", cost: 1 },
       ];
 
-      // 菜谱：配方 + 收益
       const RECIPES = [
         {
           name: "番茄炒蛋",
@@ -687,7 +691,6 @@
         state.menu.forEach((item) => {
           state.pot[item.id] = 0;
         });
-        // 计算总成本
         let totalCost = 0;
         state.menu.forEach((item) => {
           const ingDef = INGREDIENT_TYPES.find((i) => i.id === item.id);
@@ -713,7 +716,6 @@
         }
       }
 
-      // ---------- 检查菜单是否完成 ----------
       function checkMenuComplete() {
         if (state.menuComplete) return true;
         let allDone = true;
@@ -728,7 +730,6 @@
         return false;
       }
 
-      // ---------- 出餐（抬头触发） ----------
       function serveDish() {
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
         if (!state.menuComplete) {
@@ -736,15 +737,13 @@
           return;
         }
 
-        // 计算收益
         const profit = state.currentRecipeReward - state.currentRecipeCost;
         state.gold += profit;
-        state.score += profit; // 累计总金币
+        state.score += profit;
         state.dishesServed++;
         state.combo++;
         if (state.combo > state.maxCombo) state.maxCombo = state.combo;
 
-        // 匹配需求额外奖励
         let matched = false;
         if (state.leftDemand && state.leftDemand.dish === state.dishName) {
           state.gold += 5;
@@ -762,15 +761,14 @@
         }
         if (!matched) sfxServe();
         else sfxServe();
-
-        sfxGold(); // 金币音效
-
-        // 生成新菜单
+        sfxGold();
         generateMenu();
-
-        // 如果金币不足，游戏结束（但由玩家自己控制）
+        if (!matched) {
+          state.combo = Math.floor(state.combo / 2);
+        }
+        if (matched) sfxCombo();
+        else sfxServe();
         if (state.gold < 0) state.gold = 0;
-
         updateUI();
       }
 
@@ -806,7 +804,6 @@
         state.ingredients.push(ingredient);
       }
 
-      // ---------- 更新食材（含金币扣减） ----------
       function updateIngredients() {
         const cellH = canvas.height / ROWS;
         for (let i = state.ingredients.length - 1; i >= 0; i--) {
@@ -834,12 +831,7 @@
           const threshold = 55;
 
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
-            // 检查金币是否足够购买食材
-            if (state.gold < ing.cost) {
-              // 金币不足，无法拾取，但不会消失，继续掉落
-              continue;
-            }
-            // 扣金币
+            if (state.gold < ing.cost) continue; // 金币不足
             state.gold -= ing.cost;
             ing.alive = false;
             state.ingredientsCollected++;
@@ -874,20 +866,19 @@
           return;
         }
 
-        // 传送带滚动
         state.beltOffset += deltaTime * 35;
-
         state.queueTimer += deltaTime;
         if (state.queueTimer > 0.9 + rand(0, 0.4)) {
           state.queueTimer = 0;
           queueIngredient();
         }
-
         updateIngredients();
 
+        // 平滑跟随头部（或触控）
         state.chefX = lerp(state.chefX, state.targetX, 0.18);
         state.chefX = clamp(state.chefX, 0.08, 0.92);
 
+        // 抬头检测：鼻梁变短（headY 变小）
         const headUp = state.headY < 0.35;
         if (headUp && !state.isHeadUp) {
           state.isHeadUp = true;
@@ -895,7 +886,6 @@
         } else if (!headUp) {
           state.isHeadUp = false;
         }
-
         updateUI();
       }
 
@@ -915,7 +905,6 @@
           loaded++;
           if (loaded === total) callback();
         }
-
         images.belt = new Image();
         images.belt.crossOrigin = "anonymous";
         images.belt.onload = onLoad;
@@ -960,8 +949,6 @@
           cellH = H / ROWS;
 
         ctx.clearRect(0, 0, W, H);
-
-        // 背景
         ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
@@ -981,15 +968,13 @@
           ctx.stroke();
         }
 
-        // ---------- 传输带区域 ----------
+        // 传输带
         const beltTop = cellH * 1.5;
         const beltBottom = cellH * 6.8;
         const beltHeight = beltBottom - beltTop;
-
         ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
         ctx.fillRect(0, beltTop, W, beltHeight);
 
-        // 传送带图片向下滚动（无缝拼接）
         if (
           images.belt &&
           images.belt.complete &&
@@ -1001,7 +986,6 @@
           ctx.drawImage(images.belt, 0, beltTop + offset - imgH, W, imgH);
         }
 
-        // 滚动条纹
         const stripeOffset = ((state.beltOffset % 30) + 30) % 30;
         for (
           let y = beltTop - 30 + stripeOffset;
@@ -1014,7 +998,7 @@
           ctx.fillRect(0, y + 15, W, 4);
         }
 
-        // ---------- 食材 ----------
+        // 食材
         state.ingredients.forEach((ing) => {
           if (!ing.alive) return;
           const size = ing.size;
@@ -1047,7 +1031,7 @@
           ctx.shadowBlur = 0;
         });
 
-        // ---------- 厨师（带倾斜） ----------
+        // 厨师
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
@@ -1057,7 +1041,7 @@
         ctx.translate(chefX, chefY + chefSize * 0.4);
         ctx.rotate(tiltAngle);
 
-        // 身体（亮蓝色）
+        // 身体
         ctx.shadowColor = "rgba(0,0,0,0.1)";
         ctx.shadowBlur = 10;
         ctx.beginPath();
@@ -1072,7 +1056,6 @@
         );
         ctx.fillStyle = "#3498db";
         ctx.fill();
-        // 围裙
         ctx.beginPath();
         ctx.ellipse(
           0,
@@ -1132,17 +1115,15 @@
         ctx.beginPath();
         ctx.arc(12 + eyeOffset, -chefSize * 0.64, 1.8, 0, Math.PI * 2);
         ctx.fill();
-        // 微笑
         ctx.strokeStyle = "#c0392b";
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(0, -chefSize * 0.45, 10, 0.1, Math.PI - 0.1);
         ctx.stroke();
-
         ctx.shadowBlur = 0;
         ctx.restore();
 
-        // ---------- 抬头时显示“一盘菜” ----------
+        // 出餐图标
         if (state.menuComplete && state.isPlaying) {
           ctx.save();
           if (
@@ -1169,12 +1150,11 @@
           ctx.restore();
         }
 
-        // ---------- 锅 ----------
+        // 锅
         const potX = chefX;
         const potY = cellH * 6.2;
         const potW = cellW * 1.2;
         const potH = cellH * 0.85;
-
         ctx.shadowColor = "rgba(0,0,0,0.08)";
         ctx.shadowBlur = 12;
         if (images.pot && images.pot.complete && images.pot.naturalWidth > 0) {
@@ -1186,7 +1166,6 @@
             potH,
           );
         } else {
-          // 备用
           ctx.beginPath();
           ctx.ellipse(potX, potY, potW * 0.5, potH * 0.5, 0, 0, Math.PI * 2);
           ctx.fillStyle = "#e67e22";
@@ -1196,7 +1175,6 @@
           ctx.stroke();
         }
         ctx.shadowBlur = 0;
-
         const potItems = Object.keys(state.pot).filter(
           (key) => state.pot[key] > 0,
         );
@@ -1219,12 +1197,11 @@
           ctx.fillText("🥘", potX, potY - potH * 0.05);
         }
 
-        // ---------- 菜单 ----------
+        // 菜单
         const menuX = cellW * 2.8;
         const menuY = cellH * 5.2;
         const menuW = cellW * 0.9;
         const menuH = cellH * 1.6;
-
         ctx.fillStyle = "rgba(255, 248, 240, 0.95)";
         ctx.shadowBlur = 10;
         ctx.shadowColor = "rgba(0,0,0,0.05)";
@@ -1259,13 +1236,11 @@
             const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
             const collected = state.pot[item.id] || 0;
             const needed = item.count;
-            // 图标
             ctx.font = "20px serif";
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
             ctx.fillStyle = "#3d3a36";
             ctx.fillText(ing ? ing.emoji : "🍽", menuX + 4, menuY + yOff);
-            // 数字（右对齐）
             ctx.font = '8px "Press Start 2P", monospace';
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
@@ -1275,7 +1250,6 @@
               menuX + menuW - 6,
               menuY + yOff + 2,
             );
-            // 进度条
             const barX = menuX + 32;
             const barY = menuY + yOff + 12;
             const barW = menuW - 44;
@@ -1289,11 +1263,10 @@
           });
         }
 
-        // ---------- 餐厅区域 ----------
+        // 餐厅
         const restaurantTop = cellH * 7.3;
         const restaurantBottom = cellH * 9.8;
         const restaurantH = restaurantBottom - restaurantTop;
-
         ctx.fillStyle = "#e8ddd0";
         ctx.shadowBlur = 6;
         ctx.shadowColor = "rgba(0,0,0,0.05)";
@@ -1306,7 +1279,6 @@
         ctx.beginPath();
         ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
         ctx.stroke();
-
         ctx.strokeStyle = "#d0c8b8";
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
@@ -1321,7 +1293,6 @@
         const leftTableW = cellW * 1.6;
         const leftTableY = restaurantTop + restaurantH * 0.2;
         const leftTableH = restaurantH * 0.6;
-
         if (
           images.leftTable &&
           images.leftTable.complete &&
@@ -1348,7 +1319,6 @@
           ctx.roundRect(leftTableX, leftTableY, leftTableW, leftTableH, 8);
           ctx.stroke();
         }
-
         const chairY = leftTableY + leftTableH + 6;
         ctx.font = "20px serif";
         ctx.textAlign = "center";
@@ -1358,7 +1328,6 @@
         ctx.fillText("🪑", leftTableX + 20, chairY + 24);
         ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY);
         ctx.fillText("🪑", leftTableX + leftTableW - 20, chairY + 24);
-
         if (state.leftDemand) {
           const bubbleX = leftTableX + 10;
           const bubbleY = leftTableY - 30;
@@ -1389,7 +1358,6 @@
         const rightTableW = cellW * 1.6;
         const rightTableY = restaurantTop + restaurantH * 0.2;
         const rightTableH = restaurantH * 0.6;
-
         if (
           images.rightTable &&
           images.rightTable.complete &&
@@ -1416,7 +1384,6 @@
           ctx.roundRect(rightTableX, rightTableY, rightTableW, rightTableH, 8);
           ctx.stroke();
         }
-
         ctx.font = "20px serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
@@ -1425,7 +1392,6 @@
         ctx.fillText("🪑", rightTableX + 20, chairY + 24);
         ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY);
         ctx.fillText("🪑", rightTableX + rightTableW - 20, chairY + 24);
-
         if (state.rightDemand) {
           const bubbleX = rightTableX + rightTableW - 70;
           const bubbleY = rightTableY - 30;
@@ -1451,28 +1417,24 @@
           ctx.fillText(state.rightDemand.dish, bubbleX + 30, bubbleY + 34);
         }
 
-        // ---------- 顶部信息 ----------
+        // 顶部信息
         const minutes = Math.floor(state.timeLeft / 60);
         const seconds = Math.floor(state.timeLeft % 60);
         const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
-
         ctx.font = 'bold 14px "Press Start 2P", monospace';
         ctx.textAlign = "left";
         ctx.textBaseline = "top";
         ctx.fillStyle = "#2c3e50";
         ctx.fillText("⏱ " + timeStr, 10, 8);
-
         ctx.textAlign = "center";
         ctx.font = 'bold 12px "Press Start 2P", monospace';
         ctx.fillStyle = "#e67e22";
         ctx.fillText("💰 " + state.gold, W / 2, 8);
-
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
         ctx.font = '18px "Press Start 2P", monospace';
         ctx.fillStyle = "#2c3e50";
         ctx.fillText("⏸", W - 14, 6);
-
         if (state.combo > 1) {
           ctx.textAlign = "center";
           ctx.textBaseline = "top";
@@ -1480,13 +1442,11 @@
           ctx.fillStyle = "#e74c3c";
           ctx.fillText("🔥 x" + state.combo, W / 2, 32);
         }
-
         ctx.textAlign = "right";
         ctx.textBaseline = "top";
         ctx.font = '8px "Press Start 2P", monospace';
         ctx.fillStyle = "#7a7268";
         ctx.fillText("🧺 " + state.ingredientsCollected, W - 10, 34);
-
         ctx.textAlign = "left";
         ctx.textBaseline = "bottom";
         ctx.font = '6px "Press Start 2P", monospace';
@@ -1615,28 +1575,34 @@
         }
       }
 
-      // ---------- 校准覆盖层 ----------
-      function updateCalibrateOverlay(noseX, noseY) {
+      // ---------- 校准覆盖层（鼻梁竖线） ----------
+      function updateCalibrateOverlay(noseTip, noseRoot) {
         const cw = calibrateOverlay.width;
         const ch = calibrateOverlay.height;
         overlayCtx.clearRect(0, 0, cw, ch);
-        const x = noseX * cw;
-        const y = noseY * ch;
+        if (!noseTip || !noseRoot) return;
+        // 映射到画布坐标
+        const x1 = noseRoot.x * cw;
+        const y1 = noseRoot.y * ch;
+        const x2 = noseTip.x * cw;
+        const y2 = noseTip.y * ch;
+        // 绘制鼻梁竖线（红色）
         overlayCtx.beginPath();
-        overlayCtx.arc(x, y, 12, 0, Math.PI * 2);
+        overlayCtx.moveTo(x1, y1);
+        overlayCtx.lineTo(x2, y2);
         overlayCtx.strokeStyle = "#ff4444";
         overlayCtx.lineWidth = 3;
         overlayCtx.stroke();
-        overlayCtx.fillStyle = "rgba(255,68,68,0.2)";
+        // 绘制两端的小圆点
+        overlayCtx.beginPath();
+        overlayCtx.arc(x1, y1, 4, 0, Math.PI * 2);
+        overlayCtx.fillStyle = "#ff4444";
         overlayCtx.fill();
         overlayCtx.beginPath();
-        overlayCtx.moveTo(x - 20, y);
-        overlayCtx.lineTo(x + 20, y);
-        overlayCtx.moveTo(x, y - 20);
-        overlayCtx.lineTo(x, y + 20);
-        overlayCtx.strokeStyle = "rgba(255,255,255,0.7)";
-        overlayCtx.lineWidth = 1.5;
-        overlayCtx.stroke();
+        overlayCtx.arc(x2, y2, 4, 0, Math.PI * 2);
+        overlayCtx.fillStyle = "#ff4444";
+        overlayCtx.fill();
+        // 显示倾斜角度和长度提示（可选）
       }
 
       function clearCalibrateOverlay() {
@@ -1665,31 +1631,39 @@
             results.multiFaceLandmarks &&
             results.multiFaceLandmarks.length > 0
           ) {
-            const nose = results.multiFaceLandmarks[0][1];
-            if (nose) {
-              let rawX = nose.x;
-              let rawY = nose.y;
+            const landmarks = results.multiFaceLandmarks[0];
+            // 鼻尖：landmark 1，鼻根（鼻梁上端）：landmark 168（或 0？168 较稳定）
+            const noseTip = landmarks[1];
+            const noseRoot = landmarks[168] || landmarks[0]; // 如果168不存在则用0
+            if (noseTip && noseRoot) {
+              // 计算鼻梁倾斜角度和长度
+              const dx = noseTip.x - noseRoot.x;
+              const dy = noseTip.y - noseRoot.y;
+              // 头部左右倾斜：dx 正负
+              // 头部上下：dy 大小（抬头时 dy 变小）
+              let rawX = noseTip.x;
+              let rawY = noseTip.y;
               if (state.isCalibrated) {
                 rawX = clamp(rawX - state.calibrateOffsetX, 0, 1);
               }
               state.headX = clamp(rawX, 0, 1);
               state.headY = clamp(rawY, 0, 1);
 
+              // 更新校准预览（竖线）
               if (!calibrateModal.classList.contains("hidden")) {
-                updateCalibrateOverlay(nose.x, nose.y);
+                updateCalibrateOverlay(noseTip, noseRoot);
               }
 
-              // 映射到目标位置（左右）
-              let target = 0.5;
-              const x = state.headX;
-              if (x < 0.38) {
-                target = 0.1 + (x / 0.38) * 0.25;
-              } else if (x > 0.62) {
-                target = 0.9 - ((1 - x) / 0.38) * 0.25;
-              } else {
-                target = 0.3 + ((x - 0.38) / 0.24) * 0.4;
-              }
+              // 映射到目标位置：使用 dx 作为倾斜指标
+              // dx 范围大约 -0.05 ~ 0.05，映射到 -1~1
+              let tilt = clamp(dx * 12, -1, 1); // 放大系数
+              let target = 0.5 + tilt * 0.4;
               state.targetX = clamp(target, 0.05, 0.95);
+
+              // 抬头检测：dy 变短（鼻尖接近鼻根）
+              const noseLength = Math.sqrt(dx * dx + dy * dy);
+              // 根据长度变化判断抬头，这里简单用 y 坐标
+              // 我们使用 rawY 即可
             }
           } else {
             if (!calibrateModal.classList.contains("hidden")) {
@@ -1759,7 +1733,7 @@
           cameraModal.classList.add("hidden");
           calibrateModal.classList.remove("hidden");
           initAudio();
-          console.log("✅ 摄像头启动成功，请进行鼻尖校准");
+          console.log("✅ 摄像头启动成功，请进行鼻梁校准");
           return true;
         } catch (err) {
           console.error(err);
@@ -1775,6 +1749,87 @@
           return false;
         }
       }
+
+      // ---------- 触控和鼠标拖拽（保留） ----------
+      let isDragging = false;
+      let lastTouchX = 0;
+
+      function handlePointerDown(e) {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const x = (clientX - rect.left) / rect.width;
+        isDragging = true;
+        lastTouchX = x;
+      }
+
+      function handlePointerMove(e) {
+        e.preventDefault();
+        if (!isDragging) return;
+        const rect = canvas.getBoundingClientRect();
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const x = (clientX - rect.left) / rect.width;
+        const delta = x - lastTouchX;
+        if (Math.abs(delta) > 0.01) {
+          state.targetX = clamp(state.targetX + delta * 1.5, 0.05, 0.95);
+          lastTouchX = x;
+        }
+      }
+
+      function handlePointerUp(e) {
+        e.preventDefault();
+        isDragging = false;
+      }
+
+      // 点击抬头（简单点击即可触发）
+      function handleCanvasClick(e) {
+        if (state.isPlaying && !state.isPaused && !state.isGameOver) {
+          serveDish();
+        }
+      }
+
+      // 绑定事件
+      canvas.addEventListener("mousedown", handlePointerDown);
+      canvas.addEventListener("mousemove", handlePointerMove);
+      canvas.addEventListener("mouseup", handlePointerUp);
+      canvas.addEventListener("mouseleave", handlePointerUp);
+      canvas.addEventListener("touchstart", handlePointerDown, {
+        passive: false,
+      });
+      canvas.addEventListener("touchmove", handlePointerMove, {
+        passive: false,
+      });
+      canvas.addEventListener("touchend", handlePointerUp, { passive: false });
+      canvas.addEventListener("click", handleCanvasClick);
+
+      // 键盘备选
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          state.targetX = clamp(state.targetX - 0.08, 0.05, 0.95);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          state.targetX = clamp(state.targetX + 0.08, 0.05, 0.95);
+        } else if (e.key === "ArrowUp") {
+          e.preventDefault();
+          if (state.isPlaying && !state.isPaused && !state.isGameOver) {
+            serveDish();
+          }
+        } else if (e.key === " ") {
+          e.preventDefault();
+          if (state.isPlaying) togglePause();
+        }
+      });
+
+      // 暂停按钮（点击右上角区域）
+      canvas.addEventListener("click", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+        if (x > 0.7 && y < 0.12) {
+          if (state.isPlaying && !state.isGameOver) togglePause();
+        }
+      });
 
       // ---------- 事件绑定 ----------
       cameraAllowBtn.addEventListener("click", async () => {
@@ -1799,16 +1854,6 @@
         startGame();
       });
 
-      // 暂停按钮（点击右上角区域）
-      canvas.addEventListener("click", (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width;
-        const y = (e.clientY - rect.top) / rect.height;
-        if (x > 0.7 && y < 0.12) {
-          if (state.isPlaying && !state.isGameOver) togglePause();
-        }
-      });
-
       resumeBtn.addEventListener("click", () => {
         if (state.isPaused) togglePause();
       });
@@ -1824,12 +1869,10 @@
 
       retryBtn.addEventListener("click", () => {
         resetGame();
-        // 重新走校准流程
         if (state.cameraReady) {
           calibrateModal.classList.remove("hidden");
           calibrationCount = 0;
           calibXSum = 0;
-          // 重新开始校准
           setTimeout(performCalibration, 500);
         } else {
           startCamera();
@@ -1855,30 +1898,10 @@
         });
       });
 
-      // 键盘备选控制
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowLeft") {
-          e.preventDefault();
-          state.targetX = clamp(state.targetX - 0.08, 0.05, 0.95);
-        } else if (e.key === "ArrowRight") {
-          e.preventDefault();
-          state.targetX = clamp(state.targetX + 0.08, 0.05, 0.95);
-        } else if (e.key === "ArrowUp") {
-          e.preventDefault();
-          if (state.isPlaying && !state.isPaused && !state.isGameOver) {
-            serveDish();
-          }
-        } else if (e.key === " ") {
-          e.preventDefault();
-          if (state.isPlaying) togglePause();
-        }
-      });
-
       // ---------- 初始化 ----------
       function init() {
         loadImages(() => {
           resetGame();
-          // 显示摄像头弹窗
           cameraModal.classList.remove("hidden");
           calibrateModal.classList.add("hidden");
           startOverlay.classList.add("hidden");
@@ -1895,7 +1918,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已启动（头控+经济系统）");
+      console.log("🍳 像素厨房已启动（鼻梁校准+触控保留）");
     </script>
   </body>
 </html>
