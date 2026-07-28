@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
       * {
@@ -24,43 +24,35 @@
       body {
         background: #f5efe6;
         display: flex;
-        flex-direction: column;
         justify-content: center;
         align-items: center;
         min-height: 100vh;
         font-family: "Press Start 2P", monospace;
         touch-action: none;
+        flex-direction: column;
       }
-      /* 顶部状态栏（移出画布） */
-      #top-bar {
+      /* 外部状态栏，放在游戏盒子正上方 */
+      .outer-top-bar {
         width: 100%;
         max-width: 420px;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 8px 12px;
-        background: #fdf8f0;
-        border: 3px solid #d0c8b8;
-        border-bottom: none;
-        border-radius: 12px 12px 0 0;
-        margin-top: 12px;
-        font-family: "Press Start 2P", monospace;
-        font-size: 11px;
+        padding: 0 8px 8px;
         color: #2c3e50;
-        box-shadow: 0 4px 0 rgba(0, 0, 0, 0.05);
+        font-size: 15px;
+        letter-spacing: 1px;
+        margin-bottom: -4px;
       }
-      .top-item {
-        display: flex;
-        align-items: center;
-        gap: 4px;
+      .outer-top-bar span {
+        background: rgba(255, 248, 240, 0.9);
+        padding: 6px 12px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        white-space: nowrap;
       }
-      #top-gold {
-        color: #e67e22;
-        font-weight: bold;
-      }
-      #top-combo {
-        color: #e74c3c;
-        font-weight: bold;
+      #top-time {
+        cursor: pointer;
       }
       #game-wrapper {
         position: relative;
@@ -68,14 +60,13 @@
         max-width: 420px;
         aspect-ratio: 9 / 16;
         background: #fdf8f0;
-        border-radius: 0 0 20px 20px;
+        border-radius: 20px;
         overflow: hidden;
         box-shadow:
           0 8px 0 #d0c8b8,
           0 12px 40px rgba(0, 0, 0, 0.1);
         margin: 0 12px 12px;
         border: 4px solid #d0c8b8;
-        border-top: none;
       }
       #gameCanvas {
         position: absolute;
@@ -145,7 +136,6 @@
       }
       .modal-card h2 {
         font-size: 24px;
-        font-weight: 700;
         margin-bottom: 16px;
         color: #e67e22;
         text-shadow: 2px 2px 0 #f1c40f;
@@ -166,10 +156,8 @@
         font-weight: bold;
         color: #2c2a26;
         cursor: pointer;
-        transition: all 0.05s linear;
         box-shadow: 0 4px 0 #b9770e;
         font-family: "Press Start 2P", monospace;
-        letter-spacing: 0.5px;
       }
       .modal-card .btn:active {
         transform: translateY(4px);
@@ -180,10 +168,6 @@
         border-color: #bdc3c7;
         box-shadow: 0 4px 0 #95a5a6;
         color: #2c3e50;
-      }
-      .modal-card .btn-secondary:active {
-        transform: translateY(4px);
-        box-shadow: 0 0px 0 #95a5a6;
       }
       .modal-card .btn-group {
         display: flex;
@@ -199,14 +183,6 @@
         border-bottom: 2px dotted #d0c8b8;
         font-size: 13px;
       }
-      .settings-row:last-child {
-        border-bottom: none;
-      }
-      .toggle-wrap {
-        display: flex;
-        gap: 8px;
-        align-items: center;
-      }
       .toggle-btn {
         padding: 6px 18px;
         border-radius: 4px;
@@ -216,7 +192,6 @@
         font-size: 12px;
         cursor: pointer;
         font-family: "Press Start 2P", monospace;
-        transition: 0.1s;
       }
       .toggle-btn.active {
         background: #f1c40f;
@@ -228,13 +203,6 @@
         font-weight: bold;
         color: #e67e22;
         text-shadow: 4px 4px 0 #f1c40f;
-        line-height: 1.2;
-      }
-      .score-label {
-        font-size: 14px;
-        color: #7a7268;
-        letter-spacing: 2px;
-        text-transform: uppercase;
       }
       .stat-row {
         display: flex;
@@ -251,19 +219,7 @@
         font-size: 12px;
         color: #7a7268;
       }
-      @media (max-width: 440px) {
-        .modal-card {
-          padding: 20px 16px 24px;
-        }
-        .modal-card h2 {
-          font-size: 20px;
-        }
-        .score-number {
-          font-size: 40px;
-        }
-      }
 
-      /* 校准弹窗专用布局 */
       .calibrate-grid {
         display: flex;
         gap: 16px;
@@ -284,7 +240,6 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        display: block;
         transform: scaleX(-1);
       }
       .calibrate-video-wrap canvas {
@@ -307,32 +262,22 @@
         color: #e67e22;
         font-weight: bold;
       }
-      @media (max-width: 400px) {
-        .calibrate-grid {
-          flex-direction: column;
-          align-items: center;
-        }
-        .calibrate-video-wrap {
-          width: 160px;
-          height: 120px;
-        }
-      }
     </style>
   </head>
   <body>
-    <!-- 顶部状态栏，移到画布外部 -->
-    <div id="top-bar">
-      <span class="top-item" id="top-time">⏱ 01:30</span>
-      <span class="top-item" id="top-gold">💰 50</span>
-      <span class="top-item" id="top-combo"></span>
-      <span class="top-item" id="top-items">🧺 0</span>
+    <!-- 顶部状态栏，直接放在游戏盒子外部 -->
+    <div class="outer-top-bar">
+      <span id="top-time">⏱ 01:30 ⏸</span>
+      <span id="top-gold">💰 50</span>
+      <span id="top-combo" style="color: #e74c3c"></span>
+      <span id="top-items">🧺 0</span>
     </div>
 
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
 
-      <!-- 弹窗：摄像头权限 -->
+      <!-- 弹窗们 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -347,7 +292,6 @@
         </div>
       </div>
 
-      <!-- 弹窗：鼻尖校准 -->
       <div id="calibrateModal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 400px">
           <h2>🎯 视角校准</h2>
@@ -360,7 +304,7 @@
               <p>请将头部摆正，<br />眼睛直视屏幕中心。</p>
               <p>
                 <span class="highlight">🔴 红点</span>
-                将追踪你的面部，<br />摆正后点击下方按钮。
+                追踪你的面部，<br />摆正后点击下方按钮。
               </p>
             </div>
           </div>
@@ -368,11 +312,10 @@
         </div>
       </div>
 
-      <!-- 弹窗：暂停 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
-          <div style="margin: 16px 0 4px">
+          <div style="margin: 16px 0">
             <div class="settings-row">
               <span>🎵 音乐</span>
               <div class="toggle-wrap">
@@ -381,9 +324,8 @@
                   data-setting="bgm"
                   data-val="on"
                 >
-                  开
-                </button>
-                <button class="toggle-btn" data-setting="bgm" data-val="off">
+                  开</button
+                ><button class="toggle-btn" data-setting="bgm" data-val="off">
                   关
                 </button>
               </div>
@@ -396,9 +338,8 @@
                   data-setting="sfx"
                   data-val="on"
                 >
-                  开
-                </button>
-                <button class="toggle-btn" data-setting="sfx" data-val="off">
+                  开</button
+                ><button class="toggle-btn" data-setting="sfx" data-val="off">
                   关
                 </button>
               </div>
@@ -411,7 +352,6 @@
         </div>
       </div>
 
-      <!-- 弹窗：结算 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -435,7 +375,6 @@
         </div>
       </div>
 
-      <!-- 弹窗：开始游戏 -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -454,15 +393,13 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 头部追踪修复版（双眼角度 + 界面优化）
+      //  厨师大冒险 - 双眼角度控制版（完全借鉴滑雪游戏逻辑）
       // ================================================================
-
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
         alert("⚠️ 关键库加载失败，请检查网络。");
         throw new Error("FaceMesh or Camera not loaded");
       }
 
-      // ---------- DOM 引用 ----------
       const canvas = document.getElementById("gameCanvas");
       const ctx = canvas.getContext("2d");
       const video = document.getElementById("webcam");
@@ -470,31 +407,12 @@
       const calibrateOverlay = document.getElementById("calibrateOverlay");
       const overlayCtx = calibrateOverlay.getContext("2d");
 
-      const cameraModal = document.getElementById("cameraModal");
-      const calibrateModal = document.getElementById("calibrateModal");
-      const pauseModal = document.getElementById("pauseModal");
-      const resultModal = document.getElementById("resultModal");
-      const startOverlay = document.getElementById("startOverlay");
-
-      const cameraAllowBtn = document.getElementById("cameraAllowBtn");
-      const calibrateBtn = document.getElementById("calibrateBtn");
-      const startGameBtn = document.getElementById("startGameBtn");
-      const resumeBtn = document.getElementById("resumeBtn");
-      const surrenderBtn = document.getElementById("surrenderBtn");
-      const retryBtn = document.getElementById("retryBtn");
-
-      const finalScoreEl = document.getElementById("finalScore");
-      const statDishesEl = document.getElementById("statDishes");
-      const statIngredientsEl = document.getElementById("statIngredients");
-      const statComboEl = document.getElementById("statCombo");
-
-      // 顶部状态栏元素
+      // 外部状态栏元素
       const topTimeEl = document.getElementById("top-time");
       const topGoldEl = document.getElementById("top-gold");
       const topComboEl = document.getElementById("top-combo");
       const topItemsEl = document.getElementById("top-items");
 
-      // ---------- 画布适配 ----------
       function resizeCanvas() {
         const rect = canvas.parentElement.getBoundingClientRect();
         canvas.width = rect.width;
@@ -505,13 +423,11 @@
       resizeCanvas();
       window.addEventListener("resize", resizeCanvas);
 
-      // ---------- 常量 ----------
       const ROWS = 10,
         COLS = 4,
         GAME_DURATION = 90;
       const INITIAL_GOLD = 50;
 
-      // ---------- 音效系统 ----------
       let audioCtx = null;
       function initAudio() {
         if (!audioCtx)
@@ -580,7 +496,6 @@
         }
       }
 
-      // ---------- 游戏状态 ----------
       const state = {
         isPlaying: false,
         isPaused: false,
@@ -594,9 +509,9 @@
         maxCombo: 0,
         chefX: 0.5,
         targetX: 0.5,
-        headAngle: 0, // 双眼连线角度
-        calibratedZero: 0, // 校准零点
-        headY: 0.5, // 鼻尖Y用于抬头
+        headAngle: 0,
+        calibratedZero: 0,
+        headY: 0.5,
         isHeadUp: false,
         isCalibrated: false,
         ingredients: [],
@@ -614,10 +529,9 @@
         cameraReady: false,
         faceMesh: null,
         beltOffset: 0,
-        reverseControl: true, // 反转控制以适配镜像
+        reverseControl: true,
       };
 
-      // ---------- 食材库 ----------
       const INGREDIENT_TYPES = [
         { id: "tomato", name: "番茄", color: "#e74c3c", emoji: "🍅", cost: 1 },
         { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", cost: 1 },
@@ -788,8 +702,8 @@
         state.dishesServed++;
         state.combo++;
         if (state.combo > state.maxCombo) state.maxCombo = state.combo;
-        let matched = false;
-        let matchedSide = null;
+        let matched = false,
+          matchedSide = null;
         if (state.leftDemand && state.leftDemand.dish === state.dishName) {
           state.gold += 5;
           state.totalGold += 5;
@@ -842,14 +756,13 @@
         if (!state.isPlaying || state.isPaused || state.isGameOver) return;
         const last = state.ingredients[state.ingredients.length - 1];
         const cellH = canvas.height / ROWS;
-        if (last && last.y < cellH * 2.8) return; // 上下间隔加大
+        if (last && last.y < cellH * 2.8) return;
         const lane = state.ingredients.length % 2 === 0 ? 0 : 1;
         const type = INGREDIENT_TYPES[randInt(0, INGREDIENT_TYPES.length - 1)];
         const cellW = canvas.width / COLS;
         let startX;
-        if (lane === 0)
-          startX = cellW * 0.5 + rand(0, cellW * 0.3); // 左列更靠左
-        else startX = cellW * 2.7 + rand(0, cellW * 0.3); // 右列更靠右
+        if (lane === 0) startX = cellW * 0.5 + rand(0, cellW * 0.3);
+        else startX = cellW * 2.7 + rand(0, cellW * 0.3);
         state.ingredients.push({
           id: type.id,
           name: type.name,
@@ -941,6 +854,7 @@
         }
         updateIngredients();
         updateFlyingDishes(deltaTime);
+        // 平滑移动
         state.chefX = lerp(state.chefX, state.targetX, 0.18);
         state.chefX = clamp(state.chefX, 0.05, 0.95);
         const headUp = state.headY < 0.33;
@@ -953,7 +867,7 @@
         updateUI();
       }
 
-      // ---------- 图片预加载 ----------
+      // 图片加载
       const images = {
         belt: null,
         chef: null,
@@ -1007,7 +921,6 @@
           "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
       }
 
-      // ---------- 绘制（移除了顶部HUD） ----------
       function drawGame() {
         const W = canvas.width,
           H = canvas.height;
@@ -1017,33 +930,26 @@
         ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
-        const beltTop = cellH * 1.2;
-        const beltBottom = cellH * 6.8;
-        const beltHeight = beltBottom - beltTop;
-        ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
+        const beltTop = cellH * 1.2,
+          beltBottom = cellH * 6.8,
+          beltHeight = beltBottom - beltTop;
+        ctx.fillStyle = "rgba(200,190,175,0.3)";
         ctx.fillRect(0, beltTop, W, beltHeight);
-        if (
-          images.belt &&
-          images.belt.complete &&
-          images.belt.naturalWidth > 0
-        ) {
+        if (images.belt && images.belt.complete)
           ctx.drawImage(images.belt, 0, beltTop, W, beltHeight);
-        }
 
-        // 轨道位置调整：加大中间空隙
-        const leftTrackX = cellW * 0.3;
-        const rightTrackX = cellW * 2.9;
-        const trackWidth = cellW * 0.8;
+        const leftTrackX = cellW * 0.3,
+          rightTrackX = cellW * 2.9,
+          trackWidth = cellW * 0.8;
         const stripeOffset = state.beltOffset;
-
         for (
           let y = beltTop - 30 + stripeOffset;
           y < beltBottom + 30;
           y += 30
         ) {
-          ctx.fillStyle = "rgba(160, 150, 135, 0.15)";
+          ctx.fillStyle = "rgba(160,150,135,0.15)";
           ctx.fillRect(leftTrackX, y, trackWidth, 4);
-          ctx.fillStyle = "rgba(180, 170, 155, 0.10)";
+          ctx.fillStyle = "rgba(180,170,155,0.10)";
           ctx.fillRect(leftTrackX, y + 15, trackWidth, 4);
         }
         for (
@@ -1051,24 +957,10 @@
           y < beltBottom + 30;
           y += 30
         ) {
-          ctx.fillStyle = "rgba(160, 150, 135, 0.15)";
+          ctx.fillStyle = "rgba(160,150,135,0.15)";
           ctx.fillRect(rightTrackX, y, trackWidth, 4);
-          ctx.fillStyle = "rgba(180, 170, 155, 0.10)";
+          ctx.fillStyle = "rgba(180,170,155,0.10)";
           ctx.fillRect(rightTrackX, y + 15, trackWidth, 4);
-        }
-
-        ctx.fillStyle = "rgba(231, 76, 60, 0.04)";
-        ctx.fillRect(leftTrackX, beltTop, trackWidth, beltHeight);
-        ctx.fillStyle = "rgba(52, 152, 219, 0.04)";
-        ctx.fillRect(rightTrackX, beltTop, trackWidth, beltHeight);
-
-        ctx.fillStyle = "#e67e22";
-        ctx.font = '12px "Press Start 2P", monospace';
-        for (let y = beltTop + 30; y < beltBottom - 20; y += 50) {
-          ctx.textAlign = "center";
-          ctx.textBaseline = "middle";
-          ctx.fillText("▼", leftTrackX + trackWidth / 2, y);
-          ctx.fillText("▼", rightTrackX + trackWidth / 2, y);
         }
 
         state.ingredients.forEach((ing) => {
@@ -1086,12 +978,11 @@
           ctx.strokeStyle = "rgba(255,255,255,0.5)";
           ctx.lineWidth = 2;
           ctx.stroke();
-          ctx.font = `${size * 1.0}px serif`;
+          ctx.font = `${size}px serif`;
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.fillStyle = "#fff";
           ctx.shadowBlur = 6;
-          ctx.shadowColor = "rgba(0,0,0,0.2)";
           ctx.fillText(ing.emoji, x, y + 1);
           ctx.shadowBlur = 0;
         });
@@ -1099,15 +990,10 @@
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
-        const tiltAngle = (state.chefX - 0.5) * 0.6;
         ctx.save();
         ctx.translate(chefX, chefY + chefSize * 0.4);
-        ctx.rotate(tiltAngle);
-        if (
-          images.chef &&
-          images.chef.complete &&
-          images.chef.naturalWidth > 0
-        ) {
+        ctx.rotate((state.chefX - 0.5) * 0.6);
+        if (images.chef && images.chef.complete)
           ctx.drawImage(
             images.chef,
             -chefSize / 2,
@@ -1115,18 +1001,77 @@
             chefSize,
             chefSize * 1.2,
           );
-        }
         ctx.restore();
+
+        // 菜单放在厨师上方，跟随厨师水平移动
+        const menuX = chefX - cellW * 0.5;
+        const menuY = chefY - chefSize * 1.5; // 在厨师头顶上方
+        const menuW = cellW * 1.0;
+        const menuH = cellH * 2.0;
+        ctx.fillStyle = "rgba(255,248,240,0.92)";
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = "#d0c8b8";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
+        ctx.stroke();
+        ctx.font = 'bold 13px "Press Start 2P", monospace';
+        ctx.textAlign = "center";
+        ctx.fillStyle = "#e67e22";
+        ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 12);
+        if (state.menuComplete) {
+          ctx.font = "30px serif";
+          ctx.fillStyle = "#2ecc71";
+          ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2);
+          ctx.font = '8px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e67e22";
+          ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 14);
+        } else {
+          let yOff = 30;
+          state.menu.forEach((item) => {
+            const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
+            const collected = state.pot[item.id] || 0;
+            const needed = item.count;
+            ctx.font = "24px serif";
+            ctx.textAlign = "left";
+            ctx.fillStyle = "#3d3a36";
+            ctx.fillText(ing ? ing.emoji : "🍽", menuX + 10, menuY + yOff);
+            const barX = menuX + 55,
+              barY = menuY + yOff + 4,
+              barW = menuW - 70,
+              barH = 7;
+            ctx.fillStyle = "#ecf0f1";
+            ctx.fillRect(barX, barY, barW, barH);
+            ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
+            ctx.fillRect(
+              barX,
+              barY,
+              Math.min((collected / needed) * barW, barW),
+              barH,
+            );
+            ctx.fillStyle = "#3d3a36";
+            ctx.textAlign = "right";
+            ctx.font = '10px "Press Start 2P", monospace';
+            ctx.fillText(
+              `${collected}/${needed}`,
+              menuX + menuW - 10,
+              menuY + yOff - 2,
+            );
+            yOff += 34;
+          });
+        }
 
         state.flyingDishes.forEach((dish) => {
           ctx.save();
           ctx.font = "36px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
-          ctx.shadowColor = "rgba(0,0,0,0.2)";
           ctx.shadowBlur = 20;
           ctx.fillText("🍳", dish.currentX, dish.currentY);
-          ctx.shadowBlur = 0;
           ctx.restore();
         });
 
@@ -1143,94 +1088,27 @@
             cellH * 0.7,
           );
         ctx.shadowBlur = 0;
-
-        const potItems = Object.keys(state.pot).filter(
-          (key) => state.pot[key] > 0,
-        );
+        const potItems = Object.keys(state.pot).filter((k) => state.pot[k] > 0);
         if (potItems.length > 0) {
-          let emojiStr = "";
-          potItems.forEach((key) => {
-            const ing = INGREDIENT_TYPES.find((i) => i.id === key);
-            if (ing) emojiStr += ing.emoji + " ";
+          let str = "";
+          potItems.forEach((k) => {
+            const ing = INGREDIENT_TYPES.find((i) => i.id === k);
+            if (ing) str += ing.emoji + " ";
           });
           ctx.font = "20px serif";
           ctx.textAlign = "center";
           ctx.fillStyle = "#2c3e50";
-          ctx.fillText(emojiStr.trim() || "🍲", potX, potY - cellH * 0.05);
+          ctx.fillText(str.trim() || "🍲", potX, potY - cellH * 0.05);
         } else {
           ctx.font = "18px serif";
           ctx.fillStyle = "#bdc3c7";
           ctx.fillText("🥘", potX, potY - cellH * 0.05);
         }
 
-        // 菜谱右移，行距加大，标题字体加大
-        const menuX = cellW * 3.0;
-        const menuY = cellH * 4.6;
-        const menuW = cellW * 0.85;
-        const menuH = cellH * 2.2;
-        ctx.fillStyle = "rgba(255, 248, 240, 0.95)";
-        ctx.shadowBlur = 10;
-        ctx.shadowColor = "rgba(0,0,0,0.05)";
-        ctx.beginPath();
-        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#d0c8b8";
-        ctx.lineWidth = 3;
-        ctx.beginPath();
-        ctx.roundRect(menuX, menuY, menuW, menuH, 8);
-        ctx.stroke();
-        ctx.font = 'bold 12px "Press Start 2P", monospace';
-        ctx.textAlign = "center";
-        ctx.fillStyle = "#e67e22";
-        ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 6);
-
-        if (state.menuComplete) {
-          ctx.font = "28px serif";
-          ctx.fillStyle = "#2ecc71";
-          ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2);
-          ctx.font = '7px "Press Start 2P", monospace';
-          ctx.fillStyle = "#e67e22";
-          ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 14);
-        } else {
-          let yOff = 22;
-          state.menu.forEach((item) => {
-            const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
-            const collected = state.pot[item.id] || 0;
-            const needed = item.count;
-            ctx.font = "22px serif";
-            ctx.textAlign = "left";
-            ctx.fillStyle = "#3d3a36";
-            ctx.fillText(ing ? ing.emoji : "🍽", menuX + 6, menuY + yOff);
-            const barX = menuX + 48;
-            const barY = menuY + yOff + 4;
-            const barW = menuW - 60;
-            const barH = 6;
-            ctx.fillStyle = "#ecf0f1";
-            ctx.fillRect(barX, barY, barW, barH);
-            ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
-            ctx.fillRect(
-              barX,
-              barY,
-              Math.min((collected / needed) * barW, barW),
-              barH,
-            );
-            ctx.fillStyle = "#3d3a36";
-            ctx.textAlign = "right";
-            ctx.font = '9px "Press Start 2P", monospace';
-            ctx.fillText(
-              `${collected}/${needed}`,
-              menuX + menuW - 6,
-              menuY + yOff - 1,
-            );
-            yOff += 30; // 行间距加大
-          });
-        }
-
-        // 餐厅区域
-        const restaurantTop = cellH * 7.3;
-        const restaurantH = cellH * 2.5;
-        ctx.fillStyle = "rgba(240, 235, 220, 0.5)";
+        // 餐厅区域保持不变
+        const restaurantTop = cellH * 7.3,
+          restaurantH = cellH * 2.5;
+        ctx.fillStyle = "rgba(240,235,220,0.5)";
         ctx.shadowBlur = 6;
         ctx.beginPath();
         ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
@@ -1248,7 +1126,6 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // 左桌
         const leftTableX = cellW * 0.2,
           leftTableW = cellW * 1.6,
           leftTableY = restaurantTop + 20,
@@ -1261,80 +1138,60 @@
             leftTableW,
             leftTableH,
           );
-        else {
-          ctx.fillStyle = "rgba(220,200,180,0.6)";
-          ctx.beginPath();
-          ctx.roundRect(leftTableX, leftTableY, leftTableW, leftTableH, 8);
-          ctx.fill();
-        }
         if (state.leftDemand) {
-          const bubbleX = leftTableX + 5,
-            bubbleY = leftTableY - 35;
+          const bx = leftTableX + 5,
+            by = leftTableY - 35;
           ctx.fillStyle = "rgba(255,255,240,0.95)";
           ctx.shadowBlur = 8;
           ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 75, 50, 12);
+          ctx.roundRect(bx, by, 75, 50, 12);
           ctx.fill();
           ctx.shadowBlur = 0;
           ctx.strokeStyle = "#f1c40f";
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 75, 50, 12);
+          ctx.roundRect(bx, by, 75, 50, 12);
           ctx.stroke();
           ctx.font = "30px serif";
           ctx.textAlign = "center";
           ctx.fillStyle = "#2c3e50";
-          ctx.fillText(state.leftDemand.emoji, bubbleX + 37, bubbleY + 20);
+          ctx.fillText(state.leftDemand.emoji, bx + 37, by + 20);
           ctx.font = '11px "Press Start 2P", monospace';
           ctx.fillStyle = "#e67e22";
-          ctx.fillText(state.leftDemand.dish, bubbleX + 37, bubbleY + 40);
+          ctx.fillText(state.leftDemand.dish, bx + 37, by + 40);
         }
-        // 右桌
         const rightTableX = cellW * 2.2,
-          rightTableW = cellW * 1.6,
-          rightTableY = restaurantTop + 20;
+          rightTableW = cellW * 1.6;
         if (images.rightTable && images.rightTable.complete)
           ctx.drawImage(
             images.rightTable,
             rightTableX,
-            rightTableY,
+            leftTableY,
             rightTableW,
             leftTableH,
           );
-        else {
-          ctx.fillStyle = "rgba(200,215,230,0.6)";
-          ctx.beginPath();
-          ctx.roundRect(rightTableX, rightTableY, rightTableW, leftTableH, 8);
-          ctx.fill();
-        }
         if (state.rightDemand) {
-          const bubbleX = rightTableX + rightTableW - 80,
-            bubbleY = rightTableY - 35;
+          const bx = rightTableX + rightTableW - 80,
+            by = leftTableY - 35;
           ctx.fillStyle = "rgba(255,255,240,0.95)";
           ctx.shadowBlur = 8;
           ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 75, 50, 12);
+          ctx.roundRect(bx, by, 75, 50, 12);
           ctx.fill();
           ctx.shadowBlur = 0;
           ctx.strokeStyle = "#f1c40f";
           ctx.lineWidth = 3;
           ctx.beginPath();
-          ctx.roundRect(bubbleX, bubbleY, 75, 50, 12);
+          ctx.roundRect(bx, by, 75, 50, 12);
           ctx.stroke();
           ctx.font = "30px serif";
           ctx.textAlign = "center";
           ctx.fillStyle = "#2c3e50";
-          ctx.fillText(state.rightDemand.emoji, bubbleX + 37, bubbleY + 20);
+          ctx.fillText(state.rightDemand.emoji, bx + 37, by + 20);
           ctx.font = '11px "Press Start 2P", monospace';
           ctx.fillStyle = "#e67e22";
-          ctx.fillText(state.rightDemand.dish, bubbleX + 37, bubbleY + 40);
+          ctx.fillText(state.rightDemand.dish, bx + 37, by + 40);
         }
-
-        // 保留画布右上角暂停按钮
-        ctx.font = '22px "Press Start 2P", monospace';
-        ctx.textAlign = "right";
-        ctx.fillStyle = "#2c3e50";
-        ctx.fillText("⏸", W - 16, 34);
       }
 
       if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1358,7 +1215,8 @@
       function updateUI() {
         const mins = Math.floor(state.timeLeft / 60);
         const secs = Math.floor(state.timeLeft % 60);
-        topTimeEl.textContent = `⏱ ${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+        const timeStr = `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+        topTimeEl.innerHTML = `⏱ ${timeStr} <span style="cursor:pointer; margin-left:8px;">⏸</span>`;
         topGoldEl.textContent = `💰 ${state.gold}`;
         topComboEl.textContent = state.combo > 1 ? `🔥 x${state.combo}` : "";
         topItemsEl.textContent = `🧺 ${state.ingredientsCollected}`;
@@ -1380,11 +1238,12 @@
         state.isGameOver = true;
         state.isPlaying = false;
         stopBGM();
-        finalScoreEl.textContent = state.totalGold;
-        statDishesEl.textContent = state.dishesServed;
-        statIngredientsEl.textContent = state.ingredientsCollected;
-        statComboEl.textContent = state.maxCombo;
-        resultModal.classList.remove("hidden");
+        document.getElementById("finalScore").textContent = state.totalGold;
+        document.getElementById("statDishes").textContent = state.dishesServed;
+        document.getElementById("statIngredients").textContent =
+          state.ingredientsCollected;
+        document.getElementById("statCombo").textContent = state.maxCombo;
+        document.getElementById("resultModal").classList.remove("hidden");
       }
 
       function resetGame() {
@@ -1414,7 +1273,6 @@
         state.pot = {};
         state.menu = [];
         state.menuComplete = false;
-        state.dishName = "";
         state.leftDemand = null;
         state.rightDemand = null;
         state.flyingDishes = [];
@@ -1424,9 +1282,9 @@
           clearInterval(state.timerInterval);
           state.timerInterval = null;
         }
-        resultModal.classList.add("hidden");
-        pauseModal.classList.add("hidden");
-        startOverlay.classList.remove("hidden");
+        document.getElementById("resultModal").classList.add("hidden");
+        document.getElementById("pauseModal").classList.add("hidden");
+        document.getElementById("startOverlay").classList.remove("hidden");
         generateMenu();
         updateUI();
       }
@@ -1435,9 +1293,9 @@
         resetGame();
         state.isPlaying = true;
         state.isGameOver = false;
-        startOverlay.classList.add("hidden");
-        pauseModal.classList.add("hidden");
-        resultModal.classList.add("hidden");
+        document.getElementById("startOverlay").classList.add("hidden");
+        document.getElementById("pauseModal").classList.add("hidden");
+        document.getElementById("resultModal").classList.add("hidden");
         generateMenu();
         startBGM();
         updateUI();
@@ -1447,19 +1305,19 @@
         if (!state.isPlaying || state.isGameOver) return;
         state.isPaused = !state.isPaused;
         if (state.isPaused) {
-          pauseModal.classList.remove("hidden");
+          document.getElementById("pauseModal").classList.remove("hidden");
           stopBGM();
         } else {
-          pauseModal.classList.add("hidden");
+          document.getElementById("pauseModal").classList.add("hidden");
           startBGM();
         }
       }
 
-      // ---------- 面部追踪（双眼角度，灵敏可靠）----------
+      // ---------- 面部追踪（双眼角度，完美借鉴滑雪游戏）----------
       function initFaceMesh() {
         const faceMesh = new FaceMesh({
           locateFile: (file) =>
-            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+            `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
         });
         faceMesh.setOptions({
           maxNumFaces: 1,
@@ -1474,38 +1332,46 @@
           ) {
             const lm = results.multiFaceLandmarks[0];
             const leftEye = lm[33],
-              rightEye = lm[263];
-            const noseTip = lm[1];
+              rightEye = lm[263],
+              noseTip = lm[1];
             if (leftEye && rightEye && noseTip) {
               const dy = rightEye.y - leftEye.y;
               const dx = rightEye.x - leftEye.x;
               let angle = Math.atan2(dy, dx) * (180 / Math.PI);
               state.headAngle = angle;
               state.headY = clamp(noseTip.y, 0, 1);
-              // 校准后使用偏移角度，否则直接用当前角度（但会以初始位置为零点）
               let useAngle = state.isCalibrated
                 ? angle - state.calibratedZero
                 : angle;
               let tilt = clamp(useAngle / 25, -1, 1);
               if (state.reverseControl) tilt = -tilt;
               state.targetX = clamp(0.5 + tilt * 0.45, 0.05, 0.95);
-              if (!calibrateModal.classList.contains("hidden")) {
+              if (
+                !document
+                  .getElementById("calibrateModal")
+                  .classList.contains("hidden")
+              ) {
                 updateCalibrateOverlay(noseTip.x, noseTip.y);
               }
             }
           } else {
-            clearCalibrateOverlay();
+            overlayCtx.clearRect(
+              0,
+              0,
+              calibrateOverlay.width,
+              calibrateOverlay.height,
+            );
           }
         });
         return faceMesh;
       }
 
-      function updateCalibrateOverlay(noseX, noseY) {
+      function updateCalibrateOverlay(nx, ny) {
         const cw = calibrateOverlay.width,
           ch = calibrateOverlay.height;
         overlayCtx.clearRect(0, 0, cw, ch);
-        const x = noseX * cw,
-          y = noseY * ch;
+        const x = nx * cw,
+          y = ny * ch;
         overlayCtx.beginPath();
         overlayCtx.arc(x, y, 12, 0, Math.PI * 2);
         overlayCtx.strokeStyle = "#ff4444";
@@ -1522,16 +1388,7 @@
         overlayCtx.lineWidth = 1.5;
         overlayCtx.stroke();
       }
-      function clearCalibrateOverlay() {
-        overlayCtx.clearRect(
-          0,
-          0,
-          calibrateOverlay.width,
-          calibrateOverlay.height,
-        );
-      }
 
-      // 校准（收集角度零点）
       let calibrationCount = 0,
         calibSum = 0;
       function performCalibration() {
@@ -1542,7 +1399,7 @@
         } else {
           state.calibratedZero = calibSum / calibrationCount;
           state.isCalibrated = true;
-          calibrateModal.classList.add("hidden");
+          document.getElementById("calibrateModal").classList.add("hidden");
           if (calibrateVideo.srcObject) {
             calibrateVideo.srcObject.getTracks().forEach((t) => t.stop());
             calibrateVideo.srcObject = null;
@@ -1581,8 +1438,8 @@
           });
           await camera.start();
           state.cameraReady = true;
-          cameraModal.classList.add("hidden");
-          calibrateModal.classList.remove("hidden");
+          document.getElementById("cameraModal").classList.add("hidden");
+          document.getElementById("calibrateModal").classList.remove("hidden");
           initAudio();
           return true;
         } catch (err) {
@@ -1593,45 +1450,46 @@
       }
 
       // 事件绑定
-      cameraAllowBtn.addEventListener("click", startCamera);
-      calibrateBtn.addEventListener("click", () => {
+      document
+        .getElementById("cameraAllowBtn")
+        .addEventListener("click", startCamera);
+      document.getElementById("calibrateBtn").addEventListener("click", () => {
         calibrationCount = 0;
         calibSum = 0;
         performCalibration();
       });
-      startGameBtn.addEventListener("click", () => {
+      document.getElementById("startGameBtn").addEventListener("click", () => {
         if (!state.cameraReady) {
           alert("请先允许摄像头权限");
           return;
         }
         if (!state.isCalibrated) {
-          calibrateModal.classList.remove("hidden");
+          document.getElementById("calibrateModal").classList.remove("hidden");
           return;
         }
         startGame();
       });
-      canvas.addEventListener("click", (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width,
-          y = (e.clientY - rect.top) / rect.height;
-        if (x > 0.7 && y < 0.12 && state.isPlaying && !state.isGameOver)
+      // 顶部状态栏暂停按钮（通过事件委托）
+      topTimeEl.addEventListener("click", (e) => {
+        if (e.target.tagName === "SPAN" && e.target.innerText === "⏸") {
           togglePause();
+        }
       });
-      resumeBtn.addEventListener("click", () => {
+      document.getElementById("resumeBtn").addEventListener("click", () => {
         if (state.isPaused) togglePause();
       });
-      surrenderBtn.addEventListener("click", () => {
+      document.getElementById("surrenderBtn").addEventListener("click", () => {
         if (state.isPlaying) {
           state.isPlaying = false;
           state.isGameOver = true;
-          pauseModal.classList.add("hidden");
+          document.getElementById("pauseModal").classList.add("hidden");
           endGame();
         }
       });
-      retryBtn.addEventListener("click", () => {
+      document.getElementById("retryBtn").addEventListener("click", () => {
         resetGame();
         if (state.cameraReady) {
-          calibrateModal.classList.remove("hidden");
+          document.getElementById("calibrateModal").classList.remove("hidden");
           calibrationCount = 0;
           calibSum = 0;
           setTimeout(performCalibration, 500);
@@ -1671,11 +1529,11 @@
       function init() {
         loadImages(() => {
           resetGame();
-          cameraModal.classList.remove("hidden");
-          startOverlay.classList.add("hidden");
-          pauseModal.classList.add("hidden");
-          resultModal.classList.add("hidden");
-          calibrateModal.classList.add("hidden");
+          document.getElementById("cameraModal").classList.remove("hidden");
+          document.getElementById("startOverlay").classList.add("hidden");
+          document.getElementById("pauseModal").classList.add("hidden");
+          document.getElementById("resultModal").classList.add("hidden");
+          document.getElementById("calibrateModal").classList.add("hidden");
           requestAnimationFrame(gameLoop);
         });
       }
