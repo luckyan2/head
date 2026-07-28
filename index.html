@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头部控菜</title>
+    <title>像素厨房 · 头部控菜（追踪修复版）</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -31,7 +31,7 @@
         font-family: "Press Start 2P", monospace;
         touch-action: none;
       }
-      /* 外部三等分状态栏 */
+      /* 三等分状态栏 */
       .outer-top-bar {
         width: 100%;
         max-width: 420px;
@@ -49,11 +49,11 @@
         color: #2c3e50;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         margin: 0 4px;
-        white-space: nowrap;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 8px;
+        white-space: nowrap;
       }
       #top-time {
         cursor: pointer;
@@ -62,14 +62,14 @@
         color: #e67e22;
         font-weight: bold;
       }
-      #top-combo {
-        color: #e74c3c;
+      #top-items {
+        color: #2c3e50;
       }
       #game-wrapper {
         position: relative;
         width: 100%;
         max-width: 420px;
-        aspect-ratio: 9 / 16;
+        aspect-ratio: 9/16;
         background: #fdf8f0;
         border-radius: 20px;
         overflow: hidden;
@@ -130,7 +130,7 @@
         }
       }
       .modal-card {
-        background: #ffffff;
+        background: #fff;
         border-radius: 16px;
         padding: 28px 24px 32px;
         max-width: 360px;
@@ -231,11 +231,10 @@
     </style>
   </head>
   <body>
-    <!-- 外部三等分状态栏 -->
     <div class="outer-top-bar">
-      <div class="top-box" id="top-left">
-        <span id="top-time">⏱ 01:30</span>
-        <span id="top-pause" style="cursor: pointer; font-size: 18px">⏸</span>
+      <div class="top-box">
+        <span id="top-time">⏱ 01:30</span
+        ><span id="top-pause" style="cursor: pointer; font-size: 18px">⏸</span>
       </div>
       <div class="top-box" id="top-gold">💰 50</div>
       <div class="top-box" id="top-items">🧺 0</div>
@@ -245,7 +244,6 @@
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
 
-      <!-- 摄像头权限弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -254,13 +252,8 @@
             出餐上菜
           </p>
           <button class="btn" id="cameraAllowBtn">📸 允许并开始</button>
-          <div style="margin-top: 14px; font-size: 10px; color: #7a7268">
-            仅用于头部追踪
-          </div>
         </div>
       </div>
-
-      <!-- 暂停弹窗 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -295,13 +288,13 @@
             </div>
           </div>
           <div class="btn-group">
-            <button class="btn" id="resumeBtn">▶ 继续</button>
-            <button class="btn btn-secondary" id="surrenderBtn">🏳️ 认输</button>
+            <button class="btn" id="resumeBtn">▶ 继续</button
+            ><button class="btn btn-secondary" id="surrenderBtn">
+              🏳️ 认输
+            </button>
           </div>
         </div>
       </div>
-
-      <!-- 结算弹窗 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -324,8 +317,6 @@
           <button class="btn" id="retryBtn">🔄 再来一局</button>
         </div>
       </div>
-
-      <!-- 开始游戏弹窗 -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -335,26 +326,16 @@
           <h2>👨‍🍳 像素厨房</h2>
           <p style="font-size: 13px">头部控制 · 接食材 · 做菜上桌</p>
           <button class="btn" id="startGameBtn">🔥 开始游戏</button>
-          <div style="margin-top: 14px; font-size: 10px; color: #7a7268">
-            ←歪头移动 · 抬头出餐→
-          </div>
         </div>
       </div>
     </div>
 
     <script>
-      (function () {
-        // ---------- 主代码 ----------
-        if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
-          alert("⚠️ 关键库加载失败，请检查网络。");
-          throw new Error("FaceMesh or Camera not loaded");
-        }
-
+      (() => {
+        // ---------- 常量与DOM ----------
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
-
-        // 外部状态栏元素
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
@@ -370,68 +351,68 @@
 
         const ROWS = 10,
           COLS = 4,
-          GAME_DURATION = 90;
-        const INITIAL_GOLD = 50;
+          GAME_DURATION = 90,
+          INITIAL_GOLD = 50;
 
         // 音效
-        let audioCtx = null;
+        let audioCtx;
         function initAudio() {
           if (!audioCtx)
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
-        let bgmEnabled = true,
-          sfxEnabled = true;
-        function playTone(freq, duration, type = "sine", volume = 0.2) {
-          if (!sfxEnabled || !audioCtx) return;
+        let bgm = true,
+          sfx = true;
+        function tone(f, d, t = "sine", v = 0.2) {
+          if (!sfx || !audioCtx) return;
           try {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.value = freq;
-            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(
+            const o = audioCtx.createOscillator(),
+              g = audioCtx.createGain();
+            o.type = t;
+            o.frequency.value = f;
+            g.gain.setValueAtTime(v, audioCtx.currentTime);
+            g.gain.exponentialRampToValueAtTime(
               0.001,
-              audioCtx.currentTime + duration,
+              audioCtx.currentTime + d,
             );
-            osc.connect(gain);
-            gain.connect(audioCtx.destination);
-            osc.start();
-            osc.stop(audioCtx.currentTime + duration);
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.start();
+            o.stop(audioCtx.currentTime + d);
           } catch (_) {}
         }
         function sfxPickup() {
-          playTone(880, 0.08, "sine", 0.15);
+          tone(880, 0.08);
         }
         function sfxCook() {
-          playTone(660, 0.12, "square", 0.1);
-          setTimeout(() => playTone(880, 0.12, "square", 0.1), 120);
+          tone(660, 0.12, "square");
+          setTimeout(() => tone(880, 0.12, "square"), 120);
         }
         function sfxServe() {
-          playTone(1100, 0.1, "sine", 0.18);
-          setTimeout(() => playTone(1320, 0.1, "sine", 0.18), 100);
+          tone(1100, 0.1);
+          setTimeout(() => tone(1320, 0.1), 100);
         }
         function sfxMiss() {
-          playTone(300, 0.2, "sawtooth", 0.08);
+          tone(300, 0.2, "sawtooth");
         }
         function sfxCombo() {
-          playTone(1000, 0.06, "sine", 0.12);
-          setTimeout(() => playTone(1200, 0.06, "sine", 0.12), 80);
-          setTimeout(() => playTone(1400, 0.06, "sine", 0.12), 160);
+          tone(1000, 0.06);
+          setTimeout(() => tone(1200, 0.06), 80);
+          setTimeout(() => tone(1400, 0.06), 160);
         }
         function sfxGold() {
-          playTone(1500, 0.1, "sine", 0.1);
-          setTimeout(() => playTone(1800, 0.1, "sine", 0.1), 100);
+          tone(1500, 0.1);
+          setTimeout(() => tone(1800, 0.1), 100);
         }
-
-        let bgmInterval = null;
+        let bgmInt;
         function startBGM() {
-          if (!bgmEnabled) return;
+          if (!bgm) return;
           stopBGM();
-          bgmInterval = setInterval(() => {
-            if (!bgmEnabled || !audioCtx) return;
-            const freqs = [440, 494, 554, 587, 659, 740, 830, 880];
-            playTone(
-              freqs[Math.floor(Math.random() * freqs.length)],
+          bgmInt = setInterval(() => {
+            if (!bgm || !audioCtx) return;
+            tone(
+              [440, 494, 554, 587, 659, 740, 830, 880][
+                Math.floor(Math.random() * 8)
+              ],
               0.15,
               "sine",
               0.04,
@@ -439,50 +420,49 @@
           }, 400);
         }
         function stopBGM() {
-          if (bgmInterval) {
-            clearInterval(bgmInterval);
-            bgmInterval = null;
+          if (bgmInt) {
+            clearInterval(bgmInt);
+            bgmInt = null;
           }
         }
 
         // 游戏状态
         const state = {
-          isPlaying: false,
-          isPaused: false,
-          isGameOver: false,
-          timeLeft: GAME_DURATION,
+          playing: false,
+          paused: false,
+          over: false,
+          time: GAME_DURATION,
           gold: INITIAL_GOLD,
           totalGold: 0,
-          dishesServed: 0,
-          ingredientsCollected: 0,
+          dishes: 0,
+          ingr: 0,
           combo: 0,
           maxCombo: 0,
           chefX: 0.5,
           targetX: 0.5,
           headAngle: 0,
-          calibratedZero: 0,
+          zero: 0,
           headY: 0.5,
-          isHeadUp: false,
-          isCalibrated: false,
-          ingredients: [],
+          up: false,
+          calibrated: false,
+          ings: [],
           pot: {},
           menu: [],
-          menuComplete: false,
-          dishName: "",
-          currentRecipeReward: 0,
-          currentRecipeCost: 0,
-          leftDemand: null,
-          rightDemand: null,
-          flyingDishes: [],
-          timerInterval: null,
-          queueTimer: 0,
-          cameraReady: false,
-          faceMesh: null,
-          beltOffset: 0,
-          reverseControl: true,
+          menuDone: false,
+          dish: "",
+          reward: 0,
+          cost: 0,
+          leftD: null,
+          rightD: null,
+          fly: [],
+          beltOff: 0,
+          qTimer: 0,
+          camReady: false,
+          fm: null,
+          rev: true,
         };
 
-        const INGREDIENT_TYPES = [
+        const TYPES = [
           {
             id: "tomato",
             name: "番茄",
@@ -530,70 +510,69 @@
           { id: "salt", name: "盐", color: "#ecf0f1", emoji: "🧂", cost: 1 },
           { id: "oil", name: "油", color: "#f39c12", emoji: "🫒", cost: 1 },
         ];
-
         const RECIPES = [
           {
             name: "番茄炒蛋",
             emoji: "🍳",
             reward: 25,
-            ingredients: [
-              { id: "tomato", count: 3 },
-              { id: "egg", count: 2 },
-              { id: "salt", count: 1 },
+            ing: [
+              { id: "tomato", n: 3 },
+              { id: "egg", n: 2 },
+              { id: "salt", n: 1 },
             ],
           },
           {
             name: "蛋炒饭",
             emoji: "🍚",
             reward: 20,
-            ingredients: [
-              { id: "egg", count: 2 },
-              { id: "onion", count: 1 },
-              { id: "carrot", count: 1 },
-              { id: "salt", count: 1 },
+            ing: [
+              { id: "egg", n: 2 },
+              { id: "onion", n: 1 },
+              { id: "carrot", n: 1 },
+              { id: "salt", n: 1 },
             ],
           },
           {
             name: "蔬菜沙拉",
             emoji: "🥗",
             reward: 18,
-            ingredients: [
-              { id: "tomato", count: 2 },
-              { id: "carrot", count: 1 },
-              { id: "pepper", count: 1 },
-              { id: "onion", count: 1 },
+            ing: [
+              { id: "tomato", n: 2 },
+              { id: "carrot", n: 1 },
+              { id: "pepper", n: 1 },
+              { id: "onion", n: 1 },
             ],
           },
           {
             name: "蘑菇汤",
             emoji: "🍲",
             reward: 22,
-            ingredients: [
-              { id: "mushroom", count: 3 },
-              { id: "potato", count: 1 },
-              { id: "onion", count: 1 },
-              { id: "salt", count: 1 },
+            ing: [
+              { id: "mushroom", n: 3 },
+              { id: "potato", n: 1 },
+              { id: "onion", n: 1 },
+              { id: "salt", n: 1 },
             ],
           },
           {
             name: "烤土豆",
             emoji: "🥔",
             reward: 15,
-            ingredients: [
-              { id: "potato", count: 3 },
-              { id: "garlic", count: 2 },
-              { id: "oil", count: 1 },
+            ing: [
+              { id: "potato", n: 3 },
+              { id: "garlic", n: 2 },
+              { id: "oil", n: 1 },
             ],
           },
           {
             name: "番茄意面",
             emoji: "🍝",
             reward: 28,
-            ingredients: [
-              { id: "tomato", count: 3 },
-              { id: "onion", count: 1 },
-              { id: "garlic", count: 2 },
-              { id: "oil", count: 1 },
+            ing: [
+              { id: "tomato", n: 3 },
+              { id: "onion", n: 1 },
+              { id: "garlic", n: 2 },
+              { id: "oil", n: 1 },
             ],
           },
         ];
@@ -601,7 +580,7 @@
         function rand(min, max) {
           return Math.random() * (max - min) + min;
         }
-        function randInt(min, max) {
+        function randi(min, max) {
           return Math.floor(rand(min, max + 1));
         }
         function clamp(v, min, max) {
@@ -611,369 +590,332 @@
           return a + (b - a) * t;
         }
 
-        function generateMenu() {
-          const recipe = RECIPES[randInt(0, RECIPES.length - 1)];
-          state.dishName = recipe.name;
-          state.menu = recipe.ingredients.map((item) => ({
-            ...item,
-            collected: 0,
-          }));
-          state.menuComplete = false;
+        function genMenu() {
+          const r = RECIPES[randi(0, RECIPES.length - 1)];
+          state.dish = r.name;
+          state.menu = r.ing.map((i) => ({ ...i, have: 0 }));
+          state.menuDone = false;
           state.pot = {};
-          INGREDIENT_TYPES.forEach((ing) => {
-            state.pot[ing.id] = 0;
+          TYPES.forEach((t) => (state.pot[t.id] = 0));
+          state.menu.forEach((i) => (state.pot[i.id] = 0));
+          let cost = 0;
+          state.menu.forEach((i) => {
+            const d = TYPES.find((t) => t.id === i.id);
+            if (d) cost += d.cost * i.n;
           });
-          state.menu.forEach((item) => {
-            state.pot[item.id] = 0;
-          });
-          let totalCost = 0;
-          state.menu.forEach((item) => {
-            const ingDef = INGREDIENT_TYPES.find((i) => i.id === item.id);
-            if (ingDef) totalCost += ingDef.cost * item.count;
-          });
-          state.currentRecipeReward = recipe.reward;
-          state.currentRecipeCost = totalCost;
-          state.leftDemand = {
-            dish: recipe.name,
-            emoji: recipe.emoji,
-            side: "left",
-          };
-          state.rightDemand = null;
+          state.reward = r.reward;
+          state.cost = cost;
+          state.leftD = { dish: r.name, emoji: r.emoji };
+          state.rightD = null;
           if (Math.random() > 0.5) {
-            const other = RECIPES[randInt(0, RECIPES.length - 1)];
-            if (other.name !== recipe.name)
-              state.rightDemand = {
-                dish: other.name,
-                emoji: other.emoji,
-                side: "right",
-              };
+            const o = RECIPES[randi(0, RECIPES.length - 1)];
+            if (o.name !== r.name)
+              state.rightD = { dish: o.name, emoji: o.emoji };
           }
         }
 
-        function checkMenuComplete() {
-          if (state.menuComplete) return true;
-          let allDone = true;
-          state.menu.forEach((item) => {
-            if (state.pot[item.id] < item.count) allDone = false;
+        function checkMenu() {
+          if (state.menuDone) return true;
+          let ok = true;
+          state.menu.forEach((i) => {
+            if (state.pot[i.id] < i.n) ok = false;
           });
-          if (allDone && state.menu.length > 0) {
-            state.menuComplete = true;
+          if (ok && state.menu.length) {
+            state.menuDone = true;
             sfxCook();
             return true;
           }
           return false;
         }
 
-        function serveDish() {
-          if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-          if (!state.menuComplete) {
+        function serve() {
+          if (!state.playing || state.paused || state.over) return;
+          if (!state.menuDone) {
             sfxMiss();
             return;
           }
-          const profit = state.currentRecipeReward - state.currentRecipeCost;
+          const profit = state.reward - state.cost;
           state.gold += profit;
           state.totalGold += profit;
-          state.dishesServed++;
+          state.dishes++;
           state.combo++;
           if (state.combo > state.maxCombo) state.maxCombo = state.combo;
           let matched = false,
-            matchedSide = null;
-          if (state.leftDemand && state.leftDemand.dish === state.dishName) {
+            side = null;
+          if (state.leftD && state.leftD.dish === state.dish) {
             state.gold += 5;
             state.totalGold += 5;
             matched = true;
-            matchedSide = "left";
-            state.leftDemand = null;
+            side = "left";
+            state.leftD = null;
             sfxCombo();
           }
-          if (state.rightDemand && state.rightDemand.dish === state.dishName) {
+          if (state.rightD && state.rightD.dish === state.dish) {
             state.gold += 5;
             state.totalGold += 5;
             matched = true;
-            matchedSide = "right";
-            state.rightDemand = null;
+            side = "right";
+            state.rightD = null;
             sfxCombo();
           }
           sfxServe();
           sfxGold();
-          const chefX = state.chefX * canvas.width;
-          const potX = chefX,
-            potY = canvas.height * 0.58;
-          let targetX = canvas.width / 2,
-            targetY = canvas.height * 0.74;
-          if (matchedSide === "left") {
-            targetX = canvas.width * 0.25;
-          } else if (matchedSide === "right") {
-            targetX = canvas.width * 0.75;
-          }
-          state.flyingDishes.push({
-            startX: potX,
-            startY: potY,
-            midX: chefX,
-            midY: canvas.height * 0.42,
-            targetX,
-            targetY,
-            progress: 0,
-            currentX: potX,
-            currentY: potY,
-            done: false,
+          const cx = state.chefX * canvas.width;
+          const px = cx,
+            py = canvas.height * 0.58;
+          let tx = canvas.width / 2,
+            ty = canvas.height * 0.74;
+          if (side === "left") tx = canvas.width * 0.25;
+          else if (side === "right") tx = canvas.width * 0.75;
+          state.fly.push({
+            sx: px,
+            sy: py,
+            mx: cx,
+            my: canvas.height * 0.42,
+            tx,
+            ty,
+            p: 0,
+            x: px,
+            y: py,
           });
-          generateMenu();
+          genMenu();
           if (!matched) state.combo = Math.floor(state.combo / 2);
           if (state.gold < 0) state.gold = 0;
           updateUI();
         }
 
-        function queueIngredient() {
-          if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-          const last = state.ingredients[state.ingredients.length - 1];
+        function addIngredient() {
+          if (!state.playing || state.paused || state.over) return;
           const cellH = canvas.height / ROWS;
-          if (last && last.y < cellH * 2.8) return;
-          const lane = state.ingredients.length % 2 === 0 ? 0 : 1;
-          const type =
-            INGREDIENT_TYPES[randInt(0, INGREDIENT_TYPES.length - 1)];
+          if (
+            state.ings.length &&
+            state.ings[state.ings.length - 1].y < cellH * 2.8
+          )
+            return;
+          const lane = state.ings.length % 2 ? 1 : 0;
+          const t = TYPES[randi(0, TYPES.length - 1)];
           const cellW = canvas.width / COLS;
-          let startX;
-          if (lane === 0) startX = cellW * 0.5 + rand(0, cellW * 0.3);
-          else startX = cellW * 2.7 + rand(0, cellW * 0.3);
-          state.ingredients.push({
-            id: type.id,
-            name: type.name,
-            color: type.color,
-            emoji: type.emoji,
-            cost: type.cost,
+          const sx =
+            lane === 0
+              ? cellW * 0.5 + rand(0, cellW * 0.3)
+              : cellW * 2.7 + rand(0, cellW * 0.3);
+          state.ings.push({
+            ...t,
             lane,
-            x: startX,
+            x: sx,
             y: cellH * 0.2,
-            startX,
-            speed: 0.8 + rand(0, 0.3),
-            size: 32 + rand(0, 8),
+            sx,
+            sp: 0.8 + rand(0, 0.3),
+            sz: 32 + rand(0, 8),
             alive: true,
           });
         }
 
-        function updateIngredients() {
+        function updateIngs() {
           const cellH = canvas.height / ROWS;
-          for (let i = state.ingredients.length - 1; i >= 0; i--) {
-            const ing = state.ingredients[i];
+          for (let i = state.ings.length - 1; i >= 0; i--) {
+            const ing = state.ings[i];
             if (!ing.alive) {
-              state.ingredients.splice(i, 1);
+              state.ings.splice(i, 1);
               continue;
             }
-            ing.y += ing.speed * 1.0;
-            ing.x =
-              ing.startX + Math.sin(ing.y * 0.02 + Date.now() * 0.0005) * 2;
+            ing.y += ing.sp;
+            ing.x = ing.sx + Math.sin(ing.y * 0.02 + Date.now() * 0.0005) * 2;
             if (ing.y > cellH * 6.8) {
               ing.alive = false;
-              state.ingredients.splice(i, 1);
+              state.ings.splice(i, 1);
               continue;
             }
-            const chefPixelX = state.chefX * canvas.width;
-            const dist = Math.abs(ing.x - chefPixelX);
-            if (dist < 44 && ing.y > cellH * 3.8 && ing.y < cellH * 6.2) {
+            const cx = state.chefX * canvas.width;
+            if (
+              Math.abs(ing.x - cx) < 44 &&
+              ing.y > cellH * 3.8 &&
+              ing.y < cellH * 6.2
+            ) {
               if (state.gold < ing.cost) continue;
               state.gold -= ing.cost;
               ing.alive = false;
-              state.ingredientsCollected++;
-              if (state.pot[ing.id] !== undefined)
-                state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
-              else state.pot[ing.id] = 1;
+              state.ingr++;
+              state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
               sfxPickup();
-              checkMenuComplete();
-              state.ingredients.splice(i, 1);
+              checkMenu();
+              state.ings.splice(i, 1);
               continue;
             }
             if (ing.y > cellH * 6.5) {
               ing.alive = false;
-              state.ingredients.splice(i, 1);
+              state.ings.splice(i, 1);
             }
           }
         }
 
-        function updateFlyingDishes(deltaTime) {
-          for (let i = state.flyingDishes.length - 1; i >= 0; i--) {
-            const dish = state.flyingDishes[i];
-            dish.progress += deltaTime * 1.8;
-            if (dish.progress >= 1) {
-              state.flyingDishes.splice(i, 1);
+        function updateFly(dt) {
+          for (let i = state.fly.length - 1; i >= 0; i--) {
+            const f = state.fly[i];
+            f.p += dt * 1.8;
+            if (f.p >= 1) {
+              state.fly.splice(i, 1);
               continue;
             }
-            const t = dish.progress;
-            dish.currentX = lerp(dish.startX, dish.midX, t);
-            dish.currentY =
-              lerp(dish.startY, dish.midY, t) - 20 * Math.sin(t * Math.PI);
+            const t = f.p;
+            f.x = lerp(f.sx, f.mx, t);
+            f.y = lerp(f.sy, f.my, t) - 20 * Math.sin(t * Math.PI);
             if (t > 0.3) {
               const p2 = (t - 0.3) / 0.7;
-              dish.currentX = lerp(dish.midX, dish.targetX, p2);
-              dish.currentY =
-                lerp(dish.midY, dish.targetY, p2) - 20 * Math.sin(t * Math.PI);
+              f.x = lerp(f.mx, f.tx, p2);
+              f.y = lerp(f.my, f.ty, p2) - 20 * Math.sin(t * Math.PI);
             }
           }
         }
 
-        function updateGame(deltaTime) {
-          if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-          state.timeLeft -= deltaTime;
-          if (state.timeLeft <= 0) {
-            state.timeLeft = 0;
+        function update(dt) {
+          if (!state.playing || state.paused || state.over) return;
+          state.time -= dt;
+          if (state.time <= 0) {
+            state.time = 0;
             endGame();
             return;
           }
-          state.beltOffset = (state.beltOffset + deltaTime * 30) % 30;
-          state.queueTimer += deltaTime;
-          if (state.queueTimer > 1.2 + rand(0, 0.5)) {
-            state.queueTimer = 0;
-            queueIngredient();
+          state.beltOff = (state.beltOff + dt * 30) % 30;
+          state.qTimer += dt;
+          if (state.qTimer > 1.2 + rand(0, 0.5)) {
+            state.qTimer = 0;
+            addIngredient();
           }
-          updateIngredients();
-          updateFlyingDishes(deltaTime);
+          updateIngs();
+          updateFly(dt);
           state.chefX = lerp(state.chefX, state.targetX, 0.18);
           state.chefX = clamp(state.chefX, 0.05, 0.95);
-          const headUp = state.headY < 0.33;
-          if (headUp && !state.isHeadUp) {
-            state.isHeadUp = true;
-            serveDish();
-          } else if (!headUp) {
-            state.isHeadUp = false;
-          }
+          if (state.headY < 0.33 && !state.up) {
+            state.up = true;
+            serve();
+          } else if (state.headY >= 0.33) state.up = false;
           updateUI();
         }
 
         // 图片加载
-        const images = {
-          belt: null,
-          chef: null,
-          pot: null,
-          leftTable: null,
-          rightTable: null,
-        };
-        function loadImages(callback) {
-          let loaded = 0;
-          const total = 5;
-          function onLoad() {
-            loaded++;
-            if (loaded === total) callback();
+        const imgs = {};
+        function loadImgs(cb) {
+          let n = 0;
+          const t = 5;
+          function on() {
+            n++;
+            if (n === t) cb();
           }
-          images.belt = new Image();
-          images.belt.crossOrigin = "anonymous";
-          images.belt.onload = onLoad;
-          images.belt.onerror = onLoad;
-          images.belt.src =
+          imgs.belt = new Image();
+          imgs.belt.crossOrigin = "anonymous";
+          imgs.belt.onload = on;
+          imgs.belt.onerror = on;
+          imgs.belt.src =
             "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          images.chef = new Image();
-          images.chef.crossOrigin = "anonymous";
-          images.chef.onload = onLoad;
-          images.chef.onerror = onLoad;
-          images.chef.src =
+          imgs.chef = new Image();
+          imgs.chef.crossOrigin = "anonymous";
+          imgs.chef.onload = on;
+          imgs.chef.onerror = on;
+          imgs.chef.src =
             "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
-          images.pot = new Image();
-          images.pot.crossOrigin = "anonymous";
-          images.pot.onload = onLoad;
-          images.pot.onerror = onLoad;
-          images.pot.src =
+          imgs.pot = new Image();
+          imgs.pot.crossOrigin = "anonymous";
+          imgs.pot.onload = on;
+          imgs.pot.onerror = on;
+          imgs.pot.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          images.leftTable = new Image();
-          images.leftTable.crossOrigin = "anonymous";
-          images.leftTable.onload = onLoad;
-          images.leftTable.onerror = onLoad;
-          images.leftTable.src =
+          imgs.lt = new Image();
+          imgs.lt.crossOrigin = "anonymous";
+          imgs.lt.onload = on;
+          imgs.lt.onerror = on;
+          imgs.lt.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          images.rightTable = new Image();
-          images.rightTable.crossOrigin = "anonymous";
-          images.rightTable.onload = onLoad;
-          images.rightTable.onerror = onLoad;
-          images.rightTable.src =
+          imgs.rt = new Image();
+          imgs.rt.crossOrigin = "anonymous";
+          imgs.rt.onload = on;
+          imgs.rt.onerror = on;
+          imgs.rt.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
         }
 
-        function drawGame() {
+        function draw() {
           const W = canvas.width,
             H = canvas.height;
-          const cellW = W / COLS,
-            cellH = H / ROWS;
+          const cW = W / COLS,
+            cH = H / ROWS;
           ctx.clearRect(0, 0, W, H);
           ctx.fillStyle = "#fdf8f0";
           ctx.fillRect(0, 0, W, H);
-
-          const beltTop = cellH * 1.2,
-            beltBottom = cellH * 6.4,
-            beltHeight = beltBottom - beltTop;
-          ctx.fillStyle = "rgba(200,190,175,0.3)";
-          ctx.fillRect(0, beltTop, W, beltHeight);
-          if (images.belt && images.belt.complete)
-            ctx.drawImage(images.belt, 0, beltTop, W, beltHeight);
-
-          const leftTrackX = cellW * 0.3,
-            rightTrackX = cellW * 2.9,
-            trackWidth = cellW * 0.8;
-          const stripeOffset = state.beltOffset;
-          for (
-            let y = beltTop - 30 + stripeOffset;
-            y < beltBottom + 30;
-            y += 30
-          ) {
-            ctx.fillStyle = "rgba(160,150,135,0.15)";
-            ctx.fillRect(leftTrackX, y, trackWidth, 4);
-            ctx.fillStyle = "rgba(180,170,155,0.10)";
-            ctx.fillRect(leftTrackX, y + 15, trackWidth, 4);
+          const beltT = cH * 1.2,
+            beltB = cH * 6.4,
+            beltH = beltB - beltT;
+          // 传送带背景占满
+          if (imgs.belt && imgs.belt.complete)
+            ctx.drawImage(imgs.belt, 0, beltT, W, beltH);
+          else {
+            ctx.fillStyle = "#e0d6c8";
+            ctx.fillRect(0, beltT, W, beltH);
           }
-          for (
-            let y = beltTop - 30 + stripeOffset;
-            y < beltBottom + 30;
-            y += 30
-          ) {
+          const lTx = cW * 0.3,
+            rTx = cW * 2.9,
+            tw = cW * 0.8;
+          for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
             ctx.fillStyle = "rgba(160,150,135,0.15)";
-            ctx.fillRect(rightTrackX, y, trackWidth, 4);
-            ctx.fillStyle = "rgba(180,170,155,0.10)";
-            ctx.fillRect(rightTrackX, y + 15, trackWidth, 4);
+            ctx.fillRect(lTx, y, tw, 4);
+            ctx.fillStyle = "rgba(180,170,155,0.1)";
+            ctx.fillRect(lTx, y + 15, tw, 4);
           }
-
-          state.ingredients.forEach((ing) => {
+          for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
+            ctx.fillStyle = "rgba(160,150,135,0.15)";
+            ctx.fillRect(rTx, y, tw, 4);
+            ctx.fillStyle = "rgba(180,170,155,0.1)";
+            ctx.fillRect(rTx, y + 15, tw, 4);
+          }
+          state.ings.forEach((ing) => {
             if (!ing.alive) return;
-            const size = ing.size,
-              x = ing.x,
-              y = ing.y;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
             ctx.shadowBlur = 8;
             ctx.beginPath();
-            ctx.arc(x, y, size, 0, Math.PI * 2);
+            ctx.arc(ing.x, ing.y, ing.sz, 0, Math.PI * 2);
             ctx.fillStyle = ing.color;
             ctx.fill();
             ctx.shadowBlur = 0;
             ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.lineWidth = 2;
             ctx.stroke();
-            ctx.font = `${size}px serif`;
+            ctx.font = `${ing.sz}px serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#fff";
             ctx.shadowBlur = 6;
-            ctx.fillText(ing.emoji, x, y + 1);
+            ctx.fillText(ing.emoji, ing.x, ing.y + 1);
             ctx.shadowBlur = 0;
           });
-
-          // 厨师
           const chefX = state.chefX * W;
-          const chefY = cellH * 5.0;
-          const chefSize = cellH * 1.6;
+          const chefY = cH * 5.0;
+          const chefSz = cH * 1.6;
           ctx.save();
-          ctx.translate(chefX, chefY + chefSize * 0.4);
+          ctx.translate(chefX, chefY + chefSz * 0.4);
           ctx.rotate((state.chefX - 0.5) * 0.6);
-          if (images.chef && images.chef.complete)
+          if (imgs.chef && imgs.chef.complete)
             ctx.drawImage(
-              images.chef,
-              -chefSize / 2,
-              -chefSize * 1.2,
-              chefSize,
-              chefSize * 1.2,
+              imgs.chef,
+              -chefSz / 2,
+              -chefSz * 1.2,
+              chefSz,
+              chefSz * 1.2,
             );
           ctx.restore();
 
-          // 菜单：固定在顶部右侧，不跟随厨师
-          const menuX = cellW * 2.5;
-          const menuY = cellH * 1.5;
-          const menuW = cellW * 1.2;
-          const menuH = cellH * 2.4;
+          // 调试指示器：红色竖线跟随 targetX
+          ctx.strokeStyle = "#ff0000";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(state.targetX * W, beltT);
+          ctx.lineTo(state.targetX * W, beltB);
+          ctx.stroke();
+
+          // 菜单：位于厨师上方，靠近顶部
+          const menuW = cW * 1.1,
+            menuH = cH * 2.4;
+          const menuX = chefX - menuW / 2;
+          const menuY = cH * 0.8;
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.shadowBlur = 8;
           ctx.beginPath();
@@ -982,82 +924,75 @@
           ctx.shadowBlur = 0;
           ctx.strokeStyle = "#d0c8b8";
           ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.roundRect(menuX, menuY, menuW, menuH, 8);
           ctx.stroke();
-          // 标题换行居中
-          ctx.font = 'bold 14px "Press Start 2P", monospace';
+          // 图标居中，标题换行
+          ctx.font = "22px serif";
           ctx.textAlign = "center";
           ctx.fillStyle = "#e67e22";
-          ctx.fillText("📋 " + state.dishName, menuX + menuW / 2, menuY + 16);
-          if (state.menuComplete) {
+          ctx.fillText("📋", menuX + menuW / 2, menuY + 22);
+          ctx.font = 'bold 14px "Press Start 2P", monospace';
+          ctx.fillStyle = "#e67e22";
+          ctx.fillText(state.dish, menuX + menuW / 2, menuY + 48);
+          if (state.menuDone) {
             ctx.font = "32px serif";
             ctx.fillStyle = "#2ecc71";
             ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2);
-            ctx.font = '8px "Press Start 2P", monospace';
-            ctx.fillStyle = "#e67e22";
-            ctx.fillText("👆 抬头出餐!", menuX + menuW / 2, menuY + menuH - 16);
           } else {
-            let yOff = 36;
+            let yOff = 68;
             state.menu.forEach((item) => {
-              const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
-              const collected = state.pot[item.id] || 0;
-              const needed = item.count;
-              ctx.font = "24px serif";
-              ctx.textAlign = "center";
+              const ing = TYPES.find((t) => t.id === item.id);
+              const have = state.pot[item.id] || 0;
+              ctx.font = "22px serif";
+              ctx.textAlign = "left";
               ctx.fillStyle = "#3d3a36";
-              ctx.fillText(
-                ing ? ing.emoji : "🍽",
-                menuX + menuW / 2,
-                menuY + yOff,
-              );
-              const barY = menuY + yOff + 10;
-              const barW = menuW - 24,
+              ctx.fillText(ing ? ing.emoji : "🍽", menuX + 8, menuY + yOff);
+              const barX = menuX + 38,
+                barW = menuW - 80,
                 barH = 6;
               ctx.fillStyle = "#ecf0f1";
-              ctx.fillRect(menuX + 12, barY, barW, barH);
-              ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
+              ctx.fillRect(barX, menuY + yOff - 2, barW, barH);
+              ctx.fillStyle = have >= item.n ? "#2ecc71" : "#f1c40f";
               ctx.fillRect(
-                menuX + 12,
-                barY,
-                Math.min((collected / needed) * barW, barW),
+                barX,
+                menuY + yOff - 2,
+                Math.min((have / item.n) * barW, barW),
                 barH,
               );
-              ctx.fillStyle = "#3d3a36";
-              ctx.textAlign = "center";
               ctx.font = '10px "Press Start 2P", monospace';
+              ctx.textAlign = "right";
+              ctx.fillStyle = "#3d3a36";
               ctx.fillText(
-                `${collected}/${needed}`,
-                menuX + menuW / 2,
-                barY + 16,
+                `${have}/${item.n}`,
+                menuX + menuW - 8,
+                menuY + yOff + 4,
               );
-              yOff += 38;
+              yOff += 34;
             });
           }
 
-          state.flyingDishes.forEach((dish) => {
+          state.fly.forEach((f) => {
             ctx.save();
             ctx.font = "36px serif";
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.shadowBlur = 20;
-            ctx.fillText("🍳", dish.currentX, dish.currentY);
+            ctx.fillText("🍳", f.x, f.y);
             ctx.restore();
           });
 
-          // 锅及其左右装饰框
+          // 锅及装饰框（等大）
+          const potW = chefSz,
+            potH = chefSz * 0.7;
           const potX = chefX,
-            potY = cellH * 6.0;
-          const potW = cellW * 0.8;
-          const potH = cellH * 0.7;
-          // 左侧装饰框
+            potY = cH * 6.0;
+          // 左装饰框
           ctx.fillStyle = "rgba(200,180,150,0.5)";
           ctx.shadowBlur = 6;
           ctx.beginPath();
           ctx.roundRect(
-            potX - potW * 1.2,
-            potY - potH * 0.5,
-            potW * 0.8,
+            potX - potW * 1.1,
+            potY - potH / 2,
+            potW * 0.9,
             potH,
             6,
           );
@@ -1066,78 +1001,63 @@
           ctx.strokeStyle = "#b0a898";
           ctx.lineWidth = 2;
           ctx.stroke();
-          // 右侧装饰框
+          // 右装饰框
           ctx.beginPath();
           ctx.roundRect(
-            potX + potW * 0.8,
-            potY - potH * 0.5,
-            potW * 0.8,
+            potX + potW * 0.6,
+            potY - potH / 2,
+            potW * 0.9,
             potH,
             6,
           );
           ctx.fill();
-          ctx.shadowBlur = 0;
           ctx.stroke();
-          // 锅图片
+          // 锅
           ctx.shadowColor = "rgba(0,0,0,0.08)";
           ctx.shadowBlur = 12;
-          if (images.pot && images.pot.complete)
+          if (imgs.pot && imgs.pot.complete)
             ctx.drawImage(
-              images.pot,
+              imgs.pot,
               potX - potW / 2,
-              potY - potH * 0.5,
+              potY - potH / 2,
               potW,
               potH,
             );
           ctx.shadowBlur = 0;
-          const potItems = Object.keys(state.pot).filter(
-            (k) => state.pot[k] > 0,
-          );
-          if (potItems.length > 0) {
+          const items = Object.keys(state.pot).filter((k) => state.pot[k] > 0);
+          if (items.length) {
             let str = "";
-            potItems.forEach((k) => {
-              const ing = INGREDIENT_TYPES.find((i) => i.id === k);
+            items.forEach((k) => {
+              const ing = TYPES.find((t) => t.id === k);
               if (ing) str += ing.emoji + " ";
             });
             ctx.font = "18px serif";
             ctx.textAlign = "center";
             ctx.fillStyle = "#2c3e50";
             ctx.fillText(str.trim() || "🍲", potX, potY - potH * 0.1);
-          } else {
-            ctx.font = "16px serif";
-            ctx.fillStyle = "#bdc3c7";
-            ctx.fillText("🥘", potX, potY - potH * 0.1);
           }
 
-          // 餐厅区域上移
-          const restaurantTop = cellH * 6.6;
-          const restaurantH = cellH * 2.8;
+          // 餐厅区域
+          const restTop = cH * 6.6,
+            restH = cH * 2.8;
           ctx.fillStyle = "rgba(240,235,220,0.5)";
           ctx.shadowBlur = 6;
           ctx.beginPath();
-          ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
+          ctx.roundRect(0, restTop, W, restH, 8);
           ctx.fill();
           ctx.shadowBlur = 0;
           ctx.strokeStyle = "#d0c8b8";
           ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.roundRect(0, restaurantTop, W, restaurantH, 8);
           ctx.stroke();
-          const leftTableX = cellW * 0.2,
-            leftTableW = cellW * 1.6,
-            leftTableY = restaurantTop + 20,
-            leftTableH = restaurantH - 40;
-          if (images.leftTable && images.leftTable.complete)
-            ctx.drawImage(
-              images.leftTable,
-              leftTableX,
-              leftTableY,
-              leftTableW,
-              leftTableH,
-            );
-          if (state.leftDemand) {
-            const bx = leftTableX + 5,
-              by = leftTableY - 30;
+          const ltX = cW * 0.2,
+            ltW = cW * 1.6,
+            ltY = restTop + 20,
+            ltH = restH - 40;
+          if (imgs.lt && imgs.lt.complete)
+            ctx.drawImage(imgs.lt, ltX, ltY, ltW, ltH);
+          if (state.leftD) {
+            const bx = ltX + 5,
+              by = ltY - 30;
             ctx.fillStyle = "rgba(255,255,240,0.95)";
             ctx.shadowBlur = 8;
             ctx.beginPath();
@@ -1146,30 +1066,22 @@
             ctx.shadowBlur = 0;
             ctx.strokeStyle = "#f1c40f";
             ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.roundRect(bx, by, 75, 50, 12);
             ctx.stroke();
             ctx.font = "30px serif";
             ctx.textAlign = "center";
             ctx.fillStyle = "#2c3e50";
-            ctx.fillText(state.leftDemand.emoji, bx + 37, by + 20);
+            ctx.fillText(state.leftD.emoji, bx + 37, by + 20);
             ctx.font = '11px "Press Start 2P", monospace';
             ctx.fillStyle = "#e67e22";
-            ctx.fillText(state.leftDemand.dish, bx + 37, by + 40);
+            ctx.fillText(state.leftD.dish, bx + 37, by + 40);
           }
-          const rightTableX = cellW * 2.2,
-            rightTableW = cellW * 1.6;
-          if (images.rightTable && images.rightTable.complete)
-            ctx.drawImage(
-              images.rightTable,
-              rightTableX,
-              leftTableY,
-              rightTableW,
-              leftTableH,
-            );
-          if (state.rightDemand) {
-            const bx = rightTableX + rightTableW - 80,
-              by = leftTableY - 30;
+          const rtX = cW * 2.2,
+            rtW = cW * 1.6;
+          if (imgs.rt && imgs.rt.complete)
+            ctx.drawImage(imgs.rt, rtX, ltY, rtW, ltH);
+          if (state.rightD) {
+            const bx = rtX + rtW - 80,
+              by = ltY - 30;
             ctx.fillStyle = "rgba(255,255,240,0.95)";
             ctx.shadowBlur = 8;
             ctx.beginPath();
@@ -1178,16 +1090,14 @@
             ctx.shadowBlur = 0;
             ctx.strokeStyle = "#f1c40f";
             ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.roundRect(bx, by, 75, 50, 12);
             ctx.stroke();
             ctx.font = "30px serif";
             ctx.textAlign = "center";
             ctx.fillStyle = "#2c3e50";
-            ctx.fillText(state.rightDemand.emoji, bx + 37, by + 20);
+            ctx.fillText(state.rightD.emoji, bx + 37, by + 20);
             ctx.font = '11px "Press Start 2P", monospace';
             ctx.fillStyle = "#e67e22";
-            ctx.fillText(state.rightDemand.dish, bx + 37, by + 40);
+            ctx.fillText(state.rightD.dish, bx + 37, by + 40);
           }
         }
 
@@ -1197,110 +1107,106 @@
             y,
             w,
             h,
-            radii,
+            r,
           ) {
-            const r = typeof radii === "number" ? radii : radii || 0;
-            this.moveTo(x + r, y);
-            this.arcTo(x + w, y, x + w, y + h, r);
-            this.arcTo(x + w, y + h, x, y + h, r);
-            this.arcTo(x, y + h, x, y, r);
-            this.arcTo(x, y, x + w, y, r);
-            return this;
+            if (typeof r === "number") r = { tl: r, tr: r, br: r, bl: r };
+            this.beginPath();
+            this.moveTo(x + r.tl, y);
+            this.lineTo(x + w - r.tr, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+            this.lineTo(x + w, y + h - r.br);
+            this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+            this.lineTo(x + r.bl, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+            this.lineTo(x, y + r.tl);
+            this.quadraticCurveTo(x, y, x + r.tl, y);
+            this.closePath();
           };
         }
 
         function updateUI() {
-          const mins = Math.floor(state.timeLeft / 60);
-          const secs = Math.floor(state.timeLeft % 60);
-          topTimeEl.textContent = `⏱ ${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+          const m = Math.floor(state.time / 60),
+            s = Math.floor(state.time % 60);
+          topTimeEl.textContent = `⏱ ${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
           topGoldEl.textContent = `💰 ${state.gold}`;
-          topItemsEl.textContent = `🧺 ${state.ingredientsCollected}`;
+          topItemsEl.textContent = `🧺 ${state.ingr}`;
         }
 
-        let lastTimestamp = 0;
-        function gameLoop(timestamp) {
-          const delta = lastTimestamp
-            ? Math.min((timestamp - lastTimestamp) / 1000, 0.05)
-            : 0.016;
-          lastTimestamp = timestamp;
-          updateGame(delta);
-          drawGame();
-          requestAnimationFrame(gameLoop);
+        let last = 0;
+        function loop(ts) {
+          const dt = last ? Math.min((ts - last) / 1000, 0.05) : 0.016;
+          last = ts;
+          update(dt);
+          draw();
+          requestAnimationFrame(loop);
         }
 
         function endGame() {
-          if (state.isGameOver) return;
-          state.isGameOver = true;
-          state.isPlaying = false;
+          if (state.over) return;
+          state.over = true;
+          state.playing = false;
           stopBGM();
           document.getElementById("finalScore").textContent = state.totalGold;
-          document.getElementById("statDishes").textContent =
-            state.dishesServed;
-          document.getElementById("statIngredients").textContent =
-            state.ingredientsCollected;
+          document.getElementById("statDishes").textContent = state.dishes;
+          document.getElementById("statIngredients").textContent = state.ingr;
           document.getElementById("statCombo").textContent = state.maxCombo;
           document.getElementById("resultModal").classList.remove("hidden");
         }
 
-        function resetGame() {
+        function reset() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
           }
-          state.cameraReady = false;
-          state.isPlaying = false;
-          state.isPaused = false;
-          state.isGameOver = false;
-          state.timeLeft = GAME_DURATION;
+          state.playing = false;
+          state.paused = false;
+          state.over = false;
+          state.time = GAME_DURATION;
           state.gold = INITIAL_GOLD;
           state.totalGold = 0;
-          state.dishesServed = 0;
-          state.ingredientsCollected = 0;
+          state.dishes = 0;
+          state.ingr = 0;
           state.combo = 0;
           state.maxCombo = 0;
           state.chefX = 0.5;
           state.targetX = 0.5;
           state.headAngle = 0;
-          state.calibratedZero = 0;
+          state.zero = 0;
           state.headY = 0.5;
-          state.isHeadUp = false;
-          state.isCalibrated = false;
-          state.ingredients = [];
+          state.up = false;
+          state.calibrated = false;
+          state.ings = [];
           state.pot = {};
           state.menu = [];
-          state.menuComplete = false;
-          state.leftDemand = null;
-          state.rightDemand = null;
-          state.flyingDishes = [];
-          state.queueTimer = 0;
-          state.beltOffset = 0;
-          if (state.timerInterval) {
-            clearInterval(state.timerInterval);
-            state.timerInterval = null;
+          state.menuDone = false;
+          state.leftD = null;
+          state.rightD = null;
+          state.fly = [];
+          state.beltOff = 0;
+          state.qTimer = 0;
+          if (state._int) {
+            clearInterval(state._int);
+            state._int = null;
           }
           document.getElementById("resultModal").classList.add("hidden");
           document.getElementById("pauseModal").classList.add("hidden");
           document.getElementById("startOverlay").classList.remove("hidden");
-          generateMenu();
+          genMenu();
           updateUI();
         }
 
-        function startGame() {
-          resetGame();
-          state.isPlaying = true;
-          state.isGameOver = false;
+        function start() {
+          reset();
+          state.playing = true;
           document.getElementById("startOverlay").classList.add("hidden");
-          document.getElementById("pauseModal").classList.add("hidden");
-          document.getElementById("resultModal").classList.add("hidden");
-          generateMenu();
           startBGM();
           updateUI();
         }
 
         function togglePause() {
-          if (!state.isPlaying || state.isGameOver) return;
-          state.isPaused = !state.isPaused;
-          if (state.isPaused) {
+          if (!state.playing || state.over) return;
+          state.paused = !state.paused;
+          if (state.paused) {
             document.getElementById("pauseModal").classList.remove("hidden");
             stopBGM();
           } else {
@@ -1309,22 +1215,22 @@
           }
         }
 
-        // ---------- 面部追踪（完全采用滑雪游戏的双眼角度方案）----------
-        function initFaceMesh() {
-          const faceMesh = new FaceMesh({
+        // ---------- 面部追踪（滑雪游戏同款逻辑）----------
+        function initFM() {
+          const fm = new FaceMesh({
             locateFile: (file) =>
               `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
           });
-          faceMesh.setOptions({
+          fm.setOptions({
             maxNumFaces: 1,
             refineLandmarks: true,
             minDetectionConfidence: 0.6,
             minTrackingConfidence: 0.5,
           });
-          faceMesh.onResults((results) => {
+          fm.onResults((results) => {
             if (
               results.multiFaceLandmarks &&
-              results.multiFaceLandmarks.length > 0
+              results.multiFaceLandmarks.length
             ) {
               const lm = results.multiFaceLandmarks[0];
               const leftEye = lm[33],
@@ -1336,19 +1242,17 @@
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 state.headAngle = angle;
                 state.headY = clamp(noseTip.y, 0, 1);
-                let useAngle = state.isCalibrated
-                  ? angle - state.calibratedZero
-                  : angle;
-                let tilt = clamp(useAngle / 25, -1, 1);
-                if (state.reverseControl) tilt = -tilt;
+                let use = state.calibrated ? angle - state.zero : angle;
+                let tilt = clamp(use / 25, -1, 1);
+                if (state.rev) tilt = -tilt;
                 state.targetX = clamp(0.5 + tilt * 0.45, 0.05, 0.95);
               }
             }
           });
-          return faceMesh;
+          return fm;
         }
 
-        async function startCamera() {
+        async function startCam() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
@@ -1359,31 +1263,37 @@
             });
             video.srcObject = stream;
             await video.play();
-            const faceMesh = initFaceMesh();
-            state.faceMesh = faceMesh;
-            const camera = new Camera(video, {
-              onFrame: async () => {
-                try {
-                  await faceMesh.send({ image: video });
-                } catch (_) {}
-              },
-              width: 320,
-              height: 240,
-            });
-            await camera.start();
-            state.cameraReady = true;
-            // 自动校准：延迟0.5秒后记录当前角度
+            const fm = initFM();
+            state.fm = fm;
+            // 使用 requestVideoFrameCallback 驱动，与滑雪游戏一致
+            function processFrame() {
+              if (video.readyState >= 2 && !state._busy) {
+                state._busy = true;
+                fm.send({ image: video })
+                  .then(() => {
+                    state._busy = false;
+                  })
+                  .catch(() => {
+                    state._busy = false;
+                  });
+              }
+              if (video.requestVideoFrameCallback)
+                video.requestVideoFrameCallback(processFrame);
+              else requestAnimationFrame(processFrame);
+            }
+            processFrame();
+            state.camReady = true;
+            // 自动校准
             setTimeout(() => {
-              state.calibratedZero = state.headAngle;
-              state.isCalibrated = true;
+              state.zero = state.headAngle;
+              state.calibrated = true;
             }, 500);
             document.getElementById("cameraModal").classList.add("hidden");
-            startGame();
+            start();
             initAudio();
             return true;
           } catch (err) {
-            console.error(err);
-            alert("摄像头错误: " + (err.message || "未知错误"));
+            alert("摄像头错误: " + err.message);
             return false;
           }
         }
@@ -1391,63 +1301,54 @@
         // 事件绑定
         document
           .getElementById("cameraAllowBtn")
-          .addEventListener("click", startCamera);
+          .addEventListener("click", startCam);
         document
           .getElementById("startGameBtn")
           .addEventListener("click", () => {
-            if (!state.cameraReady) {
-              alert("请先允许摄像头权限");
-              return;
-            }
-            startGame();
+            if (!state.camReady) alert("请先允许摄像头权限");
+            else start();
           });
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
-          if (state.isPaused) togglePause();
+          if (state.paused) togglePause();
         });
         document
           .getElementById("surrenderBtn")
           .addEventListener("click", () => {
-            if (state.isPlaying) {
-              state.isPlaying = false;
-              state.isGameOver = true;
+            if (state.playing) {
+              state.playing = false;
+              state.over = true;
               document.getElementById("pauseModal").classList.add("hidden");
               endGame();
             }
           });
         document.getElementById("retryBtn").addEventListener("click", () => {
-          resetGame();
-          if (state.cameraReady) startGame();
-          else startCamera();
+          reset();
+          if (state.camReady) start();
+          else startCam();
         });
-        document.querySelectorAll(".toggle-btn").forEach((btn) => {
-          btn.addEventListener("click", function () {
-            const setting = this.dataset.setting,
-              val = this.dataset.val;
-            const parent = this.closest(".toggle-wrap");
-            parent
+        document.querySelectorAll(".toggle-btn").forEach((b) => {
+          b.addEventListener("click", function () {
+            const s = this.dataset.setting,
+              v = this.dataset.val;
+            this.parentElement
               .querySelectorAll(".toggle-btn")
-              .forEach((b) => b.classList.remove("active"));
+              .forEach((x) => x.classList.remove("active"));
             this.classList.add("active");
-            if (setting === "bgm") {
-              bgmEnabled = val === "on";
-              if (bgmEnabled && state.isPlaying && !state.isPaused) startBGM();
+            if (s === "bgm") {
+              bgm = v === "on";
+              if (bgm && state.playing && !state.paused) startBGM();
               else stopBGM();
-            } else if (setting === "sfx") sfxEnabled = val === "on";
+            } else if (s === "sfx") sfx = v === "on";
           });
         });
-        // 双击重置视角（借鉴滑雪游戏）
         document.body.addEventListener("dblclick", () => {
-          if (state.isPlaying) {
-            state.calibratedZero = state.headAngle;
-            console.log("视角已重置");
-          }
+          if (state.playing) state.zero = state.headAngle;
         });
-        // 键盘调试
         document.addEventListener("keydown", (e) => {
           if (e.key === "ArrowLeft") state.targetX = 0.15;
           else if (e.key === "ArrowRight") state.targetX = 0.85;
-          else if (e.key === "ArrowUp") serveDish();
+          else if (e.key === "ArrowUp") serve();
           else if (e.key === " ") {
             e.preventDefault();
             togglePause();
@@ -1458,24 +1359,13 @@
             state.targetX = 0.5;
         });
 
-        function init() {
-          loadImages(() => {
-            resetGame();
-            document.getElementById("cameraModal").classList.remove("hidden");
-            document.getElementById("startOverlay").classList.add("hidden");
-            document.getElementById("pauseModal").classList.add("hidden");
-            document.getElementById("resultModal").classList.add("hidden");
-            requestAnimationFrame(gameLoop);
-          });
-        }
-        init();
-        document.addEventListener(
-          "click",
-          () => {
-            initAudio();
-          },
-          { once: true },
-        );
+        loadImgs(() => {
+          reset();
+          document.getElementById("cameraModal").classList.remove("hidden");
+          document.getElementById("startOverlay").classList.add("hidden");
+          requestAnimationFrame(loop);
+        });
+        document.addEventListener("click", () => initAudio(), { once: true });
       })();
     </script>
   </body>
