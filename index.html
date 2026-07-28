@@ -415,8 +415,8 @@
 
     <script>
       // ================================================================
-      //  厨师大冒险 - 完整经济版（鼻尖倾斜控制 + 菜品动画 + 金币系统）
-      //  修改：视频镜像、条纹居中、菜单窄长上移、倾斜控制、经济、动画
+      //  厨师大冒险 - 完整经济版（鼻尖位置追踪 + 菜品动画 + 金币系统）
+      //  修改：视频镜像、条纹居中、菜单窄长上移、鼻尖直接定位、经济、动画
       // ================================================================
 
       if (typeof FaceMesh === "undefined" || typeof Camera === "undefined") {
@@ -552,12 +552,13 @@
         // 厨师位置
         chefX: 0.5,
         targetX: 0.5,
-        // 头部追踪
+        // 头部追踪 (直接使用鼻尖坐标)
         headX: 0.5,
         headY: 0.5,
-        headTilt: 0, // 鼻尖倾斜值 (-1~1)
         isHeadUp: false,
-        calibrateOffsetX: 0,
+        // 校准参考值
+        calibrateRefX: 0.5,
+        calibrateRefY: 0.5,
         isCalibrated: false,
         // 食材与菜单
         ingredients: [],
@@ -765,10 +766,12 @@
 
         // 匹配需求额外奖励
         let matched = false;
+        let matchedSide = null;
         if (state.leftDemand && state.leftDemand.dish === state.dishName) {
           state.gold += 5;
           state.totalGold += 5;
           matched = true;
+          matchedSide = "left";
           state.leftDemand = null;
           sfxCombo();
         }
@@ -776,6 +779,7 @@
           state.gold += 5;
           state.totalGold += 5;
           matched = true;
+          matchedSide = "right";
           state.rightDemand = null;
           sfxCombo();
         }
@@ -783,71 +787,48 @@
         sfxServe();
         sfxGold();
 
-        // 创建飞行菜品动画（从锅的位置飞到厨师面前，再飞到需求框）
+        // 创建飞行菜品动画
         const chefX = state.chefX * canvas.width;
-        const chefY = canvas.height * 0.45; // 厨师头部高度
+        const chefY = canvas.height * 0.45;
         const potX = chefX;
         const potY = canvas.height * 0.62;
 
-        // 目标位置：如果有匹配的需求，飞到对应的需求框；否则飞到中间
         let targetX = canvas.width / 2;
         let targetY = canvas.height * 0.78;
-        if (matched) {
-          // 匹配的是左还是右？
-          // 由于我们不知道匹配了哪个，但可以根据 leftDemand 或 rightDemand 为空来判断
-          // 因为我们将 leftDemand 和 rightDemand 置空了，需要记录之前匹配的方向
-          // 简单起见，我们使用一个变量存储最后匹配的方向
-          // 这里我们使用一个临时变量，在匹配时记录
-          // 为了简化，我们将这个判断放到外面
+        if (matchedSide === "left") {
+          targetX = canvas.width * 0.25;
+          targetY = canvas.height * 0.78;
+        } else if (matchedSide === "right") {
+          targetX = canvas.width * 0.75;
+          targetY = canvas.height * 0.78;
         }
 
-        // 由于我们不知道具体匹配哪个，我们统一飞到中间偏下
-        // 但为了效果更好，我们根据是否匹配左或右来飞
-        // 我们修改匹配逻辑，记录匹配方向
-        // 由于代码已经修改了需求，我们需要在匹配时记录
-        // 在下面实现
+        const midX = chefX;
+        const midY = chefY - 30;
 
-        // 重新设计：在匹配时，我们存储匹配的方向
-        // 这里我们用 state.lastMatchedSide 来记录
-        // 但为了不增加复杂，我们简单将目标设为中间
-        // 实际可以通过检测哪个需求被清除来判断
+        state.flyingDishes.push({
+          startX: potX,
+          startY: potY,
+          midX: midX,
+          midY: midY,
+          targetX: targetX,
+          targetY: targetY,
+          progress: 0,
+          currentX: potX,
+          currentY: potY,
+          done: false,
+        });
 
-        // 更简洁：我们直接让菜品飞到左或右需求框的中心（如果存在），否则飞到中间
-        let targetX_fly = canvas.width / 2;
-        let targetY_fly = canvas.height * 0.78;
-        if (state.leftDemand) {
-          // 如果左需求还在，说明匹配的是右需求？不，因为匹配后需求被清空，所以我们可以根据清空来判断
-          // 但我们清空了，所以无法判断。我们改为在匹配时存储方向
+        // 生成新菜单
+        generateMenu();
+        if (!matched) {
+          state.combo = Math.floor(state.combo / 2);
         }
-
-        // 重新设计：我们修改匹配部分，在匹配时 push 一个飞行目标
-        // 我这里直接改为：出餐时，如果左需求匹配，飞到左需求框，否则右需求或中间
-        // 但由于我们马上要生成新菜单，所以我们可以在匹配后保存匹配方向
-        // 我们增加一个变量 state.matchedSide
-        // 下面我将在匹配时设置 state.matchedSide
-
-        // 为了代码整洁，我们重构匹配部分，使用 state.matchedSide 变量
-        // 在 serveDish 开头初始化 state.matchedSide = null
-        // 在匹配时设置
-        // 然后根据 state.matchedSide 确定目标
-
-        // 为了方便，我直接修改 serveDish 函数，增加 matchedSide 临时变量。
-        // 但由于函数已经写好了，我将在外部重写 serveDish，或者直接修改内部。
-
-        // 由于这个文件已经很长，我将直接在下面重写 serveDish，并添加飞行逻辑。
-
-        // 但为了保持一致性，我重新定义 serveDish
+        if (matched) sfxCombo();
+        else sfxServe();
+        if (state.gold < 0) state.gold = 0;
+        updateUI();
       }
-
-      // 重新定义 serveDish（替换原来的）
-      // 为了保险，我注释掉原来的，重新定义
-      // 但因为下面已经有事件绑定引用 serveDish，所以直接覆盖
-
-      // 我们重新声明 serveDish
-      // 但由于函数提升，我们可以在下面重新赋值
-      // 这里不重复定义，在下面直接覆盖
-
-      // 为了代码清晰，我将从下面开始重新定义所有内容
 
       // ---------- 食材生成 ----------
       function queueIngredient() {
@@ -913,7 +894,6 @@
           if (dist < threshold && ing.y > cellH * 4.0 && ing.y < cellH * 6.8) {
             // 检查金币是否足够购买食材
             if (state.gold < ing.cost) {
-              // 金币不足，不能拾取，但可以继续掉落
               continue;
             }
             // 扣除金币
@@ -945,23 +925,15 @@
       function updateFlyingDishes(deltaTime) {
         for (let i = state.flyingDishes.length - 1; i >= 0; i--) {
           const dish = state.flyingDishes[i];
-          dish.progress += deltaTime * 1.8; // 速度
+          dish.progress += deltaTime * 1.8;
           if (dish.progress >= 1) {
-            dish.progress = 1;
-            dish.done = true;
-            // 到达目标，可以触发一些效果
-            // 移除
             state.flyingDishes.splice(i, 1);
             continue;
           }
-          // 缓动函数
           const t = dish.progress;
-          // 先上升再下降
-          const ease = t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
           dish.currentX = lerp(dish.startX, dish.midX, t);
           dish.currentY =
             lerp(dish.startY, dish.midY, t) - 20 * Math.sin(t * Math.PI);
-          // 如果是后半段，向终点移动
           if (t > 0.3) {
             const p2 = (t - 0.3) / 0.7;
             dish.currentX = lerp(dish.midX, dish.targetX, p2);
@@ -981,7 +953,6 @@
           return;
         }
 
-        // 传送带条纹滚动
         state.beltOffset = (state.beltOffset + deltaTime * 30) % 30;
 
         state.queueTimer += deltaTime;
@@ -1001,7 +972,7 @@
         const headUp = state.headY < 0.35;
         if (headUp && !state.isHeadUp) {
           state.isHeadUp = true;
-          serveDish(); // 调用出餐
+          serveDish();
         } else if (!headUp) {
           state.isHeadUp = false;
         }
@@ -1079,11 +1050,9 @@
 
         ctx.clearRect(0, 0, W, H);
 
-        // 背景
         ctx.fillStyle = "#fdf8f0";
         ctx.fillRect(0, 0, W, H);
 
-        // 网格线（辅助）
         ctx.strokeStyle = "rgba(200, 190, 175, 0.2)";
         ctx.lineWidth = 1;
         for (let r = 0; r <= ROWS; r++) {
@@ -1099,34 +1068,26 @@
           ctx.stroke();
         }
 
-        // ---------- 传输带区域 ----------
         const beltTop = cellH * 1.5;
         const beltBottom = cellH * 6.8;
         const beltHeight = beltBottom - beltTop;
 
-        // 后备背景色
         ctx.fillStyle = "rgba(200, 190, 175, 0.3)";
         ctx.fillRect(0, beltTop, W, beltHeight);
 
-        // 传送带图片静态
         if (
           images.belt &&
           images.belt.complete &&
           images.belt.naturalWidth > 0
         ) {
-          const imgW = W;
-          const imgH = beltHeight;
-          ctx.drawImage(images.belt, 0, beltTop, imgW, imgH);
+          ctx.drawImage(images.belt, 0, beltTop, W, beltHeight);
         }
 
-        // ---------- 条纹左右两列（居中调整） ----------
-        // 左轨道和右轨道居中：leftTrackX = cellW*0.6, rightTrackX = cellW*2.2, trackWidth = cellW*1.2
         const leftTrackX = cellW * 0.6;
         const rightTrackX = cellW * 2.2;
         const trackWidth = cellW * 1.2;
-
         const stripeOffset = state.beltOffset;
-        // 左列条纹
+
         for (
           let y = beltTop - 30 + stripeOffset;
           y < beltBottom + 30;
@@ -1137,7 +1098,6 @@
           ctx.fillStyle = "rgba(180, 170, 155, 0.10)";
           ctx.fillRect(leftTrackX, y + 15, trackWidth, 4);
         }
-        // 右列条纹
         for (
           let y = beltTop - 30 + stripeOffset;
           y < beltBottom + 30;
@@ -1149,13 +1109,11 @@
           ctx.fillRect(rightTrackX, y + 15, trackWidth, 4);
         }
 
-        // 轨道背景（极淡）
         ctx.fillStyle = "rgba(231, 76, 60, 0.04)";
         ctx.fillRect(leftTrackX, beltTop, trackWidth, beltHeight);
         ctx.fillStyle = "rgba(52, 152, 219, 0.04)";
         ctx.fillRect(rightTrackX, beltTop, trackWidth, beltHeight);
 
-        // 小箭头
         ctx.fillStyle = "#e67e22";
         ctx.font = '14px "Press Start 2P", monospace';
         for (let y = beltTop + 30; y < beltBottom - 20; y += 50) {
@@ -1165,7 +1123,6 @@
           ctx.fillText("▼", rightTrackX + trackWidth / 2, y);
         }
 
-        // ---------- 食材 ----------
         state.ingredients.forEach((ing) => {
           if (!ing.alive) return;
           const size = ing.size;
@@ -1198,7 +1155,6 @@
           ctx.shadowBlur = 0;
         });
 
-        // ---------- 厨师（带倾斜） ----------
         const chefX = state.chefX * W;
         const chefY = cellH * 5.2;
         const chefSize = cellH * 1.6;
@@ -1207,7 +1163,6 @@
         ctx.save();
         ctx.translate(chefX, chefY + chefSize * 0.4);
         ctx.rotate(tiltAngle);
-
         if (
           images.chef &&
           images.chef.complete &&
@@ -1219,22 +1174,18 @@
         }
         ctx.restore();
 
-        // ---------- 飞行菜品动画 ----------
         state.flyingDishes.forEach((dish) => {
-          const x = dish.currentX;
-          const y = dish.currentY;
           ctx.save();
           ctx.font = "36px serif";
           ctx.textAlign = "center";
           ctx.textBaseline = "middle";
           ctx.shadowColor = "rgba(0,0,0,0.2)";
           ctx.shadowBlur = 20;
-          ctx.fillText("🍳", x, y);
+          ctx.fillText("🍳", dish.currentX, dish.currentY);
           ctx.shadowBlur = 0;
           ctx.restore();
         });
 
-        // ---------- 锅（图片 + 阴影） ----------
         const potX = chefX;
         const potY = cellH * 6.2;
         const potW = cellW * 1.0;
@@ -1253,7 +1204,6 @@
         }
         ctx.shadowBlur = 0;
 
-        // 锅中食材图标
         const potItems = Object.keys(state.pot).filter(
           (key) => state.pot[key] > 0,
         );
@@ -1276,11 +1226,10 @@
           ctx.fillText("🥘", potX, potY - potH * 0.05);
         }
 
-        // ---------- 菜单（窄长，上移） ----------
         const menuX = cellW * 2.7;
-        const menuY = cellH * 4.8; // 上移
-        const menuW = cellW * 0.9; // 更窄
-        const menuH = cellH * 2.0; // 更长
+        const menuY = cellH * 4.8;
+        const menuW = cellW * 0.9;
+        const menuH = cellH * 2.0;
 
         ctx.fillStyle = "rgba(255, 248, 240, 0.95)";
         ctx.shadowBlur = 10;
@@ -1316,15 +1265,11 @@
             const ing = INGREDIENT_TYPES.find((i) => i.id === item.id);
             const collected = state.pot[item.id] || 0;
             const needed = item.count;
-
-            // 只显示图标，放大
             ctx.font = "22px serif";
             ctx.textAlign = "left";
             ctx.textBaseline = "top";
             ctx.fillStyle = "#3d3a36";
             ctx.fillText(ing ? ing.emoji : "🍽", menuX + 6, menuY + yOff);
-
-            // 进度条
             const barX = menuX + 54;
             const barY = menuY + yOff + 4;
             const barW = menuW - 72;
@@ -1334,8 +1279,6 @@
             ctx.fillRect(barX, barY, barW, barH);
             ctx.fillStyle = collected >= needed ? "#2ecc71" : "#f1c40f";
             ctx.fillRect(barX, barY, Math.min(fillW, barW), barH);
-
-            // 数字右对齐，字号变大
             ctx.fillStyle = "#3d3a36";
             ctx.textAlign = "right";
             ctx.textBaseline = "top";
@@ -1345,12 +1288,10 @@
               menuX + menuW - 6,
               menuY + yOff - 1,
             );
-
             yOff += 24;
           });
         }
 
-        // ---------- 餐厅区域 ----------
         const restaurantTop = cellH * 7.3;
         const restaurantBottom = cellH * 9.8;
         const restaurantH = restaurantBottom - restaurantTop;
@@ -1377,7 +1318,6 @@
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // 左桌
         const leftTableX = cellW * 0.2;
         const leftTableW = cellW * 1.6;
         const leftTableY = restaurantTop + restaurantH * 0.2;
@@ -1445,7 +1385,6 @@
           ctx.fillText(state.leftDemand.dish, bubbleX + 30, bubbleY + 34);
         }
 
-        // 右桌
         const rightTableX = cellW * 2.2;
         const rightTableW = cellW * 1.6;
         const rightTableY = restaurantTop + restaurantH * 0.2;
@@ -1512,7 +1451,6 @@
           ctx.fillText(state.rightDemand.dish, bubbleX + 30, bubbleY + 34);
         }
 
-        // ---------- 顶部信息 ----------
         const minutes = Math.floor(state.timeLeft / 60);
         const seconds = Math.floor(state.timeLeft % 60);
         const timeStr = `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
@@ -1555,7 +1493,6 @@
         ctx.fillText("←歪头  ·  抬头→", 10, H - 8);
       }
 
-      // ---- roundRect polyfill ----
       if (!CanvasRenderingContext2D.prototype.roundRect) {
         CanvasRenderingContext2D.prototype.roundRect = function (
           x,
@@ -1576,7 +1513,6 @@
 
       function updateUI() {}
 
-      // ---------- 游戏循环 ----------
       let lastTimestamp = 0;
       function gameLoop(timestamp) {
         const delta = lastTimestamp
@@ -1588,7 +1524,6 @@
         requestAnimationFrame(gameLoop);
       }
 
-      // ---------- 结束游戏 ----------
       function endGame() {
         if (state.isGameOver) return;
         state.isGameOver = true;
@@ -1601,7 +1536,6 @@
         resultModal.classList.remove("hidden");
       }
 
-      // ---------- 重置 ----------
       function resetGame() {
         if (video.srcObject) {
           video.srcObject.getTracks().forEach((track) => track.stop());
@@ -1622,8 +1556,10 @@
         state.targetX = 0.5;
         state.headX = 0.5;
         state.headY = 0.5;
-        state.headTilt = 0;
         state.isHeadUp = false;
+        state.calibrateRefX = 0.5;
+        state.calibrateRefY = 0.5;
+        state.isCalibrated = false;
         state.ingredients = [];
         state.pot = {};
         state.menu = [];
@@ -1634,7 +1570,6 @@
         state.flyingDishes = [];
         state.queueTimer = 0;
         state.beltOffset = 0;
-        state.isCalibrated = false;
         if (state.timerInterval) {
           clearInterval(state.timerInterval);
           state.timerInterval = null;
@@ -1646,7 +1581,6 @@
         updateUI();
       }
 
-      // ---------- 开始游戏 ----------
       function startGame() {
         resetGame();
         state.isPlaying = true;
@@ -1661,7 +1595,6 @@
         updateUI();
       }
 
-      // ---------- 暂停 ----------
       function togglePause() {
         if (!state.isPlaying || state.isGameOver) return;
         state.isPaused = !state.isPaused;
@@ -1674,7 +1607,7 @@
         }
       }
 
-      // ---------- MediaPipe 初始化 ----------
+      // ---------- MediaPipe 初始化 (改用鼻尖直接定位) ----------
       function initFaceMesh() {
         const faceMesh = new FaceMesh({
           locateFile: (file) =>
@@ -1692,26 +1625,22 @@
             results.multiFaceLandmarks.length > 0
           ) {
             const landmarks = results.multiFaceLandmarks[0];
-            // 鼻尖 landmark 1，鼻根 landmark 168（或0）
-            const noseTip = landmarks[1];
-            const noseRoot = landmarks[168] || landmarks[0];
-            if (noseTip && noseRoot) {
-              // 计算鼻尖相对于鼻根的偏移（水平方向）
-              // 修复：前置摄像头镜像下，鼻尖坐标需要反转方向
-              // 使用鼻根减鼻尖，使左歪头时厨师向左移动
-              const dx = noseRoot.x - noseTip.x;
-              // 使用偏移量控制厨师目标位置
-              // 偏移量范围大约 -0.05 ~ 0.05，映射到 -1~1
-              let tilt = clamp(dx * 20, -1, 1);
-              state.headTilt = tilt;
-              // 将 tilt 映射到目标位置 0.1~0.9
-              let target = 0.5 + tilt * 0.4;
-              state.targetX = clamp(target, 0.05, 0.95);
-
-              // 同时保留 headY 用于抬头检测
+            const noseTip = landmarks[1]; // 鼻尖
+            if (noseTip) {
+              // 更新头部坐标
+              state.headX = clamp(noseTip.x, 0, 1);
               state.headY = clamp(noseTip.y, 0, 1);
 
-              // 更新校准预览
+              // 只有校准完成后才允许移动厨师
+              if (state.isCalibrated) {
+                // 灵敏度：2.0 表示鼻尖移动1%画面，厨师移动2%屏幕宽度
+                const sensitivity = 2.0;
+                let target =
+                  (state.headX - state.calibrateRefX) * sensitivity + 0.5;
+                state.targetX = clamp(target, 0.05, 0.95);
+              }
+
+              // 校准预览红点
               if (!calibrateModal.classList.contains("hidden")) {
                 updateCalibrateOverlay(noseTip.x, noseTip.y);
               }
@@ -1723,7 +1652,6 @@
         return faceMesh;
       }
 
-      // ---------- 校准覆盖层绘制 ----------
       function updateCalibrateOverlay(noseX, noseY) {
         const cw = calibrateOverlay.width;
         const ch = calibrateOverlay.height;
@@ -1756,18 +1684,21 @@
         );
       }
 
-      // ---------- 校准 ----------
+      // ---------- 校准（收集鼻尖初始位置） ----------
       let calibrationCount = 0;
       let calibXSum = 0;
 
       function performCalibration() {
-        if (state.headX > 0.1 && state.headX < 0.9) {
-          calibXSum += state.headX;
-          calibrationCount++;
-        }
-        if (calibrationCount >= 10) {
+        if (calibrationCount < 10) {
+          if (state.headX > 0 && state.headX < 1) {
+            calibXSum += state.headX;
+            calibrationCount++;
+          }
+          setTimeout(performCalibration, 100);
+        } else {
           const avgX = calibXSum / calibrationCount;
-          state.calibrateOffsetX = avgX - 0.5;
+          state.calibrateRefX = avgX;
+          state.calibrateRefY = state.headY;
           state.isCalibrated = true;
           calibrateModal.classList.add("hidden");
           if (calibrateVideo.srcObject) {
@@ -1775,8 +1706,6 @@
             calibrateVideo.srcObject = null;
           }
           startGame();
-        } else {
-          setTimeout(performCalibration, 100);
         }
       }
 
@@ -1921,92 +1850,6 @@
           state.targetX = 0.5;
       });
 
-      // ---------- 重写 serveDish（添加飞行动画） ----------
-      // 覆盖之前的 serveDish 定义
-      serveDish = function () {
-        if (!state.isPlaying || state.isPaused || state.isGameOver) return;
-        if (!state.menuComplete) {
-          sfxMiss();
-          return;
-        }
-
-        // 计算利润 = 收益 - 成本
-        const profit = state.currentRecipeReward - state.currentRecipeCost;
-        state.gold += profit;
-        state.totalGold += profit;
-
-        state.dishesServed++;
-        state.combo++;
-        if (state.combo > state.maxCombo) state.maxCombo = state.combo;
-
-        // 匹配需求额外奖励
-        let matched = false;
-        let matchedSide = null;
-        if (state.leftDemand && state.leftDemand.dish === state.dishName) {
-          state.gold += 5;
-          state.totalGold += 5;
-          matched = true;
-          matchedSide = "left";
-          state.leftDemand = null;
-          sfxCombo();
-        }
-        if (state.rightDemand && state.rightDemand.dish === state.dishName) {
-          state.gold += 5;
-          state.totalGold += 5;
-          matched = true;
-          matchedSide = "right";
-          state.rightDemand = null;
-          sfxCombo();
-        }
-
-        sfxServe();
-        sfxGold();
-
-        // 创建飞行菜品动画
-        const chefX = state.chefX * canvas.width;
-        const chefY = canvas.height * 0.45;
-        const potX = chefX;
-        const potY = canvas.height * 0.62;
-
-        // 目标位置：如果有匹配，飞到对应的需求框；否则飞到中间
-        let targetX = canvas.width / 2;
-        let targetY = canvas.height * 0.78;
-        if (matchedSide === "left") {
-          targetX = canvas.width * 0.25;
-          targetY = canvas.height * 0.78;
-        } else if (matchedSide === "right") {
-          targetX = canvas.width * 0.75;
-          targetY = canvas.height * 0.78;
-        }
-
-        // 中间点（厨师面前）
-        const midX = chefX;
-        const midY = chefY - 30;
-
-        state.flyingDishes.push({
-          startX: potX,
-          startY: potY,
-          midX: midX,
-          midY: midY,
-          targetX: targetX,
-          targetY: targetY,
-          progress: 0,
-          currentX: potX,
-          currentY: potY,
-          done: false,
-        });
-
-        // 生成新菜单
-        generateMenu();
-        if (!matched) {
-          state.combo = Math.floor(state.combo / 2);
-        }
-        if (matched) sfxCombo();
-        else sfxServe();
-        if (state.gold < 0) state.gold = 0;
-        updateUI();
-      };
-
       // ---------- 初始化 ----------
       function init() {
         loadImages(() => {
@@ -2027,7 +1870,7 @@
         },
         { once: true },
       );
-      console.log("🍳 像素厨房已加载（经济系统+倾斜控制+动画）");
+      console.log("🍳 像素厨房已加载（鼻尖直接定位控制）");
     </script>
   </body>
 </html>
