@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头部控菜</title>
+    <title>像素厨房 · 头部控菜（追踪增强版）</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -62,7 +62,7 @@
         color: #e67e22;
         font-weight: bold;
       }
-      #top-items {
+      #top-dishes {
         color: #2c3e50;
       }
       #game-wrapper {
@@ -234,7 +234,7 @@
   </head>
   <body>
     <div class="outer-top-bar">
-      <div class="top-box" id="top-items">🧺 0</div>
+      <div class="top-box" id="top-dishes">🍽️ 0</div>
       <div class="top-box" id="top-gold">💰 50</div>
       <div class="top-box">
         <span id="top-time">01:30</span><span id="top-pause">⏸</span>
@@ -344,7 +344,7 @@
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
-        const topItemsEl = document.getElementById("top-items");
+        const topDishesEl = document.getElementById("top-dishes");
 
         function resizeCanvas() {
           const rect = canvas.parentElement.getBoundingClientRect();
@@ -463,6 +463,7 @@
           fm: null,
           touchActive: false,
           touchStartX: 0,
+          floatingTexts: [], // 金币提示动画
         };
 
         const TYPES = [
@@ -669,6 +670,17 @@
           updateUI();
         }
 
+        // 智能食材生成：优先出现当前菜谱所需食材
+        function getWeightedType() {
+          const neededIds = state.menu.map((i) => i.id);
+          if (Math.random() < 0.75 && neededIds.length > 0) {
+            const pick = neededIds[randi(0, neededIds.length - 1)];
+            const found = TYPES.find((t) => t.id === pick);
+            if (found) return found;
+          }
+          return TYPES[randi(0, TYPES.length - 1)];
+        }
+
         function addIngredient() {
           if (!state.playing || state.paused || state.over) return;
           const cellH = canvas.height / ROWS;
@@ -678,7 +690,7 @@
           )
             return;
           const lane = state.ings.length % 2 ? 1 : 0;
-          const t = TYPES[randi(0, TYPES.length - 1)];
+          const t = getWeightedType();
           const cellW = canvas.width / COLS;
           const sx =
             lane === 0
@@ -725,6 +737,13 @@
               sfxPickup();
               checkMenu();
               state.ings.splice(i, 1);
+              // 金币扣减动画
+              state.floatingTexts.push({
+                text: `-${ing.cost}`,
+                x: ing.x,
+                y: ing.y,
+                life: 1.0,
+              });
               continue;
             }
             if (ing.y > cellH * 6.5) {
@@ -753,6 +772,15 @@
           }
         }
 
+        function updateFloatingTexts(dt) {
+          for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
+            const ft = state.floatingTexts[i];
+            ft.y -= 40 * dt;
+            ft.life -= dt;
+            if (ft.life <= 0) state.floatingTexts.splice(i, 1);
+          }
+        }
+
         function update(dt) {
           if (!state.playing || state.paused || state.over) return;
           state.time -= dt;
@@ -769,6 +797,7 @@
           }
           updateIngs();
           updateFly(dt);
+          updateFloatingTexts(dt);
           state.chefX = lerp(state.chefX, state.targetX, 0.18);
           state.chefX = clamp(state.chefX, 0.05, 0.95);
           if (state.headY < 0.35 && !state.up) {
@@ -867,9 +896,18 @@
             ctx.fillText(ing.emoji, ing.x, ing.y + 1);
             ctx.shadowBlur = 0;
           });
+
           const chefSz = cH * 1.3;
           const chefX = state.chefX * W;
           const chefY = cH * 5.3;
+          const potSz = chefSz * 1.25;
+          const potW = potSz,
+            potH = potSz * 0.7;
+          const potX = chefX,
+            potY = cH * 6.0;
+
+          // 绘制顺序：厨师（底层） -> 实色锅 -> 食材堆积 -> 透明锅
+          // 厨师
           ctx.save();
           ctx.translate(chefX, chefY + chefSz * 0.4);
           ctx.rotate((state.chefX - 0.5) * 0.6);
@@ -883,11 +921,20 @@
             );
           ctx.restore();
 
-          const potSz = chefSz * 1.25;
-          const potW = potSz,
-            potH = potSz * 0.7;
-          const potX = chefX,
-            potY = cH * 6.0;
+          // 实色锅（不透明）
+          ctx.save();
+          ctx.globalAlpha = 1;
+          if (imgs.pot && imgs.pot.complete)
+            ctx.drawImage(
+              imgs.pot,
+              potX - potW / 2,
+              potY - potH / 2,
+              potW,
+              potH,
+            );
+          ctx.restore();
+
+          // 食材堆积
           const potItems = Object.keys(state.pot).filter(
             (k) => state.pot[k] > 0,
           );
@@ -917,6 +964,7 @@
             ctx.restore();
           }
 
+          // 透明锅
           ctx.save();
           ctx.globalAlpha = 0.7;
           ctx.shadowColor = "rgba(0,0,0,0.08)";
@@ -932,22 +980,22 @@
           ctx.shadowBlur = 0;
           ctx.restore();
 
-          // 锅左右装饰（留空隙）
-          const decoPotW = potW * 0.4; // 左右装饰宽度
+          // 锅左右固定装饰（不跟随，紧挨锅两侧，无空隙）
+          const decoPotW = potW * 0.4;
           const decoHPot = potH;
           const decoPotY = potY - potH / 2;
-          const gap = 15; // 与锅之间的空隙
           ctx.fillStyle = "#b0b0b0";
-          // 左装饰
-          ctx.fillRect(0, decoPotY, potX - potW / 2 - gap, decoHPot);
-          // 右装饰
+          // 左装饰紧贴锅左边缘
           ctx.fillRect(
-            potX + potW / 2 + gap,
+            potX - potW / 2 - decoPotW,
             decoPotY,
-            W - (potX + potW / 2 + gap),
+            decoPotW,
             decoHPot,
           );
+          // 右装饰紧贴锅右边缘
+          ctx.fillRect(potX + potW / 2, decoPotY, decoPotW, decoHPot);
 
+          // 客人区域
           const restTop = cH * 6.25,
             restH = cH * 2.8;
           ctx.fillStyle = "#f0ebdc";
@@ -1010,19 +1058,22 @@
             ctx.fillText(state.rightD.dish, bx + 37, by + 40);
           }
 
-          // 菜谱固定在中间，不跟随厨师
+          // 固定菜谱
           const menuW = cW * 1.1;
           const baseH = 90,
             rowH = 30;
           const menuH = baseH + state.menu.length * rowH;
-          const menuX = (W - menuW) / 2; // 居中
+          const menuX = (W - menuW) / 2;
           const menuY = 0;
-          const decoH = 20; // 扁横条高度
+          const decoH = 20;
           ctx.fillStyle = "#b0b0b0";
-          // 左装饰横条
-          ctx.fillRect(0, menuY, menuX, decoH);
-          // 右装饰横条
-          ctx.fillRect(menuX + menuW, menuY, W - (menuX + menuW), decoH);
+          ctx.fillRect(0, menuY, menuX * 2, decoH); // 左侧装饰条长度翻倍
+          ctx.fillRect(
+            menuX + menuW - menuX,
+            menuY,
+            W - (menuX + menuW) + menuX,
+            decoH,
+          ); // 右侧同样处理，保持宽度翻倍
 
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.shadowBlur = 8;
@@ -1076,6 +1127,28 @@
               yOff += rowH;
             });
           }
+
+          // 金币提示飘字
+          state.floatingTexts.forEach((ft) => {
+            ctx.save();
+            ctx.globalAlpha = ft.life;
+            ctx.font = 'bold 14px "Press Start 2P", monospace';
+            ctx.fillStyle = "#e74c3c";
+            ctx.textAlign = "center";
+            ctx.fillText(ft.text, ft.x, ft.y);
+            ctx.restore();
+          });
+
+          // 追踪指示器（绿色 = 追踪正常，红色 = 未校准）
+          const indicatorX = chefX;
+          const indicatorY = chefY - 30;
+          ctx.beginPath();
+          ctx.arc(indicatorX, indicatorY, 6, 0, Math.PI * 2);
+          ctx.fillStyle = state.calibrated ? "#2ecc71" : "#e74c3c";
+          ctx.fill();
+          ctx.strokeStyle = "#fff";
+          ctx.lineWidth = 2;
+          ctx.stroke();
         }
 
         if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1106,7 +1179,7 @@
             s = Math.floor(state.time % 60);
           topTimeEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
           topGoldEl.textContent = `💰 ${state.gold}`;
-          topItemsEl.textContent = `🧺 ${state.ingr}`;
+          topDishesEl.textContent = `🍽️ ${state.dishes}`;
         }
 
         let last = 0;
@@ -1172,6 +1245,7 @@
           state.leftD = null;
           state.rightD = null;
           state.fly = [];
+          state.floatingTexts = [];
           state.beltOff = 0;
           state.qTimer = 0;
           if (state._int) {
@@ -1211,7 +1285,7 @@
           start();
         }
 
-        // 触控控制（左右滑动移动厨师，点击暂停）
+        // 触控
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -1231,18 +1305,13 @@
             return;
           const touch = e.touches[0];
           const dx = touch.clientX - state.touchStartX;
-          const sensitivity = 0.004;
-          state.targetX = clamp(
-            state._touchBaseX + dx * sensitivity,
-            0.05,
-            0.95,
-          );
+          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.05, 0.95);
         });
         canvas.addEventListener("touchend", (e) => {
           e.preventDefault();
           state.touchActive = false;
         });
-        canvas.addEventListener("click", (e) => {
+        canvas.addEventListener("click", () => {
           if (state.playing && !state.over) togglePause();
         });
 
