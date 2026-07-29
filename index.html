@@ -1388,8 +1388,9 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 头控核心（极简稳定版） ----------
+        // ---------- 头控核心（完全参照滑雪游戏） ----------
         let faceMeshInstance = null;
+        let isProcessing = false; // 防止并发
 
         function initFaceMesh() {
           const fm = new FaceMesh({
@@ -1398,8 +1399,8 @@
           });
           fm.setOptions({
             maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.6,
+            refineLandmarks: false, // 与滑雪游戏一致
+            minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5,
           });
           fm.onResults((results) => {
@@ -1431,6 +1432,25 @@
           return fm;
         }
 
+        // 推理循环函数（递归）
+        async function startCameraLoop() {
+          if (video.readyState >= 2 && !isProcessing) {
+            isProcessing = true;
+            try {
+              await faceMeshInstance.send({ image: video });
+            } catch (e) {
+              console.warn("FaceMesh send error:", e);
+            }
+            isProcessing = false;
+          }
+          // 使用 requestVideoFrameCallback 或 requestAnimationFrame 循环
+          if (video.requestVideoFrameCallback) {
+            video.requestVideoFrameCallback(startCameraLoop);
+          } else {
+            requestAnimationFrame(startCameraLoop);
+          }
+        }
+
         async function startCam() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
@@ -1449,6 +1469,8 @@
               video.onloadedmetadata = resolve;
             });
             await video.play();
+
+            // 等待视频有实际帧
             await new Promise((resolve) => {
               const check = () => {
                 if (video.readyState >= 2) resolve();
@@ -1460,31 +1482,16 @@
             debugEl.textContent = "⏳ 加载 FaceMesh 模型...";
             faceMeshInstance = initFaceMesh();
 
-            // 等待模型加载（给 WASM 一些时间）
-            await new Promise((r) => setTimeout(r, 1500));
+            // 给模型一点加载时间（实际加载是异步的，但 send 会触发加载）
+            await new Promise((r) => setTimeout(r, 1000));
 
-            // 极简推理循环：永不停止，出错只打印
-            let processing = false;
-            function processFrame() {
-              if (video.readyState >= 2 && !processing) {
-                processing = true;
-                faceMeshInstance
-                  .send({ image: video })
-                  .then(() => {
-                    processing = false;
-                  })
-                  .catch((err) => {
-                    console.warn("推理错误（忽略）:", err);
-                    processing = false;
-                  });
-              }
-              requestAnimationFrame(processFrame);
-            }
-            processFrame();
+            // 开始推理循环
+            startCameraLoop();
 
             state.camReady = true;
             document.getElementById("cameraModal").classList.add("hidden");
 
+            // 1 秒后校准
             setTimeout(() => {
               state.zeroAngle = state.headAngle;
               state.calibrated = true;
