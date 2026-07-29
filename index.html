@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 触控+头部控菜</title>
+    <title>像素厨房 · 头部控菜</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -320,7 +320,7 @@
             </div>
           </div>
           <button class="btn" id="retryBtn">🔄 再来一局</button>
-          <button class="btn btn-secondary" id="rankBtn">📊 你的业绩</button>
+          <button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
         </div>
       </div>
       <div
@@ -932,19 +932,25 @@
           ctx.shadowBlur = 0;
           ctx.restore();
 
-          const decoLeftPotW = potX - potW / 2;
-          const decoRightPotW = W - (potX + potW / 2);
+          // 锅左右装饰（留空隙）
+          const decoPotW = potW * 0.4; // 左右装饰宽度
           const decoHPot = potH;
           const decoPotY = potY - potH / 2;
+          const gap = 15; // 与锅之间的空隙
           ctx.fillStyle = "#b0b0b0";
-          if (decoLeftPotW > 0)
-            ctx.fillRect(0, decoPotY, decoLeftPotW, decoHPot);
-          if (decoRightPotW > 0)
-            ctx.fillRect(potX + potW / 2, decoPotY, decoRightPotW, decoHPot);
+          // 左装饰
+          ctx.fillRect(0, decoPotY, potX - potW / 2 - gap, decoHPot);
+          // 右装饰
+          ctx.fillRect(
+            potX + potW / 2 + gap,
+            decoPotY,
+            W - (potX + potW / 2 + gap),
+            decoHPot,
+          );
 
           const restTop = cH * 6.25,
             restH = cH * 2.8;
-          ctx.fillStyle = "#f0ebdc"; // 实色背景
+          ctx.fillStyle = "#f0ebdc";
           ctx.shadowBlur = 6;
           ctx.beginPath();
           ctx.roundRect(0, restTop, W, restH, 8);
@@ -1004,20 +1010,19 @@
             ctx.fillText(state.rightD.dish, bx + 37, by + 40);
           }
 
+          // 菜谱固定在中间，不跟随厨师
           const menuW = cW * 1.1;
           const baseH = 90,
             rowH = 30;
           const menuH = baseH + state.menu.length * rowH;
-          const menuX = chefX - menuW / 2;
+          const menuX = (W - menuW) / 2; // 居中
           const menuY = 0;
-          const decoMenuW = (W - menuW) / 2;
-          // 左右装饰宽度缩短为原来的1/4，即很扁的条
-          const decoStripW = decoMenuW / 4;
+          const decoH = 20; // 扁横条高度
           ctx.fillStyle = "#b0b0b0";
-          // 左装饰 (紧贴顶部，靠左)
-          ctx.fillRect(0, menuY, decoStripW, menuH);
-          // 右装饰
-          ctx.fillRect(W - decoStripW, menuY, decoStripW, menuH);
+          // 左装饰横条
+          ctx.fillRect(0, menuY, menuX, decoH);
+          // 右装饰横条
+          ctx.fillRect(menuX + menuW, menuY, W - (menuX + menuW), decoH);
 
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.shadowBlur = 8;
@@ -1206,7 +1211,7 @@
           start();
         }
 
-        // ---------- 触控控制 ----------
+        // 触控控制（左右滑动移动厨师，点击暂停）
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -1238,11 +1243,10 @@
           state.touchActive = false;
         });
         canvas.addEventListener("click", (e) => {
-          // 只用于暂停/继续
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 面部追踪（复刻滑雪游戏）----------
+        // 面部追踪（双眼角度）
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1340,7 +1344,7 @@
         });
         document.getElementById("rankBtn").addEventListener("click", () => {
           alert(
-            `你的业绩：${getRank(state.totalGold)}\n总金币：${state.totalGold}`,
+            `我的评级：${getRank(state.totalGold)}\n总金币：${state.totalGold}`,
           );
         });
         document.querySelectorAll(".toggle-btn").forEach((b) => {
