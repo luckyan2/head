@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头部控菜（最终修复版）</title>
+    <title>像素厨房 · 触控+头部控菜</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -77,7 +77,7 @@
           0 12px 40px rgba(0, 0, 0, 0.1);
         margin: 0 12px 12px;
         border: 4px solid #d0c8b8;
-        border-radius: 0; /* 取消圆角 */
+        border-radius: 0;
       }
       #gameCanvas {
         position: absolute;
@@ -234,11 +234,11 @@
   </head>
   <body>
     <div class="outer-top-bar">
+      <div class="top-box" id="top-items">🧺 0</div>
+      <div class="top-box" id="top-gold">💰 50</div>
       <div class="top-box">
         <span id="top-time">01:30</span><span id="top-pause">⏸</span>
       </div>
-      <div class="top-box" id="top-gold">💰 50</div>
-      <div class="top-box" id="top-items">🧺 0</div>
     </div>
 
     <div id="game-wrapper">
@@ -461,6 +461,8 @@
           qTimer: 0,
           camReady: false,
           fm: null,
+          touchActive: false,
+          touchStartX: 0,
         };
 
         const TYPES = [
@@ -822,16 +824,12 @@
           const cW = W / COLS,
             cH = H / ROWS;
           ctx.clearRect(0, 0, W, H);
-
-          // 底层：传送带背景铺满整个画布
           if (imgs.belt && imgs.belt.complete) {
             ctx.drawImage(imgs.belt, 0, 0, W, H);
           } else {
             ctx.fillStyle = "#e0d6c8";
             ctx.fillRect(0, 0, W, H);
           }
-
-          // 传送带条纹区域
           const beltT = cH * 1.2,
             beltB = cH * 6.4;
           const lTx = cW * 0.3,
@@ -849,8 +847,6 @@
             ctx.fillStyle = "rgba(180,170,155,0.1)";
             ctx.fillRect(rTx, y + 15, tw, 4);
           }
-
-          // 食材掉落
           state.ings.forEach((ing) => {
             if (!ing.alive) return;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
@@ -871,8 +867,6 @@
             ctx.fillText(ing.emoji, ing.x, ing.y + 1);
             ctx.shadowBlur = 0;
           });
-
-          // 厨师
           const chefSz = cH * 1.3;
           const chefX = state.chefX * W;
           const chefY = cH * 5.3;
@@ -889,14 +883,11 @@
             );
           ctx.restore();
 
-          // 锅的尺寸和位置
           const potSz = chefSz * 1.25;
           const potW = potSz,
             potH = potSz * 0.7;
           const potX = chefX,
             potY = cH * 6.0;
-
-          // 绘制锅中食材（散乱叠压，在锅图层之下）
           const potItems = Object.keys(state.pot).filter(
             (k) => state.pot[k] > 0,
           );
@@ -904,8 +895,8 @@
             ctx.save();
             const centerX = potX,
               centerY = potY - potH * 0.1;
-            const radiusX = potW * 0.4;
-            const radiusY = potH * 0.3;
+            const radiusX = potW * 0.4,
+              radiusY = potH * 0.3;
             potItems.forEach((key, idx) => {
               const ing = TYPES.find((t) => t.id === key);
               const count = state.pot[key];
@@ -926,7 +917,6 @@
             ctx.restore();
           }
 
-          // 锅（半透明）
           ctx.save();
           ctx.globalAlpha = 0.7;
           ctx.shadowColor = "rgba(0,0,0,0.08)";
@@ -942,24 +932,19 @@
           ctx.shadowBlur = 0;
           ctx.restore();
 
-          // 锅左右装饰（实色灰色）
           const decoLeftPotW = potX - potW / 2;
           const decoRightPotW = W - (potX + potW / 2);
           const decoHPot = potH;
           const decoPotY = potY - potH / 2;
           ctx.fillStyle = "#b0b0b0";
-          ctx.shadowBlur = 0;
-          if (decoLeftPotW > 0) {
+          if (decoLeftPotW > 0)
             ctx.fillRect(0, decoPotY, decoLeftPotW, decoHPot);
-          }
-          if (decoRightPotW > 0) {
+          if (decoRightPotW > 0)
             ctx.fillRect(potX + potW / 2, decoPotY, decoRightPotW, decoHPot);
-          }
 
-          // 客人区域上移
           const restTop = cH * 6.25,
             restH = cH * 2.8;
-          ctx.fillStyle = "rgba(240,235,220,0.5)";
+          ctx.fillStyle = "#f0ebdc"; // 实色背景
           ctx.shadowBlur = 6;
           ctx.beginPath();
           ctx.roundRect(0, restTop, W, restH, 8);
@@ -1019,20 +1004,21 @@
             ctx.fillText(state.rightD.dish, bx + 37, by + 40);
           }
 
-          // 菜谱（及其左右装饰）
           const menuW = cW * 1.1;
           const baseH = 90,
             rowH = 30;
           const menuH = baseH + state.menu.length * rowH;
           const menuX = chefX - menuW / 2;
-          const menuY = 0; // 紧靠顶部
-          const decoMenuW = (W - menuW) / 2; // 左右装饰宽度各占一半剩余空间
-          // 左装饰
+          const menuY = 0;
+          const decoMenuW = (W - menuW) / 2;
+          // 左右装饰宽度缩短为原来的1/4，即很扁的条
+          const decoStripW = decoMenuW / 4;
           ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, menuY, decoMenuW, menuH);
+          // 左装饰 (紧贴顶部，靠左)
+          ctx.fillRect(0, menuY, decoStripW, menuH);
           // 右装饰
-          ctx.fillRect(menuX + menuW, menuY, decoMenuW, menuH);
-          // 菜谱本体
+          ctx.fillRect(W - decoStripW, menuY, decoStripW, menuH);
+
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.shadowBlur = 8;
           ctx.beginPath();
@@ -1220,7 +1206,43 @@
           start();
         }
 
-        // ---------- 面部追踪（彻底复刻滑雪游戏）----------
+        // ---------- 触控控制 ----------
+        canvas.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          if (!state.playing || state.paused || state.over) return;
+          const touch = e.touches[0];
+          state.touchActive = true;
+          state.touchStartX = touch.clientX;
+          state._touchBaseX = state.targetX;
+        });
+        canvas.addEventListener("touchmove", (e) => {
+          e.preventDefault();
+          if (
+            !state.touchActive ||
+            !state.playing ||
+            state.paused ||
+            state.over
+          )
+            return;
+          const touch = e.touches[0];
+          const dx = touch.clientX - state.touchStartX;
+          const sensitivity = 0.004;
+          state.targetX = clamp(
+            state._touchBaseX + dx * sensitivity,
+            0.05,
+            0.95,
+          );
+        });
+        canvas.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          state.touchActive = false;
+        });
+        canvas.addEventListener("click", (e) => {
+          // 只用于暂停/继续
+          if (state.playing && !state.over) togglePause();
+        });
+
+        // ---------- 面部追踪（复刻滑雪游戏）----------
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1252,7 +1274,7 @@
                   : angle;
                 let tilt = clamp(useAngle / 25, -1, 1);
                 state.targetX = clamp(0.5 - tilt * 0.45, 0.05, 0.95);
-                console.log("头部追踪:", state.targetX.toFixed(2)); // 调试日志
+                console.log("头部追踪:", state.targetX.toFixed(2));
               }
             }
           });
@@ -1338,20 +1360,6 @@
         });
         document.body.addEventListener("dblclick", () => {
           if (state.playing) state.zeroAngle = state.headAngle;
-        });
-        // 键盘控制（确保移动测试可用）
-        document.addEventListener("keydown", (e) => {
-          if (e.key === "ArrowLeft") state.targetX = 0.15;
-          else if (e.key === "ArrowRight") state.targetX = 0.85;
-          else if (e.key === "ArrowUp") serve();
-          else if (e.key === " ") {
-            e.preventDefault();
-            togglePause();
-          }
-        });
-        document.addEventListener("keyup", (e) => {
-          if (e.key === "ArrowLeft" || e.key === "ArrowRight")
-            state.targetX = 0.5;
         });
 
         loadImgs(() => {
