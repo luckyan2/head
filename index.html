@@ -1388,9 +1388,9 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 头控核心（完全参照滑雪游戏） ----------
+        // ---------- 头控核心（最简暴力版） ----------
         let faceMeshInstance = null;
-        let isProcessing = false; // 防止并发
+        let calibratedOnce = false;
 
         function initFaceMesh() {
           const fm = new FaceMesh({
@@ -1399,7 +1399,7 @@
           });
           fm.setOptions({
             maxNumFaces: 1,
-            refineLandmarks: false, // 与滑雪游戏一致
+            refineLandmarks: false,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5,
           });
@@ -1418,6 +1418,15 @@
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 state.headAngle = angle;
                 state.headY = clamp(noseTip.y, 0, 1);
+
+                // 第一次检测到人脸时自动校准
+                if (!calibratedOnce) {
+                  calibratedOnce = true;
+                  state.zeroAngle = angle;
+                  state.calibrated = true;
+                  debugEl.textContent = `✅ 已校准，角度: ${angle.toFixed(2)}°`;
+                }
+
                 let useAngle = state.calibrated
                   ? angle - state.zeroAngle
                   : angle;
@@ -1432,23 +1441,14 @@
           return fm;
         }
 
-        // 推理循环函数（递归）
-        async function startCameraLoop() {
-          if (video.readyState >= 2 && !isProcessing) {
-            isProcessing = true;
-            try {
-              await faceMeshInstance.send({ image: video });
-            } catch (e) {
-              console.warn("FaceMesh send error:", e);
-            }
-            isProcessing = false;
+        // 暴力循环：每隔 50ms 发送一次，不管视频状态
+        function startCameraLoop() {
+          if (faceMeshInstance && video.srcObject) {
+            faceMeshInstance
+              .send({ image: video })
+              .catch((e) => console.warn("send error", e));
           }
-          // 使用 requestVideoFrameCallback 或 requestAnimationFrame 循环
-          if (video.requestVideoFrameCallback) {
-            video.requestVideoFrameCallback(startCameraLoop);
-          } else {
-            requestAnimationFrame(startCameraLoop);
-          }
+          setTimeout(startCameraLoop, 50);
         }
 
         async function startCam() {
@@ -1470,34 +1470,19 @@
             });
             await video.play();
 
-            // 等待视频有实际帧
-            await new Promise((resolve) => {
-              const check = () => {
-                if (video.readyState >= 2) resolve();
-                else requestAnimationFrame(check);
-              };
-              check();
-            });
-
             debugEl.textContent = "⏳ 加载 FaceMesh 模型...";
             faceMeshInstance = initFaceMesh();
 
-            // 给模型一点加载时间（实际加载是异步的，但 send 会触发加载）
-            await new Promise((r) => setTimeout(r, 1000));
+            // 等待模型初始化（给点时间加载 WASM）
+            await new Promise((r) => setTimeout(r, 1500));
 
-            // 开始推理循环
+            // 启动暴力循环
             startCameraLoop();
 
             state.camReady = true;
             document.getElementById("cameraModal").classList.add("hidden");
 
-            // 1 秒后校准
-            setTimeout(() => {
-              state.zeroAngle = state.headAngle;
-              state.calibrated = true;
-              debugEl.textContent += " 🔄 已校准";
-            }, 1000);
-
+            // 启动游戏（不依赖校准，校准会在第一次检测到时自动完成）
             start();
             initAudio();
             return true;
