@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头部控菜（追踪增强版）</title>
+    <title>像素厨房 · 头部控菜（高灵敏版）</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -245,6 +245,7 @@
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
 
+      <!-- 弹窗内容不变，略 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -289,8 +290,8 @@
             </div>
           </div>
           <div class="btn-group">
-            <button class="btn" id="resumeBtn">▶ 继续</button>
-            <button class="btn btn-secondary" id="restartBtn">
+            <button class="btn" id="resumeBtn">▶ 继续</button
+            ><button class="btn btn-secondary" id="restartBtn">
               🔄 重新开始
             </button>
           </div>
@@ -319,8 +320,8 @@
               <div class="label">连击</div>
             </div>
           </div>
-          <button class="btn" id="retryBtn">🔄 再来一局</button>
-          <button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
+          <button class="btn" id="retryBtn">🔄 再来一局</button
+          ><button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
         </div>
       </div>
       <div
@@ -341,6 +342,7 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
+        // 省略部分DOM引用，直接使用id
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
@@ -463,7 +465,7 @@
           fm: null,
           touchActive: false,
           touchStartX: 0,
-          floatingTexts: [], // 金币提示动画
+          floatingTexts: [],
         };
 
         const TYPES = [
@@ -670,13 +672,14 @@
           updateUI();
         }
 
-        // 智能食材生成：优先出现当前菜谱所需食材
-        function getWeightedType() {
-          const neededIds = state.menu.map((i) => i.id);
-          if (Math.random() < 0.75 && neededIds.length > 0) {
-            const pick = neededIds[randi(0, neededIds.length - 1)];
-            const found = TYPES.find((t) => t.id === pick);
-            if (found) return found;
+        // 智能食材生成：85%出现当前菜单仍需的食材，15%随机
+        function getSmartType() {
+          const needed = state.menu
+            .filter((i) => state.pot[i.id] < i.n)
+            .map((i) => i.id);
+          if (needed.length > 0 && Math.random() < 0.85) {
+            const pick = needed[randi(0, needed.length - 1)];
+            return TYPES.find((t) => t.id === pick);
           }
           return TYPES[randi(0, TYPES.length - 1)];
         }
@@ -690,7 +693,7 @@
           )
             return;
           const lane = state.ings.length % 2 ? 1 : 0;
-          const t = getWeightedType();
+          const t = getSmartType();
           const cellW = canvas.width / COLS;
           const sx =
             lane === 0
@@ -737,12 +740,11 @@
               sfxPickup();
               checkMenu();
               state.ings.splice(i, 1);
-              // 金币扣减动画
               state.floatingTexts.push({
-                text: `-${ing.cost}`,
+                text: `💰-${ing.cost}`,
                 x: ing.x,
                 y: ing.y,
-                life: 1.0,
+                life: 1.2,
               });
               continue;
             }
@@ -775,7 +777,7 @@
         function updateFloatingTexts(dt) {
           for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
             const ft = state.floatingTexts[i];
-            ft.y -= 40 * dt;
+            ft.y -= 30 * dt;
             ft.life -= dt;
             if (ft.life <= 0) state.floatingTexts.splice(i, 1);
           }
@@ -906,7 +908,6 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          // 绘制顺序：厨师（底层） -> 实色锅 -> 食材堆积 -> 透明锅
           // 厨师
           ctx.save();
           ctx.translate(chefX, chefY + chefSz * 0.4);
@@ -921,9 +922,7 @@
             );
           ctx.restore();
 
-          // 实色锅（不透明）
-          ctx.save();
-          ctx.globalAlpha = 1;
+          // 实色锅
           if (imgs.pot && imgs.pot.complete)
             ctx.drawImage(
               imgs.pot,
@@ -932,7 +931,6 @@
               potW,
               potH,
             );
-          ctx.restore();
 
           // 食材堆积
           const potItems = Object.keys(state.pot).filter(
@@ -980,20 +978,13 @@
           ctx.shadowBlur = 0;
           ctx.restore();
 
-          // 锅左右固定装饰（不跟随，紧挨锅两侧，无空隙）
+          // 固定左右装饰条（静止在屏幕两侧）
           const decoPotW = potW * 0.4;
           const decoHPot = potH;
           const decoPotY = potY - potH / 2;
           ctx.fillStyle = "#b0b0b0";
-          // 左装饰紧贴锅左边缘
-          ctx.fillRect(
-            potX - potW / 2 - decoPotW,
-            decoPotY,
-            decoPotW,
-            decoHPot,
-          );
-          // 右装饰紧贴锅右边缘
-          ctx.fillRect(potX + potW / 2, decoPotY, decoPotW, decoHPot);
+          ctx.fillRect(0, decoPotY, decoPotW, decoHPot); // 左
+          ctx.fillRect(W - decoPotW, decoPotY, decoPotW, decoHPot); // 右
 
           // 客人区域
           const restTop = cH * 6.25,
@@ -1065,15 +1056,9 @@
           const menuH = baseH + state.menu.length * rowH;
           const menuX = (W - menuW) / 2;
           const menuY = 0;
-          const decoH = 20;
+          const decoH = 40; // 纵向加长
           ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, menuY, menuX * 2, decoH); // 左侧装饰条长度翻倍
-          ctx.fillRect(
-            menuX + menuW - menuX,
-            menuY,
-            W - (menuX + menuW) + menuX,
-            decoH,
-          ); // 右侧同样处理，保持宽度翻倍
+          ctx.fillRect(0, menuY, W, decoH); // 左右装饰条占满整个顶部宽度，高度40px
 
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.shadowBlur = 8;
@@ -1133,17 +1118,15 @@
             ctx.save();
             ctx.globalAlpha = ft.life;
             ctx.font = 'bold 14px "Press Start 2P", monospace';
-            ctx.fillStyle = "#e74c3c";
+            ctx.fillStyle = "#f1c40f"; // 黄色
             ctx.textAlign = "center";
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
 
-          // 追踪指示器（绿色 = 追踪正常，红色 = 未校准）
-          const indicatorX = chefX;
-          const indicatorY = chefY - 30;
+          // 追踪指示器
           ctx.beginPath();
-          ctx.arc(indicatorX, indicatorY, 6, 0, Math.PI * 2);
+          ctx.arc(chefX, chefY - 30, 6, 0, Math.PI * 2);
           ctx.fillStyle = state.calibrated ? "#2ecc71" : "#e74c3c";
           ctx.fill();
           ctx.strokeStyle = "#fff";
@@ -1315,7 +1298,7 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // 面部追踪（双眼角度）
+        // 面部追踪（高灵敏度）
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1345,9 +1328,14 @@
                 let useAngle = state.calibrated
                   ? angle - state.zeroAngle
                   : angle;
-                let tilt = clamp(useAngle / 25, -1, 1);
-                state.targetX = clamp(0.5 - tilt * 0.45, 0.05, 0.95);
-                console.log("头部追踪:", state.targetX.toFixed(2));
+                let tilt = clamp(useAngle / 15, -1, 1); // 提高灵敏度
+                state.targetX = clamp(0.5 - tilt * 0.7, 0.05, 0.95);
+                console.log(
+                  "头部追踪:",
+                  state.targetX.toFixed(2),
+                  "角度:",
+                  angle.toFixed(1),
+                );
               }
             }
           });
