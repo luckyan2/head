@@ -242,7 +242,6 @@
         border-radius: 4px;
         pointer-events: none;
         opacity: 0.9;
-        max-width: 80%;
         white-space: nowrap;
       }
     </style>
@@ -1389,50 +1388,47 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 头控核心（强化） ----------
+        // ---------- 头控核心（极简稳定版） ----------
         let faceMeshInstance = null;
-        let meshReady = false;
 
         function initFaceMesh() {
-          return new Promise((resolve, reject) => {
-            const fm = new FaceMesh({
-              locateFile: (file) =>
-                `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
-            });
-            fm.setOptions({
-              maxNumFaces: 1,
-              refineLandmarks: true,
-              minDetectionConfidence: 0.6,
-              minTrackingConfidence: 0.5,
-            });
-            fm.onResults((results) => {
-              if (
-                results.multiFaceLandmarks &&
-                results.multiFaceLandmarks.length
-              ) {
-                const lm = results.multiFaceLandmarks[0];
-                const leftEye = lm[33],
-                  rightEye = lm[263],
-                  noseTip = lm[1];
-                if (leftEye && rightEye && noseTip) {
-                  const dy = rightEye.y - leftEye.y;
-                  const dx = rightEye.x - leftEye.x;
-                  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                  state.headAngle = angle;
-                  state.headY = clamp(noseTip.y, 0, 1);
-                  let useAngle = state.calibrated
-                    ? angle - state.zeroAngle
-                    : angle;
-                  let tilt = clamp(useAngle / 10, -1, 1);
-                  state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
-                  debugEl.textContent = `✅ 角度: ${angle.toFixed(2)}° | 目标: ${state.targetX.toFixed(2)}`;
-                }
-              } else {
-                debugEl.textContent = "⏳ 未检测到面部...";
-              }
-            });
-            resolve(fm);
+          const fm = new FaceMesh({
+            locateFile: (file) =>
+              `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
           });
+          fm.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.5,
+          });
+          fm.onResults((results) => {
+            if (
+              results.multiFaceLandmarks &&
+              results.multiFaceLandmarks.length
+            ) {
+              const lm = results.multiFaceLandmarks[0];
+              const leftEye = lm[33],
+                rightEye = lm[263],
+                noseTip = lm[1];
+              if (leftEye && rightEye && noseTip) {
+                const dy = rightEye.y - leftEye.y;
+                const dx = rightEye.x - leftEye.x;
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                state.headAngle = angle;
+                state.headY = clamp(noseTip.y, 0, 1);
+                let useAngle = state.calibrated
+                  ? angle - state.zeroAngle
+                  : angle;
+                let tilt = clamp(useAngle / 10, -1, 1);
+                state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
+                debugEl.textContent = `✅ 角度: ${angle.toFixed(2)}° | 目标: ${state.targetX.toFixed(2)}`;
+              }
+            } else {
+              debugEl.textContent = "⏳ 未检测到面部...";
+            }
+          });
+          return fm;
         }
 
         async function startCam() {
@@ -1462,37 +1458,15 @@
             });
 
             debugEl.textContent = "⏳ 加载 FaceMesh 模型...";
-            faceMeshInstance = await initFaceMesh();
+            faceMeshInstance = initFaceMesh();
 
-            // 尝试发送第一帧以触发模型加载
-            let sendSuccess = false;
-            for (let attempt = 0; attempt < 5; attempt++) {
-              try {
-                await faceMeshInstance.send({ image: video });
-                sendSuccess = true;
-                break;
-              } catch (e) {
-                console.warn(`发送尝试 ${attempt + 1} 失败:`, e);
-                await new Promise((r) => setTimeout(r, 1000));
-              }
-            }
-            if (!sendSuccess) {
-              debugEl.textContent = "❌ 模型加载失败，请检查网络";
-              alert("FaceMesh 模型加载失败，请确保网络通畅后刷新重试");
-              return false;
-            }
+            // 等待模型加载（给 WASM 一些时间）
+            await new Promise((r) => setTimeout(r, 1500));
 
-            meshReady = true;
-            debugEl.textContent = "✅ 模型已就绪，开始游戏";
-
+            // 极简推理循环：永不停止，出错只打印
             let processing = false;
             function processFrame() {
-              if (
-                video.readyState >= 2 &&
-                !processing &&
-                state.playing &&
-                meshReady
-              ) {
+              if (video.readyState >= 2 && !processing) {
                 processing = true;
                 faceMeshInstance
                   .send({ image: video })
@@ -1500,19 +1474,8 @@
                     processing = false;
                   })
                   .catch((err) => {
-                    console.warn("推理错误:", err);
+                    console.warn("推理错误（忽略）:", err);
                     processing = false;
-                    if (meshReady) {
-                      meshReady = false;
-                      debugEl.textContent = "⚠️ 模型异常，尝试重新加载...";
-                      initFaceMesh()
-                        .then((fm) => {
-                          faceMeshInstance = fm;
-                          meshReady = true;
-                          debugEl.textContent = "✅ 模型重新加载成功";
-                        })
-                        .catch(() => {});
-                    }
                   });
               }
               requestAnimationFrame(processFrame);
@@ -1590,7 +1553,6 @@
           }
         });
 
-        // 加载图片资源并启动
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
