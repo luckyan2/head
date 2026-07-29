@@ -443,8 +443,8 @@
           dish: "",
           reward: 0,
           cost: 0,
-          leftD: null,
-          rightD: null,
+          leftD: { dish: "番茄炒蛋", emoji: "🍳" }, // 初始先给一个菜品
+          rightD: { dish: "...", emoji: "..." },
           fly: [],
           beltOff: 0,
           qTimer: 0,
@@ -455,6 +455,7 @@
           rightEating: false,
           eatTimers: [],
           autoServe: false,
+          rightDemandTimer: null, // 用于延迟右边需求
         };
 
         const TYPES = [
@@ -585,23 +586,34 @@
           return a + (b - a) * t;
         }
 
-        function newDemand(side) {
-          const r = RECIPES[randi(0, RECIPES.length - 1)];
-          if (side === "left") state.leftD = { dish: r.name, emoji: r.emoji };
-          else state.rightD = { dish: r.name, emoji: r.emoji };
-        }
         function genMenu() {
-          const available = [];
-          if (state.leftD) available.push(state.leftD.dish);
-          if (state.rightD) available.push(state.rightD.dish);
-          if (available.length === 0) {
-            newDemand("left");
-            if (Math.random() > 0.5) newDemand("right");
+          // 收集当前有效的菜品需求（非省略号、非绿勾）
+          const demands = [];
+          if (
+            state.leftD &&
+            state.leftD.dish !== "..." &&
+            state.leftD.dish !== "✅"
+          )
+            demands.push({ side: "left", dish: state.leftD.dish });
+          if (
+            state.rightD &&
+            state.rightD.dish !== "..." &&
+            state.rightD.dish !== "✅"
+          )
+            demands.push({ side: "right", dish: state.rightD.dish });
+          if (demands.length === 0) {
+            // 如果都没有，随机选一个生成新需求
+            const sides = ["left", "right"];
+            const pick = sides[randi(0, 1)];
+            const recipe = RECIPES[randi(0, RECIPES.length - 1)];
+            if (pick === "left")
+              state.leftD = { dish: recipe.name, emoji: recipe.emoji };
+            else state.rightD = { dish: recipe.name, emoji: recipe.emoji };
             genMenu();
             return;
           }
-          const pick = available[randi(0, available.length - 1)];
-          const recipe = RECIPES.find((r) => r.name === pick);
+          const chosen = demands[randi(0, demands.length - 1)];
+          const recipe = RECIPES.find((r) => r.name === chosen.dish);
           state.dish = recipe.name;
           state.menu = recipe.ing.map((i) => ({ ...i, have: 0 }));
           state.menuDone = false;
@@ -631,6 +643,20 @@
           return false;
         }
 
+        function startRightDemandTimer() {
+          if (state.rightDemandTimer) clearTimeout(state.rightDemandTimer);
+          state.rightDemandTimer = setTimeout(() => {
+            if (
+              state.rightD &&
+              state.rightD.dish === "..." &&
+              !state.rightEating
+            ) {
+              const recipe = RECIPES[randi(0, RECIPES.length - 1)];
+              state.rightD = { dish: recipe.name, emoji: recipe.emoji };
+            }
+          }, 10000);
+        }
+
         function autoServe() {
           if (!state.playing || state.paused || state.over) return;
           if (!state.menuDone) return;
@@ -641,29 +667,41 @@
           state.combo++;
           if (state.combo > state.maxCombo) state.maxCombo = state.combo;
           let matched = false;
-          if (state.leftD && state.leftD.dish === state.dish) {
+          if (
+            state.leftD &&
+            state.leftD.dish === state.dish &&
+            !state.leftEating
+          ) {
             state.gold += 5;
             state.totalGold += 5;
             matched = true;
-            state.leftD = null;
+            state.leftD.dish = "✅"; // 显示绿勾
             state.leftEating = true;
             if (state.eatTimers.left) clearTimeout(state.eatTimers.left);
             state.eatTimers.left = setTimeout(() => {
               state.leftEating = false;
-              newDemand("left");
+              const recipe = RECIPES[randi(0, RECIPES.length - 1)];
+              state.leftD = { dish: recipe.name, emoji: recipe.emoji };
             }, 10000);
+            sfxCombo();
           }
-          if (state.rightD && state.rightD.dish === state.dish) {
+          if (
+            state.rightD &&
+            state.rightD.dish === state.dish &&
+            !state.rightEating
+          ) {
             state.gold += 5;
             state.totalGold += 5;
             matched = true;
-            state.rightD = null;
+            state.rightD.dish = "✅";
             state.rightEating = true;
             if (state.eatTimers.right) clearTimeout(state.eatTimers.right);
             state.eatTimers.right = setTimeout(() => {
               state.rightEating = false;
-              newDemand("right");
+              const recipe = RECIPES[randi(0, RECIPES.length - 1)];
+              state.rightD = { dish: recipe.name, emoji: recipe.emoji };
             }, 10000);
+            sfxCombo();
           }
           sfxServe();
           sfxGold();
@@ -943,7 +981,6 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          // 锅左右装饰在厨师图层之下
           const decoPotW = tw * 1.3,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
@@ -1029,10 +1066,12 @@
             ltW = cW * 1.6,
             ltY = restTop + 20,
             ltH = restH - 40;
+          // 左客人图片
           if (state.leftEating && imgs.eatL)
             ctx.drawImage(imgs.eatL, ltX, ltY, ltW, ltH);
           else if (imgs.guestL) ctx.drawImage(imgs.guestL, ltX, ltY, ltW, ltH);
-          if (state.leftD && !state.leftEating) {
+          // 左需求框（始终显示）
+          if (state.leftD) {
             const bx = ltX + 5,
               by = ltY - 30;
             ctx.fillStyle = "rgba(255,255,240,0.95)";
@@ -1042,20 +1081,34 @@
             ctx.strokeStyle = "#f1c40f";
             ctx.lineWidth = 3;
             ctx.stroke();
-            ctx.font = "30px serif";
-            ctx.textAlign = "center";
-            ctx.fillStyle = "#2c3e50";
-            ctx.fillText(state.leftD.emoji, bx + 37, by + 20);
-            ctx.font = '11px "Press Start 2P",monospace';
-            ctx.fillStyle = "#e67e22";
-            ctx.fillText(state.leftD.dish, bx + 37, by + 40);
+            if (state.leftD.dish === "✅") {
+              ctx.font = "30px serif";
+              ctx.textAlign = "center";
+              ctx.fillStyle = "#2ecc71";
+              ctx.fillText("✅", bx + 37, by + 25);
+            } else if (state.leftD.dish === "...") {
+              const dots = (Math.floor(Date.now() / 500) % 3) + 1;
+              ctx.font = "24px serif";
+              ctx.textAlign = "center";
+              ctx.fillStyle = "#888";
+              ctx.fillText(".".repeat(dots), bx + 37, by + 25);
+            } else {
+              ctx.font = "30px serif";
+              ctx.textAlign = "center";
+              ctx.fillStyle = "#2c3e50";
+              ctx.fillText(state.leftD.emoji, bx + 37, by + 20);
+              ctx.font = '11px "Press Start 2P",monospace';
+              ctx.fillStyle = "#e67e22";
+              ctx.fillText(state.leftD.dish, bx + 37, by + 40);
+            }
           }
+
           const rtX = cW * 2.2,
             rtW = cW * 1.6;
           if (state.rightEating && imgs.eatR)
             ctx.drawImage(imgs.eatR, rtX, ltY, rtW, ltH);
           else if (imgs.guestR) ctx.drawImage(imgs.guestR, rtX, ltY, rtW, ltH);
-          if (state.rightD && !state.rightEating) {
+          if (state.rightD) {
             const bx = rtX + rtW - 80,
               by = ltY - 30;
             ctx.fillStyle = "rgba(255,255,240,0.95)";
@@ -1065,13 +1118,26 @@
             ctx.strokeStyle = "#f1c40f";
             ctx.lineWidth = 3;
             ctx.stroke();
-            ctx.font = "30px serif";
-            ctx.textAlign = "center";
-            ctx.fillStyle = "#2c3e50";
-            ctx.fillText(state.rightD.emoji, bx + 37, by + 20);
-            ctx.font = '11px "Press Start 2P",monospace';
-            ctx.fillStyle = "#e67e22";
-            ctx.fillText(state.rightD.dish, bx + 37, by + 40);
+            if (state.rightD.dish === "✅") {
+              ctx.font = "30px serif";
+              ctx.textAlign = "center";
+              ctx.fillStyle = "#2ecc71";
+              ctx.fillText("✅", bx + 37, by + 25);
+            } else if (state.rightD.dish === "...") {
+              const dots = (Math.floor(Date.now() / 500) % 3) + 1;
+              ctx.font = "24px serif";
+              ctx.textAlign = "center";
+              ctx.fillStyle = "#888";
+              ctx.fillText(".".repeat(dots), bx + 37, by + 25);
+            } else {
+              ctx.font = "30px serif";
+              ctx.textAlign = "center";
+              ctx.fillStyle = "#2c3e50";
+              ctx.fillText(state.rightD.emoji, bx + 37, by + 20);
+              ctx.font = '11px "Press Start 2P",monospace';
+              ctx.fillStyle = "#e67e22";
+              ctx.fillText(state.rightD.dish, bx + 37, by + 40);
+            }
           }
 
           const menuW = cW * 1.1,
@@ -1228,22 +1294,33 @@
           state.pot = {};
           state.menu = [];
           state.menuDone = false;
-          state.leftD = null;
-          state.rightD = null;
           state.fly = [];
           state.floatingTexts = [];
           state.leftEating = false;
           state.rightEating = false;
           state.eatTimers.forEach((t) => clearTimeout(t));
           state.eatTimers = [];
+          if (state.rightDemandTimer) clearTimeout(state.rightDemandTimer);
           state.autoServe = false;
           state.beltOff = 0;
           state.qTimer = 0;
+          // 初始需求：左边有菜，右边省略号
+          const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
+          state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
+          state.rightD = { dish: "...", emoji: "..." };
+          state.rightDemandTimer = setTimeout(() => {
+            if (
+              state.rightD &&
+              state.rightD.dish === "..." &&
+              !state.rightEating
+            ) {
+              const recipe = RECIPES[randi(0, RECIPES.length - 1)];
+              state.rightD = { dish: recipe.name, emoji: recipe.emoji };
+            }
+          }, 10000);
           document.getElementById("resultModal").classList.add("hidden");
           document.getElementById("pauseModal").classList.add("hidden");
           document.getElementById("startOverlay").classList.remove("hidden");
-          newDemand("left");
-          if (Math.random() > 0.5) newDemand("right");
           genMenu();
           updateUI();
         }
@@ -1300,7 +1377,6 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // 面部追踪
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
