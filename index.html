@@ -12,7 +12,6 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
       * {
         margin: 0;
@@ -230,6 +229,21 @@
         font-size: 12px;
         color: #7a7268;
       }
+      /* 调试信息 */
+      #debug-info {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 50;
+        color: #fff;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 4px 8px;
+        font-size: 12px;
+        font-family: monospace;
+        border-radius: 4px;
+        pointer-events: none;
+        opacity: 0.8;
+      }
     </style>
   </head>
   <body>
@@ -243,6 +257,7 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
+      <div id="debug-info">⏳ 初始化...</div>
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -331,6 +346,7 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
+        const debugEl = document.getElementById("debug-info");
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
@@ -1207,6 +1223,15 @@
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
+
+          // 调试信息（显示头部角度和targetX）
+          ctx.save();
+          ctx.font = "16px monospace";
+          ctx.fillStyle = "#000";
+          ctx.fillText(`角度: ${state.headAngle.toFixed(2)}°`, 10, 30);
+          ctx.fillText(`目标: ${state.targetX.toFixed(2)}`, 10, 60);
+          ctx.fillText(`已校准: ${state.calibrated}`, 10, 90);
+          ctx.restore();
         }
 
         if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1377,6 +1402,7 @@
           if (state.playing && !state.over) togglePause();
         });
 
+        // ---------- 核心修复：摄像头与 FaceMesh 初始化 ----------
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1403,16 +1429,22 @@
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 state.headAngle = angle;
                 state.headY = clamp(noseTip.y, 0, 1);
+                // 使用校准角度
                 let useAngle = state.calibrated
                   ? angle - state.zeroAngle
                   : angle;
                 let tilt = clamp(useAngle / 10, -1, 1);
                 state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
+                // 更新调试信息
+                debugEl.textContent = `角度: ${angle.toFixed(2)}° | 偏移: ${useAngle.toFixed(2)} | 目标: ${state.targetX.toFixed(2)}`;
               }
+            } else {
+              debugEl.textContent = "⏳ 未检测到面部...";
             }
           });
           return fm;
         }
+
         async function startCam() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
@@ -1423,48 +1455,80 @@
               video: { facingMode: "user", width: 320, height: 240 },
             });
             video.srcObject = stream;
+
+            // 等待视频元数据加载
+            await new Promise((resolve) => {
+              video.onloadedmetadata = resolve;
+            });
             await video.play();
+
+            // 等待视频有实际帧（readyState >= 2）
+            await new Promise((resolve) => {
+              const check = () => {
+                if (video.readyState >= 2) resolve();
+                else requestAnimationFrame(check);
+              };
+              check();
+            });
+
+            // 初始化 FaceMesh
             const fm = initFaceMesh();
             state.fm = fm;
+
+            // 等待模型加载（简单延时 2 秒，确保 WASM 和模型加载完成）
+            await new Promise((resolve) => setTimeout(resolve, 2000));
+
+            // 开始推理循环（使用 requestAnimationFrame 保证稳定性）
+            let processing = false;
             function processFrame() {
-              if (video.readyState >= 2 && !state._busy) {
-                state._busy = true;
+              if (video.readyState >= 2 && !processing && state.playing) {
+                processing = true;
                 fm.send({ image: video })
                   .then(() => {
-                    state._busy = false;
+                    processing = false;
                   })
-                  .catch(() => {
-                    state._busy = false;
+                  .catch((err) => {
+                    console.warn("FaceMesh send error:", err);
+                    processing = false;
                   });
               }
-              if (video.requestVideoFrameCallback)
-                video.requestVideoFrameCallback(processFrame);
-              else requestAnimationFrame(processFrame);
+              // 如果游戏未开始或已结束，可以继续轮询但不发送
+              requestAnimationFrame(processFrame);
             }
             processFrame();
+
             state.camReady = true;
+            document.getElementById("cameraModal").classList.add("hidden");
+
+            // 1 秒后校准（假设此时人脸正对镜头）
             setTimeout(() => {
               state.zeroAngle = state.headAngle;
               state.calibrated = true;
-            }, 500);
-            document.getElementById("cameraModal").classList.add("hidden");
+              debugEl.textContent += " ✅ 已校准";
+            }, 1000);
+
             start();
             initAudio();
             return true;
           } catch (err) {
             alert("摄像头错误: " + err.message);
+            debugEl.textContent = "❌ 摄像头失败: " + err.message;
             return false;
           }
         }
 
+        // ----- 事件绑定 -----
         document
           .getElementById("cameraAllowBtn")
           .addEventListener("click", startCam);
         document
           .getElementById("startGameBtn")
           .addEventListener("click", () => {
-            if (!state.camReady) alert("请先允许摄像头权限");
-            else start();
+            if (!state.camReady) {
+              alert("请先允许摄像头权限");
+              return;
+            }
+            start();
           });
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
@@ -1499,8 +1563,13 @@
           });
         });
         document.body.addEventListener("dblclick", () => {
-          if (state.playing) state.zeroAngle = state.headAngle;
+          if (state.playing) {
+            state.zeroAngle = state.headAngle;
+            debugEl.textContent += " 🔄 手动归零";
+          }
         });
+
+        // 加载图片资源并启动循环
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
