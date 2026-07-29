@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头部控菜（高灵敏版）</title>
+    <title>像素厨房 · 头部控菜（最终版）</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -142,7 +142,7 @@
           0 8px 0 #b0a898,
           0 12px 30px rgba(0, 0, 0, 0.08);
         font-family: "Press Start 2P", monospace;
-        margin-top: -30px;
+        margin-top: -80px; /* 整体上移 */
       }
       .modal-card h2 {
         font-size: 24px;
@@ -245,7 +245,6 @@
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
 
-      <!-- 弹窗内容不变，略 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -312,10 +311,6 @@
               <div class="label">出餐</div>
             </div>
             <div class="stat-item">
-              <div class="num" id="statIngredients">0</div>
-              <div class="label">食材</div>
-            </div>
-            <div class="stat-item">
               <div class="num" id="statCombo">0</div>
               <div class="label">连击</div>
             </div>
@@ -342,7 +337,6 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
-        // 省略部分DOM引用，直接使用id
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
@@ -466,6 +460,9 @@
           touchActive: false,
           touchStartX: 0,
           floatingTexts: [],
+          leftEating: false,
+          rightEating: false,
+          eatTimers: [],
         };
 
         const TYPES = [
@@ -634,6 +631,22 @@
           return false;
         }
 
+        function switchGuest(side) {
+          if (side === "left") {
+            state.leftEating = true;
+            if (state.eatTimers.left) clearTimeout(state.eatTimers.left);
+            state.eatTimers.left = setTimeout(() => {
+              state.leftEating = false;
+            }, 10000);
+          } else if (side === "right") {
+            state.rightEating = true;
+            if (state.eatTimers.right) clearTimeout(state.eatTimers.right);
+            state.eatTimers.right = setTimeout(() => {
+              state.rightEating = false;
+            }, 10000);
+          }
+        }
+
         function serve() {
           if (!state.playing || state.paused || state.over) return;
           if (!state.menuDone) {
@@ -655,6 +668,7 @@
             side = "left";
             state.leftD = null;
             sfxCombo();
+            switchGuest("left");
           }
           if (state.rightD && state.rightD.dish === state.dish) {
             state.gold += 5;
@@ -663,6 +677,7 @@
             side = "right";
             state.rightD = null;
             sfxCombo();
+            switchGuest("right");
           }
           sfxServe();
           sfxGold();
@@ -672,14 +687,14 @@
           updateUI();
         }
 
-        // 智能食材生成：85%出现当前菜单仍需的食材，15%随机
         function getSmartType() {
           const needed = state.menu
             .filter((i) => state.pot[i.id] < i.n)
             .map((i) => i.id);
-          if (needed.length > 0 && Math.random() < 0.85) {
-            const pick = needed[randi(0, needed.length - 1)];
-            return TYPES.find((t) => t.id === pick);
+          if (needed.length > 0 && Math.random() < 0.75) {
+            return TYPES.find(
+              (t) => t.id === needed[randi(0, needed.length - 1)],
+            );
           }
           return TYPES[randi(0, TYPES.length - 1)];
         }
@@ -705,7 +720,7 @@
             x: sx,
             y: cellH * 0.2,
             sx,
-            sp: 0.8 + rand(0, 0.3),
+            sp: 1.2 + rand(0, 0.5),
             sz: 32 + rand(0, 8),
             alive: true,
           });
@@ -812,7 +827,7 @@
         const imgs = {};
         function loadImgs(cb) {
           let n = 0;
-          const t = 5;
+          const t = 7;
           function on() {
             n++;
             if (n === t) cb();
@@ -847,6 +862,18 @@
           imgs.rt.onerror = on;
           imgs.rt.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          imgs.ltEat = new Image();
+          imgs.ltEat.crossOrigin = "anonymous";
+          imgs.ltEat.onload = on;
+          imgs.ltEat.onerror = on;
+          imgs.ltEat.src =
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // 暂用相同图
+          imgs.rtEat = new Image();
+          imgs.rtEat.crossOrigin = "anonymous";
+          imgs.rtEat.onload = on;
+          imgs.rtEat.onerror = on;
+          imgs.rtEat.src =
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
         }
 
         function draw() {
@@ -866,6 +893,8 @@
           const lTx = cW * 0.3,
             rTx = cW * 2.9,
             tw = cW * 0.8;
+          const leftCenter = lTx + tw / 2;
+          const rightCenter = rTx + tw / 2;
           for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
             ctx.fillStyle = "rgba(160,150,135,0.15)";
             ctx.fillRect(lTx, y, tw, 4);
@@ -978,15 +1007,20 @@
           ctx.shadowBlur = 0;
           ctx.restore();
 
-          // 固定左右装饰条（静止在屏幕两侧）
-          const decoPotW = potW * 0.4;
+          // 装饰条（对齐传送带中心，加宽）
+          const decoPotW = tw * 1.3;
           const decoHPot = potH;
           const decoPotY = potY - potH / 2;
           ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, decoPotY, decoPotW, decoHPot); // 左
-          ctx.fillRect(W - decoPotW, decoPotY, decoPotW, decoHPot); // 右
+          ctx.fillRect(leftCenter - decoPotW / 2, decoPotY, decoPotW, decoHPot);
+          ctx.fillRect(
+            rightCenter - decoPotW / 2,
+            decoPotY,
+            decoPotW,
+            decoHPot,
+          );
 
-          // 客人区域
+          // 餐厅区域
           const restTop = cH * 6.25,
             restH = cH * 2.8;
           ctx.fillStyle = "#f0ebdc";
@@ -1002,9 +1036,15 @@
             ltW = cW * 1.6,
             ltY = restTop + 20,
             ltH = restH - 40;
-          if (imgs.lt && imgs.lt.complete)
-            ctx.drawImage(imgs.lt, ltX, ltY, ltW, ltH);
-          if (state.leftD) {
+          // 左客人
+          if (state.leftD && !state.leftEating) {
+            if (imgs.lt && imgs.lt.complete)
+              ctx.drawImage(imgs.lt, ltX, ltY, ltW, ltH);
+          } else if (state.leftEating) {
+            if (imgs.ltEat && imgs.ltEat.complete)
+              ctx.drawImage(imgs.ltEat, ltX, ltY, ltW, ltH);
+          }
+          if (state.leftD && !state.leftEating) {
             const bx = ltX + 5,
               by = ltY - 30;
             ctx.fillStyle = "rgba(255,255,240,0.95)";
@@ -1024,11 +1064,17 @@
             ctx.fillStyle = "#e67e22";
             ctx.fillText(state.leftD.dish, bx + 37, by + 40);
           }
+          // 右客人
           const rtX = cW * 2.2,
             rtW = cW * 1.6;
-          if (imgs.rt && imgs.rt.complete)
-            ctx.drawImage(imgs.rt, rtX, ltY, rtW, ltH);
-          if (state.rightD) {
+          if (state.rightD && !state.rightEating) {
+            if (imgs.rt && imgs.rt.complete)
+              ctx.drawImage(imgs.rt, rtX, ltY, rtW, ltH);
+          } else if (state.rightEating) {
+            if (imgs.rtEat && imgs.rtEat.complete)
+              ctx.drawImage(imgs.rtEat, rtX, ltY, rtW, ltH);
+          }
+          if (state.rightD && !state.rightEating) {
             const bx = rtX + rtW - 80,
               by = ltY - 30;
             ctx.fillStyle = "rgba(255,255,240,0.95)";
@@ -1049,17 +1095,15 @@
             ctx.fillText(state.rightD.dish, bx + 37, by + 40);
           }
 
-          // 固定菜谱
+          // 菜谱（固定）
           const menuW = cW * 1.1;
           const baseH = 90,
             rowH = 30;
           const menuH = baseH + state.menu.length * rowH;
           const menuX = (W - menuW) / 2;
           const menuY = 0;
-          const decoH = 40; // 纵向加长
           ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, menuY, W, decoH); // 左右装饰条占满整个顶部宽度，高度40px
-
+          ctx.fillRect(0, menuY, W, 40);
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.shadowBlur = 8;
           ctx.beginPath();
@@ -1113,25 +1157,25 @@
             });
           }
 
-          // 金币提示飘字
+          // 飘字
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
             ctx.font = 'bold 14px "Press Start 2P", monospace';
-            ctx.fillStyle = "#f1c40f"; // 黄色
+            ctx.fillStyle = "#f1c40f";
             ctx.textAlign = "center";
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
 
-          // 追踪指示器
-          ctx.beginPath();
-          ctx.arc(chefX, chefY - 30, 6, 0, Math.PI * 2);
-          ctx.fillStyle = state.calibrated ? "#2ecc71" : "#e74c3c";
-          ctx.fill();
-          ctx.strokeStyle = "#fff";
-          ctx.lineWidth = 2;
-          ctx.stroke();
+          // 角度/目标位置指示器（文字）
+          ctx.font = '10px "Press Start 2P", monospace';
+          ctx.fillStyle = "#000";
+          ctx.fillText(
+            `角度:${state.headAngle?.toFixed(1)} 目标X:${state.targetX?.toFixed(2)}`,
+            10,
+            H - 10,
+          );
         }
 
         if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1191,7 +1235,6 @@
           stopBGM();
           document.getElementById("finalScore").textContent = state.totalGold;
           document.getElementById("statDishes").textContent = state.dishes;
-          document.getElementById("statIngredients").textContent = state.ingr;
           document.getElementById("statCombo").textContent = state.maxCombo;
           document.getElementById("finalRank").textContent = getRank(
             state.totalGold,
@@ -1229,6 +1272,10 @@
           state.rightD = null;
           state.fly = [];
           state.floatingTexts = [];
+          state.leftEating = false;
+          state.rightEating = false;
+          state.eatTimers.forEach((t) => clearTimeout(t));
+          state.eatTimers = [];
           state.beltOff = 0;
           state.qTimer = 0;
           if (state._int) {
@@ -1268,7 +1315,7 @@
           start();
         }
 
-        // 触控
+        // 触控及点击出餐
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -1294,11 +1341,31 @@
           e.preventDefault();
           state.touchActive = false;
         });
-        canvas.addEventListener("click", () => {
-          if (state.playing && !state.over) togglePause();
+        canvas.addEventListener("click", (e) => {
+          if (!state.playing || state.over) return;
+          const rect = canvas.getBoundingClientRect();
+          const x = (e.clientX - rect.left) / rect.width;
+          const y = (e.clientY - rect.top) / rect.height;
+          // 检查是否点击了菜谱中的✅区域
+          if (state.menuDone) {
+            const menuW = (canvas.width / COLS) * 1.1;
+            const menuH = 90 + state.menu.length * 30;
+            const menuX = (canvas.width - menuW) / 2;
+            const menuY = 0;
+            if (
+              x >= menuX / canvas.width &&
+              x <= (menuX + menuW) / canvas.width &&
+              y >= menuY / canvas.height &&
+              y <= (menuY + menuH) / canvas.height
+            ) {
+              serve();
+              return;
+            }
+          }
+          togglePause();
         });
 
-        // 面部追踪（高灵敏度）
+        // 面部追踪
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1328,14 +1395,8 @@
                 let useAngle = state.calibrated
                   ? angle - state.zeroAngle
                   : angle;
-                let tilt = clamp(useAngle / 15, -1, 1); // 提高灵敏度
-                state.targetX = clamp(0.5 - tilt * 0.7, 0.05, 0.95);
-                console.log(
-                  "头部追踪:",
-                  state.targetX.toFixed(2),
-                  "角度:",
-                  angle.toFixed(1),
-                );
+                let tilt = clamp(useAngle / 10, -1, 1); // 灵敏度极高
+                state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
               }
             }
           });
