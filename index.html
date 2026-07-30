@@ -235,6 +235,19 @@
         font-size: 12px;
         color: #7a7268;
       }
+      #debug-angle {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        color: #0f0;
+        padding: 4px 8px;
+        font-size: 12px;
+        border-radius: 4px;
+        z-index: 50;
+        font-family: monospace;
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
@@ -248,6 +261,8 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
+      <div id="debug-angle">角度: 0.0</div>
+      <!-- 调试显示 -->
       <!-- 开启摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
@@ -368,6 +383,7 @@
         const topGoldEl = document.getElementById("top-gold");
         const topDishesEl = document.getElementById("top-dishes");
         const avatarInput = document.getElementById("avatarInput");
+        const debugAngle = document.getElementById("debug-angle");
 
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
@@ -491,6 +507,7 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
+          headControlReverse: false, // 新增：反向控制开关
         };
 
         const TYPES = [
@@ -818,7 +835,6 @@
                 state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
                 sfxPickup();
               } else {
-                // 干扰食材：弹飞动画 + 红色覆盖停顿
                 state.hurtTimer = 0.3;
                 state.floatingTexts.push({
                   text: ing.emoji,
@@ -1473,6 +1489,7 @@
           if (state.playing && !state.over) togglePause();
         });
 
+        // ---------- 头控核心（修改）----------
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1490,25 +1507,63 @@
               results.multiFaceLandmarks.length
             ) {
               const lm = results.multiFaceLandmarks[0];
-              const leftEye = lm[33],
-                rightEye = lm[263],
-                noseTip = lm[1];
-              if (leftEye && rightEye && noseTip) {
+              const leftEye = lm[33];
+              const rightEye = lm[263];
+              if (leftEye && rightEye) {
                 const dy = rightEye.y - leftEye.y;
                 const dx = rightEye.x - leftEye.x;
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 state.headAngle = angle;
-                state.headY = clamp(noseTip.y, 0, 1);
-                let useAngle = state.calibrated
-                  ? angle - state.zeroAngle
-                  : angle;
-                let tilt = clamp(useAngle / 10, -1, 1);
-                state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
+                // 校准：如果未校准，取当前角度作为零位
+                if (!state.calibrated) {
+                  state.zeroAngle = angle;
+                  state.calibrated = true;
+                  console.log("校准完成，零角度:", angle);
+                }
+                // 计算偏移
+                let useAngle = angle - state.zeroAngle;
+                // 限制范围 ±30 度，映射到 [-1,1]
+                const maxTilt = 30;
+                let tilt = clamp(useAngle / maxTilt, -1, 1);
+                // 反向控制（默认不反向，头左→左，头右→右）
+                if (state.headControlReverse) tilt = -tilt;
+                // 映射到目标位置（0~1），加一点死区避免抖动
+                const deadZone = 0.02;
+                if (Math.abs(tilt) < deadZone) tilt = 0;
+                state.targetX = clamp(0.5 + tilt * 0.45, 0.05, 0.95);
+                // 调试显示
+                if (debugAngle)
+                  debugAngle.textContent = `角度: ${angle.toFixed(1)}° 偏移: ${tilt.toFixed(2)}`;
               }
+            } else {
+              // 未检测到人脸，不更新目标，保持上次位置
             }
           });
           return fm;
         }
+
+        // 视频帧循环（简化，与滑雪游戏类似）
+        let isProcessing = false;
+        function startCameraLoop() {
+          if (isProcessing) return;
+          isProcessing = true;
+          if (video.readyState >= 2 && state.fm) {
+            state.fm
+              .send({ image: video })
+              .then(() => {
+                isProcessing = false;
+              })
+              .catch((err) => {
+                console.warn("MediaPipe 发送错误:", err);
+                isProcessing = false;
+              });
+          } else {
+            isProcessing = false;
+          }
+          // 无论是否处理，继续调度下一帧（使用 requestAnimationFrame 更稳定）
+          requestAnimationFrame(startCameraLoop);
+        }
+
         async function startCam() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
@@ -1516,33 +1571,26 @@
           }
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: "user", width: 320, height: 240 },
+              video: {
+                facingMode: "user",
+                width: { ideal: 320 },
+                height: { ideal: 240 },
+              },
             });
             video.srcObject = stream;
             await video.play();
+            // 设置视频实际尺寸（可选，帮助 MediaPipe）
+            video.width = video.videoWidth || 320;
+            video.height = video.videoHeight || 240;
+
             const fm = initFaceMesh();
             state.fm = fm;
-            function processFrame() {
-              if (video.readyState >= 2 && !state._busy) {
-                state._busy = true;
-                fm.send({ image: video })
-                  .then(() => {
-                    state._busy = false;
-                  })
-                  .catch(() => {
-                    state._busy = false;
-                  });
-              }
-              if (video.requestVideoFrameCallback)
-                video.requestVideoFrameCallback(processFrame);
-              else requestAnimationFrame(processFrame);
-            }
-            processFrame();
+            // 开始循环
+            state.calibrated = false; // 重置校准
+            isProcessing = false;
+            startCameraLoop();
+
             state.camReady = true;
-            setTimeout(() => {
-              state.zeroAngle = state.headAngle;
-              state.calibrated = true;
-            }, 500);
             document.getElementById("cameraModal").classList.add("hidden");
             start();
             initAudio();
@@ -1574,6 +1622,17 @@
           reader.readAsDataURL(file);
         }
 
+        // 双击重置校准（替代原来的双击）
+        document.body.addEventListener("dblclick", () => {
+          if (state.playing) {
+            state.zeroAngle = state.headAngle;
+            state.calibrated = true;
+            if (debugAngle) debugAngle.textContent = "🔄 重置零位";
+            console.log("重置零位");
+          }
+        });
+
+        // 事件绑定
         document
           .getElementById("cameraAllowBtn")
           .addEventListener("click", startCam);
@@ -1622,9 +1681,8 @@
             } else if (s === "sfx") sfx = v === "on";
           });
         });
-        document.body.addEventListener("dblclick", () => {
-          if (state.playing) state.zeroAngle = state.headAngle;
-        });
+
+        // 加载资源，启动
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
