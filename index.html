@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头控+完整自动出餐</title>
+    <title>像素厨房 · 头控+直接自动出餐</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -229,21 +229,20 @@
         font-size: 12px;
         color: #7a7268;
       }
+      /* 调试信息 */
       #debug-info {
         position: absolute;
         top: 10px;
         left: 10px;
         z-index: 50;
         color: #fff;
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.6);
         padding: 4px 8px;
         font-size: 12px;
         font-family: monospace;
         border-radius: 4px;
         pointer-events: none;
-        opacity: 0.9;
-        max-width: 80%;
-        white-space: nowrap;
+        opacity: 0.8;
       }
     </style>
   </head>
@@ -460,7 +459,7 @@
           dish: "",
           reward: 0,
           cost: 0,
-          leftD: { dish: "番茄炒蛋", emoji: "🍳" },
+          leftD: { dish: "番茄炒蛋", emoji: "🍳" }, // 初始先给一个菜品
           rightD: { dish: "...", emoji: "..." },
           fly: [],
           beltOff: 0,
@@ -472,7 +471,7 @@
           rightEating: false,
           eatTimers: [],
           autoServe: false,
-          rightDemandTimer: null,
+          rightDemandTimer: null, // 用于延迟右边需求
         };
 
         const TYPES = [
@@ -604,6 +603,7 @@
         }
 
         function genMenu() {
+          // 收集当前有效的菜品需求（非省略号、非绿勾）
           const demands = [];
           if (
             state.leftD &&
@@ -618,6 +618,7 @@
           )
             demands.push({ side: "right", dish: state.rightD.dish });
           if (demands.length === 0) {
+            // 如果都没有，随机选一个生成新需求
             const sides = ["left", "right"];
             const pick = sides[randi(0, 1)];
             const recipe = RECIPES[randi(0, RECIPES.length - 1)];
@@ -690,7 +691,7 @@
             state.gold += 5;
             state.totalGold += 5;
             matched = true;
-            state.leftD.dish = "✅";
+            state.leftD.dish = "✅"; // 显示绿勾
             state.leftEating = true;
             if (state.eatTimers.left) clearTimeout(state.eatTimers.left);
             state.eatTimers.left = setTimeout(() => {
@@ -1081,9 +1082,11 @@
             ltW = cW * 1.6,
             ltY = restTop + 20,
             ltH = restH - 40;
+          // 左客人图片
           if (state.leftEating && imgs.eatL)
             ctx.drawImage(imgs.eatL, ltX, ltY, ltW, ltH);
           else if (imgs.guestL) ctx.drawImage(imgs.guestL, ltX, ltY, ltW, ltH);
+          // 左需求框（始终显示）
           if (state.leftD) {
             const bx = ltX + 5,
               by = ltY - 30;
@@ -1220,6 +1223,15 @@
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
+
+          // 调试信息（显示头部角度和targetX）
+          ctx.save();
+          ctx.font = "16px monospace";
+          ctx.fillStyle = "#000";
+          ctx.fillText(`角度: ${state.headAngle.toFixed(2)}°`, 10, 30);
+          ctx.fillText(`目标: ${state.targetX.toFixed(2)}`, 10, 60);
+          ctx.fillText(`已校准: ${state.calibrated}`, 10, 90);
+          ctx.restore();
         }
 
         if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1317,6 +1329,7 @@
           state.autoServe = false;
           state.beltOff = 0;
           state.qTimer = 0;
+          // 初始需求：左边有菜，右边省略号
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
           state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
           state.rightD = { dish: "...", emoji: "..." };
@@ -1389,50 +1402,47 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 头控核心（强化） ----------
-        let faceMeshInstance = null;
-        let meshReady = false;
-
+        // ---------- 核心修复：摄像头与 FaceMesh 初始化 ----------
         function initFaceMesh() {
-          return new Promise((resolve, reject) => {
-            const fm = new FaceMesh({
-              locateFile: (file) =>
-                `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
-            });
-            fm.setOptions({
-              maxNumFaces: 1,
-              refineLandmarks: true,
-              minDetectionConfidence: 0.6,
-              minTrackingConfidence: 0.5,
-            });
-            fm.onResults((results) => {
-              if (
-                results.multiFaceLandmarks &&
-                results.multiFaceLandmarks.length
-              ) {
-                const lm = results.multiFaceLandmarks[0];
-                const leftEye = lm[33],
-                  rightEye = lm[263],
-                  noseTip = lm[1];
-                if (leftEye && rightEye && noseTip) {
-                  const dy = rightEye.y - leftEye.y;
-                  const dx = rightEye.x - leftEye.x;
-                  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                  state.headAngle = angle;
-                  state.headY = clamp(noseTip.y, 0, 1);
-                  let useAngle = state.calibrated
-                    ? angle - state.zeroAngle
-                    : angle;
-                  let tilt = clamp(useAngle / 10, -1, 1);
-                  state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
-                  debugEl.textContent = `✅ 角度: ${angle.toFixed(2)}° | 目标: ${state.targetX.toFixed(2)}`;
-                }
-              } else {
-                debugEl.textContent = "⏳ 未检测到面部...";
-              }
-            });
-            resolve(fm);
+          const fm = new FaceMesh({
+            locateFile: (file) =>
+              `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
           });
+          fm.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.5,
+          });
+          fm.onResults((results) => {
+            if (
+              results.multiFaceLandmarks &&
+              results.multiFaceLandmarks.length
+            ) {
+              const lm = results.multiFaceLandmarks[0];
+              const leftEye = lm[33],
+                rightEye = lm[263],
+                noseTip = lm[1];
+              if (leftEye && rightEye && noseTip) {
+                const dy = rightEye.y - leftEye.y;
+                const dx = rightEye.x - leftEye.x;
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                state.headAngle = angle;
+                state.headY = clamp(noseTip.y, 0, 1);
+                // 使用校准角度
+                let useAngle = state.calibrated
+                  ? angle - state.zeroAngle
+                  : angle;
+                let tilt = clamp(useAngle / 10, -1, 1);
+                state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
+                // 更新调试信息
+                debugEl.textContent = `角度: ${angle.toFixed(2)}° | 偏移: ${useAngle.toFixed(2)} | 目标: ${state.targetX.toFixed(2)}`;
+              }
+            } else {
+              debugEl.textContent = "⏳ 未检测到面部...";
+            }
+          });
+          return fm;
         }
 
         async function startCam() {
@@ -1442,17 +1452,17 @@
           }
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                facingMode: "user",
-                width: { ideal: 320 },
-                height: { ideal: 240 },
-              },
+              video: { facingMode: "user", width: 320, height: 240 },
             });
             video.srcObject = stream;
+
+            // 等待视频元数据加载
             await new Promise((resolve) => {
               video.onloadedmetadata = resolve;
             });
             await video.play();
+
+            // 等待视频有实际帧（readyState >= 2）
             await new Promise((resolve) => {
               const check = () => {
                 if (video.readyState >= 2) resolve();
@@ -1461,60 +1471,28 @@
               check();
             });
 
-            debugEl.textContent = "⏳ 加载 FaceMesh 模型...";
-            faceMeshInstance = await initFaceMesh();
+            // 初始化 FaceMesh
+            const fm = initFaceMesh();
+            state.fm = fm;
 
-            // 尝试发送第一帧以触发模型加载
-            let sendSuccess = false;
-            for (let attempt = 0; attempt < 5; attempt++) {
-              try {
-                await faceMeshInstance.send({ image: video });
-                sendSuccess = true;
-                break;
-              } catch (e) {
-                console.warn(`发送尝试 ${attempt + 1} 失败:`, e);
-                await new Promise((r) => setTimeout(r, 1000));
-              }
-            }
-            if (!sendSuccess) {
-              debugEl.textContent = "❌ 模型加载失败，请检查网络";
-              alert("FaceMesh 模型加载失败，请确保网络通畅后刷新重试");
-              return false;
-            }
+            // 等待模型加载（简单延时 2 秒，确保 WASM 和模型加载完成）
+            await new Promise((resolve) => setTimeout(resolve, 2000));
 
-            meshReady = true;
-            debugEl.textContent = "✅ 模型已就绪，开始游戏";
-
+            // 开始推理循环（使用 requestAnimationFrame 保证稳定性）
             let processing = false;
             function processFrame() {
-              if (
-                video.readyState >= 2 &&
-                !processing &&
-                state.playing &&
-                meshReady
-              ) {
+              if (video.readyState >= 2 && !processing && state.playing) {
                 processing = true;
-                faceMeshInstance
-                  .send({ image: video })
+                fm.send({ image: video })
                   .then(() => {
                     processing = false;
                   })
                   .catch((err) => {
-                    console.warn("推理错误:", err);
+                    console.warn("FaceMesh send error:", err);
                     processing = false;
-                    if (meshReady) {
-                      meshReady = false;
-                      debugEl.textContent = "⚠️ 模型异常，尝试重新加载...";
-                      initFaceMesh()
-                        .then((fm) => {
-                          faceMeshInstance = fm;
-                          meshReady = true;
-                          debugEl.textContent = "✅ 模型重新加载成功";
-                        })
-                        .catch(() => {});
-                    }
                   });
               }
+              // 如果游戏未开始或已结束，可以继续轮询但不发送
               requestAnimationFrame(processFrame);
             }
             processFrame();
@@ -1522,10 +1500,11 @@
             state.camReady = true;
             document.getElementById("cameraModal").classList.add("hidden");
 
+            // 1 秒后校准（假设此时人脸正对镜头）
             setTimeout(() => {
               state.zeroAngle = state.headAngle;
               state.calibrated = true;
-              debugEl.textContent += " 🔄 已校准";
+              debugEl.textContent += " ✅ 已校准";
             }, 1000);
 
             start();
@@ -1533,7 +1512,7 @@
             return true;
           } catch (err) {
             alert("摄像头错误: " + err.message);
-            debugEl.textContent = "❌ " + err.message;
+            debugEl.textContent = "❌ 摄像头失败: " + err.message;
             return false;
           }
         }
@@ -1590,7 +1569,7 @@
           }
         });
 
-        // 加载图片资源并启动
+        // 加载图片资源并启动循环
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
