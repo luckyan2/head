@@ -12,6 +12,7 @@
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
       * {
         margin: 0;
@@ -173,6 +174,11 @@
         transform: translateY(4px);
         box-shadow: 0 0px 0 #b9770e;
       }
+      .modal-card .btn-small {
+        padding: 10px 20px;
+        font-size: 11px;
+        border-width: 3px;
+      }
       .modal-card .btn-secondary {
         background: #ecf0f1;
         border-color: #bdc3c7;
@@ -229,22 +235,6 @@
         font-size: 12px;
         color: #7a7268;
       }
-      #debug-info {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 50;
-        color: #fff;
-        background: rgba(0, 0, 0, 0.7);
-        padding: 4px 8px;
-        font-size: 12px;
-        font-family: monospace;
-        border-radius: 4px;
-        pointer-events: none;
-        opacity: 0.9;
-        max-width: 80%;
-        white-space: nowrap;
-      }
     </style>
   </head>
   <body>
@@ -258,14 +248,35 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
-      <div id="debug-info">⏳ 初始化...</div>
+      <!-- 开启摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
           <p>向左歪头 → 接左道食材<br />向右歪头 → 接右道食材</p>
           <button class="btn" id="cameraAllowBtn">📸 允许并开始</button>
+          <button
+            class="btn btn-small"
+            id="touchModeBtn"
+            style="background: #dcdcdc; border-color: #b0b0b0; color: #555"
+          >
+            🎮 触屏玩法
+          </button>
+          <button
+            class="btn btn-small"
+            id="uploadAvatarBtn"
+            style="background: #dcdcdc; border-color: #b0b0b0; color: #555"
+          >
+            📷 上传头像
+          </button>
+          <input
+            type="file"
+            id="avatarInput"
+            accept="image/*"
+            style="display: none"
+          />
         </div>
       </div>
+      <!-- 暂停弹窗 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -307,6 +318,7 @@
           </div>
         </div>
       </div>
+      <!-- 结算弹窗 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -326,10 +338,14 @@
               <div class="label">连击</div>
             </div>
           </div>
-          <button class="btn" id="retryBtn">🔄 再来一局</button
-          ><button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
+          <button class="btn" id="retryBtn">🔄 再来一局</button>
+          <button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
+          <div style="font-size: 10px; margin-top: 15px; color: #888">
+            我的邮箱：xxx
+          </div>
         </div>
       </div>
+      <!-- 开始游戏弹窗 -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -347,11 +363,11 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
-        const debugEl = document.getElementById("debug-info");
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
         const topDishesEl = document.getElementById("top-dishes");
+        const avatarInput = document.getElementById("avatarInput");
 
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
@@ -473,6 +489,8 @@
           eatTimers: [],
           autoServe: false,
           rightDemandTimer: null,
+          avatarImg: null,
+          hurtTimer: 0,
         };
 
         const TYPES = [
@@ -720,6 +738,13 @@
           }
           sfxServe();
           sfxGold();
+          state.floatingTexts.push({
+            text: `💰+${profit}`,
+            x: state.chefX * canvas.width,
+            y: canvas.height * 0.55,
+            life: 1.5,
+            color: "#f1c40f",
+          });
           if (!matched) state.combo = Math.floor(state.combo / 2);
           if (state.gold < 0) state.gold = 0;
           genMenu();
@@ -785,23 +810,47 @@
               ing.y > cellH * 3.8 &&
               ing.y < cellH * 6.2
             ) {
-              if (state.gold < ing.cost) continue;
-              state.gold -= ing.cost;
-              state.ingr++;
-              state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
-              sfxPickup();
+              const isNeeded = state.menu.some((item) => item.id === ing.id);
+              if (isNeeded) {
+                // 正确食材，扣除1金币
+                if (state.gold < ing.cost) continue;
+                state.gold -= ing.cost;
+                state.ingr++;
+                state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
+                sfxPickup();
+                state.floatingTexts.push({
+                  text: `💰-${ing.cost}`,
+                  x: ing.x,
+                  y: ing.y,
+                  life: 1.2,
+                  color: "#e74c3c",
+                });
+              } else {
+                // 干扰食材，扣除5金币，弹飞动画加强，附加红色停顿
+                if (state.gold < 5) continue; // 至少要有5金币才能扣除
+                state.gold -= 5;
+                state.hurtTimer = 0.3;
+                // 强烈弹飞：水平速度更大，垂直上抛更高
+                const dir = ing.x - cx > 0 ? 1 : -1;
+                state.floatingTexts.push({
+                  text: ing.emoji,
+                  x: ing.x,
+                  y: ing.y,
+                  life: 0.8,
+                  vx: dir * (400 + rand(0, 200)),
+                  vy: -350 - rand(0, 150),
+                  color: ing.color,
+                });
+                state.floatingTexts.push({
+                  text: `💰-5`,
+                  x: ing.x,
+                  y: ing.y,
+                  life: 1.2,
+                  color: "#e74c3c",
+                });
+              }
               state.ings.splice(i, 1);
-              state.floatingTexts.push({
-                text: `💰-${ing.cost}`,
-                x: ing.x,
-                y: ing.y,
-                life: 1.2,
-              });
               checkMenu();
-              continue;
-            }
-            if (ing.y > cellH * 6.5) {
-              state.ings.splice(i, 1);
             }
           }
         }
@@ -828,7 +877,13 @@
         function updateFloatingTexts(dt) {
           for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
             const ft = state.floatingTexts[i];
-            ft.y -= 30 * dt;
+            if (ft.vx !== undefined) {
+              ft.x += ft.vx * dt;
+              ft.y += ft.vy * dt;
+              ft.vy += 600 * dt; // 增加重力感
+            } else {
+              ft.y -= 30 * dt;
+            }
             ft.life -= dt;
             if (ft.life <= 0) state.floatingTexts.splice(i, 1);
           }
@@ -851,8 +906,14 @@
           updateIngs();
           updateFly(dt);
           updateFloatingTexts(dt);
-          state.chefX = lerp(state.chefX, state.targetX, 0.18);
-          state.chefX = clamp(state.chefX, 0.05, 0.95);
+
+          if (state.hurtTimer > 0) {
+            state.hurtTimer -= dt;
+          } else {
+            state.chefX = lerp(state.chefX, state.targetX, 0.18);
+            state.chefX = clamp(state.chefX, 0.05, 0.95);
+          }
+
           if (state.menuDone && !state.autoServe) {
             state.autoServe = true;
             autoServe();
@@ -871,6 +932,7 @@
             n++;
             if (n === t) cb();
           }
+          // 传送带背景图
           imgs.belt = new Image();
           imgs.belt.crossOrigin = "anonymous";
           imgs.belt.onload = on;
@@ -880,6 +942,7 @@
           };
           imgs.belt.src =
             "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // 厨师图片
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -889,6 +952,7 @@
           };
           imgs.chef.src =
             "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
+          // 锅图片
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -898,6 +962,7 @@
           };
           imgs.pot.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // 左客人点餐图
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -907,6 +972,7 @@
           };
           imgs.guestL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // 右客人点餐图
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -916,6 +982,7 @@
           };
           imgs.guestR.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // 左客人吃饭图
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -925,6 +992,7 @@
           };
           imgs.eatL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // 右客人吃饭图
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -996,7 +1064,7 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          const decoPotW = tw * 1.3,
+          const decoPotW = tw * 1.6,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
           ctx.fillStyle = "#b0b0b0";
@@ -1011,7 +1079,6 @@
           if (imgs.chef) {
             ctx.save();
             ctx.translate(chefX, chefY + chefSz * 0.4);
-            ctx.rotate((state.chefX - 0.5) * 0.6);
             ctx.drawImage(
               imgs.chef,
               -chefSz / 2,
@@ -1021,6 +1088,29 @@
             );
             ctx.restore();
           }
+
+          if (
+            state.avatarImg &&
+            state.avatarImg.complete &&
+            state.avatarImg.naturalWidth > 0
+          ) {
+            ctx.save();
+            const avatarX = chefX;
+            const avatarY = chefY + chefSz * 0.4 - chefSz * 0.65;
+            const avatarRadius = chefSz * 0.22;
+            ctx.beginPath();
+            ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(
+              state.avatarImg,
+              avatarX - avatarRadius,
+              avatarY - avatarRadius,
+              avatarRadius * 2,
+              avatarRadius * 2,
+            );
+            ctx.restore();
+          }
+
           if (imgs.pot)
             ctx.drawImage(
               imgs.pot,
@@ -1067,6 +1157,18 @@
               potH,
             );
           ctx.restore();
+
+          if (state.hurtTimer > 0) {
+            ctx.save();
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = "#ff0000";
+            const coverX = chefX - chefSz * 0.8;
+            const coverY = chefY - chefSz * 0.5;
+            const coverW = chefSz * 1.6;
+            const coverH = chefSz * 2.0;
+            ctx.fillRect(coverX, coverY, coverW, coverH);
+            ctx.restore();
+          }
 
           const restTop = cH * 6.25,
             restH = cH * 2.8;
@@ -1160,7 +1262,7 @@
           const menuX = (W - menuW) / 2,
             menuY = 0;
           ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, menuY, W, 40);
+          ctx.fillRect(0, menuY, W, 60);
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.beginPath();
           ctx.roundRect(menuX, menuY, menuW, menuH, 8);
@@ -1214,8 +1316,8 @@
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
-            ctx.font = 'bold 14px "Press Start 2P",monospace';
-            ctx.fillStyle = "#f1c40f";
+            ctx.font = 'bold 14px "Press Start 2P", monospace';
+            ctx.fillStyle = ft.color || "#f1c40f";
             ctx.textAlign = "center";
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
@@ -1311,6 +1413,7 @@
           state.floatingTexts = [];
           state.leftEating = false;
           state.rightEating = false;
+          state.hurtTimer = 0;
           state.eatTimers.forEach((t) => clearTimeout(t));
           state.eatTimers = [];
           if (state.rightDemandTimer) clearTimeout(state.rightDemandTimer);
@@ -1389,52 +1492,42 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 头控核心（强化） ----------
-        let faceMeshInstance = null;
-        let meshReady = false;
-
         function initFaceMesh() {
-          return new Promise((resolve, reject) => {
-            const fm = new FaceMesh({
-              locateFile: (file) =>
-                `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
-            });
-            fm.setOptions({
-              maxNumFaces: 1,
-              refineLandmarks: true,
-              minDetectionConfidence: 0.6,
-              minTrackingConfidence: 0.5,
-            });
-            fm.onResults((results) => {
-              if (
-                results.multiFaceLandmarks &&
-                results.multiFaceLandmarks.length
-              ) {
-                const lm = results.multiFaceLandmarks[0];
-                const leftEye = lm[33],
-                  rightEye = lm[263],
-                  noseTip = lm[1];
-                if (leftEye && rightEye && noseTip) {
-                  const dy = rightEye.y - leftEye.y;
-                  const dx = rightEye.x - leftEye.x;
-                  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                  state.headAngle = angle;
-                  state.headY = clamp(noseTip.y, 0, 1);
-                  let useAngle = state.calibrated
-                    ? angle - state.zeroAngle
-                    : angle;
-                  let tilt = clamp(useAngle / 10, -1, 1);
-                  state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
-                  debugEl.textContent = `✅ 角度: ${angle.toFixed(2)}° | 目标: ${state.targetX.toFixed(2)}`;
-                }
-              } else {
-                debugEl.textContent = "⏳ 未检测到面部...";
-              }
-            });
-            resolve(fm);
+          const fm = new FaceMesh({
+            locateFile: (file) =>
+              `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
           });
+          fm.setOptions({
+            maxNumFaces: 1,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.6,
+            minTrackingConfidence: 0.5,
+          });
+          fm.onResults((results) => {
+            if (
+              results.multiFaceLandmarks &&
+              results.multiFaceLandmarks.length
+            ) {
+              const lm = results.multiFaceLandmarks[0];
+              const leftEye = lm[33],
+                rightEye = lm[263],
+                noseTip = lm[1];
+              if (leftEye && rightEye && noseTip) {
+                const dy = rightEye.y - leftEye.y;
+                const dx = rightEye.x - leftEye.x;
+                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                state.headAngle = angle;
+                state.headY = clamp(noseTip.y, 0, 1);
+                let useAngle = state.calibrated
+                  ? angle - state.zeroAngle
+                  : angle;
+                let tilt = clamp(useAngle / 10, -1, 1);
+                state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
+              }
+            }
+          });
+          return fm;
         }
-
         async function startCam() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
@@ -1442,114 +1535,79 @@
           }
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                facingMode: "user",
-                width: { ideal: 320 },
-                height: { ideal: 240 },
-              },
+              video: { facingMode: "user", width: 320, height: 240 },
             });
             video.srcObject = stream;
-            await new Promise((resolve) => {
-              video.onloadedmetadata = resolve;
-            });
             await video.play();
-            await new Promise((resolve) => {
-              const check = () => {
-                if (video.readyState >= 2) resolve();
-                else requestAnimationFrame(check);
-              };
-              check();
-            });
-
-            debugEl.textContent = "⏳ 加载 FaceMesh 模型...";
-            faceMeshInstance = await initFaceMesh();
-
-            // 尝试发送第一帧以触发模型加载
-            let sendSuccess = false;
-            for (let attempt = 0; attempt < 5; attempt++) {
-              try {
-                await faceMeshInstance.send({ image: video });
-                sendSuccess = true;
-                break;
-              } catch (e) {
-                console.warn(`发送尝试 ${attempt + 1} 失败:`, e);
-                await new Promise((r) => setTimeout(r, 1000));
-              }
-            }
-            if (!sendSuccess) {
-              debugEl.textContent = "❌ 模型加载失败，请检查网络";
-              alert("FaceMesh 模型加载失败，请确保网络通畅后刷新重试");
-              return false;
-            }
-
-            meshReady = true;
-            debugEl.textContent = "✅ 模型已就绪，开始游戏";
-
-            let processing = false;
+            const fm = initFaceMesh();
+            state.fm = fm;
             function processFrame() {
-              if (
-                video.readyState >= 2 &&
-                !processing &&
-                state.playing &&
-                meshReady
-              ) {
-                processing = true;
-                faceMeshInstance
-                  .send({ image: video })
+              if (video.readyState >= 2 && !state._busy) {
+                state._busy = true;
+                fm.send({ image: video })
                   .then(() => {
-                    processing = false;
+                    state._busy = false;
                   })
-                  .catch((err) => {
-                    console.warn("推理错误:", err);
-                    processing = false;
-                    if (meshReady) {
-                      meshReady = false;
-                      debugEl.textContent = "⚠️ 模型异常，尝试重新加载...";
-                      initFaceMesh()
-                        .then((fm) => {
-                          faceMeshInstance = fm;
-                          meshReady = true;
-                          debugEl.textContent = "✅ 模型重新加载成功";
-                        })
-                        .catch(() => {});
-                    }
+                  .catch(() => {
+                    state._busy = false;
                   });
               }
-              requestAnimationFrame(processFrame);
+              if (video.requestVideoFrameCallback)
+                video.requestVideoFrameCallback(processFrame);
+              else requestAnimationFrame(processFrame);
             }
             processFrame();
-
             state.camReady = true;
-            document.getElementById("cameraModal").classList.add("hidden");
-
             setTimeout(() => {
               state.zeroAngle = state.headAngle;
               state.calibrated = true;
-              debugEl.textContent += " 🔄 已校准";
-            }, 1000);
-
+            }, 500);
+            document.getElementById("cameraModal").classList.add("hidden");
             start();
             initAudio();
             return true;
           } catch (err) {
             alert("摄像头错误: " + err.message);
-            debugEl.textContent = "❌ " + err.message;
             return false;
           }
         }
 
-        // ----- 事件绑定 -----
+        function startWithoutCamera() {
+          state.camReady = true;
+          document.getElementById("cameraModal").classList.add("hidden");
+          start();
+          initAudio();
+        }
+
+        function handleAvatarUpload() {
+          const file = avatarInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              state.avatarImg = img;
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+
         document
           .getElementById("cameraAllowBtn")
           .addEventListener("click", startCam);
         document
+          .getElementById("touchModeBtn")
+          .addEventListener("click", startWithoutCamera);
+        document
+          .getElementById("uploadAvatarBtn")
+          .addEventListener("click", () => avatarInput.click());
+        avatarInput.addEventListener("change", handleAvatarUpload);
+        document
           .getElementById("startGameBtn")
           .addEventListener("click", () => {
-            if (!state.camReady) {
-              alert("请先允许摄像头权限");
-              return;
-            }
-            start();
+            if (!state.camReady) alert("请先允许摄像头权限或选择触屏玩法");
+            else start();
           });
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
@@ -1584,13 +1642,8 @@
           });
         });
         document.body.addEventListener("dblclick", () => {
-          if (state.playing) {
-            state.zeroAngle = state.headAngle;
-            debugEl.textContent += " 🔄 手动归零";
-          }
+          if (state.playing) state.zeroAngle = state.headAngle;
         });
-
-        // 加载图片资源并启动
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
