@@ -100,43 +100,6 @@
         opacity: 0.01;
         pointer-events: none;
       }
-      /* ---- 角度指示器 (头控反馈) ---- */
-      #angle-meter {
-        position: absolute;
-        bottom: 16px;
-        left: 50%;
-        transform: translateX(-50%);
-        width: 160px;
-        height: 6px;
-        background: rgba(0, 0, 0, 0.15);
-        border-radius: 4px;
-        z-index: 10;
-        display: none;
-        pointer-events: none;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-      }
-      #angle-cursor {
-        width: 12px;
-        height: 18px;
-        background: #f1c40f;
-        position: absolute;
-        top: -6px;
-        left: 50%;
-        transform: translateX(-50%);
-        border-radius: 3px;
-        transition: left 0.08s linear;
-        box-shadow: 0 0 8px rgba(241, 196, 15, 0.6);
-      }
-      #angle-center {
-        width: 2px;
-        height: 6px;
-        background: #888;
-        position: absolute;
-        left: 50%;
-        top: 0;
-        opacity: 0.5;
-      }
-      /* ---- 模态框 ---- */
       .modal-overlay {
         position: absolute;
         top: 0;
@@ -271,22 +234,6 @@
         font-size: 12px;
         color: #7a7268;
       }
-      #head-status {
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        transform: translateX(-50%);
-        z-index: 8;
-        font-size: 11px;
-        color: #888;
-        background: rgba(255, 255, 255, 0.7);
-        padding: 2px 12px;
-        border-radius: 12px;
-        display: none;
-        pointer-events: none;
-        font-family: "Press Start 2P", monospace;
-        letter-spacing: 0.5px;
-      }
     </style>
   </head>
   <body>
@@ -300,15 +247,7 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
-
-      <!-- 头控角度指示器 -->
-      <div id="angle-meter">
-        <div id="angle-center"></div>
-        <div id="angle-cursor"></div>
-      </div>
-      <div id="head-status">⏳ 等待头部...</div>
-
-      <!-- 摄像头授权弹窗 -->
+      <!-- 开启摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -336,7 +275,6 @@
           />
         </div>
       </div>
-
       <!-- 暂停弹窗 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
@@ -379,7 +317,6 @@
           </div>
         </div>
       </div>
-
       <!-- 结算弹窗 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
@@ -407,7 +344,6 @@
           </div>
         </div>
       </div>
-
       <!-- 开始游戏弹窗 -->
       <div
         id="startOverlay"
@@ -421,7 +357,6 @@
         </div>
       </div>
     </div>
-
     <script>
       (() => {
         const canvas = document.getElementById("gameCanvas");
@@ -432,9 +367,6 @@
         const topGoldEl = document.getElementById("top-gold");
         const topDishesEl = document.getElementById("top-dishes");
         const avatarInput = document.getElementById("avatarInput");
-        const angleCursor = document.getElementById("angle-cursor");
-        const angleMeter = document.getElementById("angle-meter");
-        const headStatus = document.getElementById("head-status");
 
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
@@ -444,24 +376,17 @@
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
 
-        // ---- 常量 ----
         const ROWS = 10,
           COLS = 4,
           GAME_DURATION = 90,
           INITIAL_GOLD = 50;
-        // 头控参数 (参照滑雪游戏)
-        const MAX_TILT_ANGLE = 18; // 最大有效倾斜角度(度)
-        const POSITION_SMOOTH = 0.16; // 平滑系数
-
         let audioCtx;
-
         function initAudio() {
           if (!audioCtx)
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
         let bgm = true,
           sfx = true;
-
         function tone(f, d, t = "sine", v = 0.2) {
           if (!sfx || !audioCtx) return;
           try {
@@ -480,37 +405,30 @@
             o.stop(audioCtx.currentTime + d);
           } catch (_) {}
         }
-
         function sfxPickup() {
           tone(880, 0.08);
         }
-
         function sfxCook() {
           tone(660, 0.12, "square");
           setTimeout(() => tone(880, 0.12, "square"), 120);
         }
-
         function sfxServe() {
           tone(1100, 0.1);
           setTimeout(() => tone(1320, 0.1), 100);
         }
-
         function sfxMiss() {
           tone(300, 0.2, "sawtooth");
         }
-
         function sfxCombo() {
           tone(1000, 0.06);
           setTimeout(() => tone(1200, 0.06), 80);
           setTimeout(() => tone(1400, 0.06), 160);
         }
-
         function sfxGold() {
           tone(1500, 0.1);
           setTimeout(() => tone(1800, 0.1), 100);
         }
         let bgmInt;
-
         function startBGM() {
           if (!bgm) return;
           stopBGM();
@@ -526,7 +444,6 @@
             );
           }, 400);
         }
-
         function stopBGM() {
           if (bgmInt) {
             clearInterval(bgmInt);
@@ -534,7 +451,6 @@
           }
         }
 
-        // ---- 游戏状态 ----
         const state = {
           playing: false,
           paused: false,
@@ -548,10 +464,11 @@
           maxCombo: 0,
           chefX: 0.5,
           targetX: 0.5,
+          // 头控相关
           headAngle: 0,
           zeroAngle: 0,
-          headY: 0.5,
-          calibrated: false, // 是否已校准
+          calibrated: false,
+          headY: 0.5, // 未使用，但保留
           ings: [],
           pot: {},
           menu: [],
@@ -574,11 +491,8 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
-          reverseControl: false, // 方向反转
-          headDetected: false, // 是否检测到面部
         };
 
-        // ---- 食材 & 菜谱 ----
         const TYPES = [
           {
             id: "tomato",
@@ -697,20 +611,16 @@
         function rand(min, max) {
           return Math.random() * (max - min) + min;
         }
-
         function randi(min, max) {
           return Math.floor(rand(min, max + 1));
         }
-
         function clamp(v, min, max) {
           return Math.max(min, Math.min(max, v));
         }
-
         function lerp(a, b, t) {
           return a + (b - a) * t;
         }
 
-        // ---- 菜谱系统 ----
         function genMenu() {
           const demands = [];
           if (
@@ -880,7 +790,6 @@
           });
         }
 
-        // ---- 更新逻辑 ----
         function updateIngs() {
           const cellH = canvas.height / ROWS;
           for (let i = state.ings.length - 1; i >= 0; i--) {
@@ -909,6 +818,7 @@
                 state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
                 sfxPickup();
               } else {
+                // 干扰食材：弹飞动画 + 红色覆盖停顿
                 state.hurtTimer = 0.3;
                 state.floatingTexts.push({
                   text: ing.emoji,
@@ -967,7 +877,6 @@
           }
         }
 
-        // ---- 核心更新 (头控在这里) ----
         function update(dt) {
           if (!state.playing || state.paused || state.over) return;
           state.time -= dt;
@@ -976,29 +885,6 @@
             endGame();
             return;
           }
-
-          // ========== 头控逻辑 (参照滑雪游戏) ==========
-          // 计算倾斜角度 (相对于校准零位)
-          const tilt = state.headAngle - state.zeroAngle;
-          // 归一化到 [-1, 1]
-          let normalizedTilt = clamp(tilt / MAX_TILT_ANGLE, -1, 1);
-          // 方向反转 (双击切换)
-          if (state.reverseControl) normalizedTilt = -normalizedTilt;
-          // 映射到目标位置 [0.05, 0.95] (0.4 控制最大偏移幅度)
-          state.targetX = clamp(0.5 + normalizedTilt * 0.4, 0.05, 0.95);
-
-          // 更新角度指示器
-          updateAngleMeter(normalizedTilt);
-
-          // 平滑移动厨师 (受伤时冻结)
-          if (state.hurtTimer <= 0) {
-            state.chefX = lerp(state.chefX, state.targetX, POSITION_SMOOTH);
-          } else {
-            state.hurtTimer -= dt;
-          }
-          state.chefX = clamp(state.chefX, 0.05, 0.95);
-
-          // ---- 其他更新 ----
           state.beltOff = (state.beltOff + dt * 30) % 30;
           state.qTimer += dt;
           if (state.qTimer > 1.2 + rand(0, 0.5)) {
@@ -1008,6 +894,29 @@
           updateIngs();
           updateFly(dt);
           updateFloatingTexts(dt);
+
+          // --- 头控校准与目标计算 ---
+          if (state.camReady && !state.calibrated) {
+            // 游戏开始后第一帧自动校准
+            state.zeroAngle = state.headAngle;
+            state.calibrated = true;
+          }
+          if (state.calibrated) {
+            const tilt = state.headAngle - state.zeroAngle; // 左倾 -> 负值
+            const maxAngle = 30; // 最大倾斜角度（度）
+            let normalized = clamp(tilt / maxAngle, -1, 1);
+            // 左倾（负）使 targetX 变小，厨师向左移动
+            state.targetX = clamp(0.5 + normalized * 0.45, 0.05, 0.95);
+          }
+
+          if (state.hurtTimer > 0) {
+            state.hurtTimer -= dt;
+            // 受干扰时厨师不移动，停在当前位置
+          } else {
+            // 平滑移动厨师
+            state.chefX = lerp(state.chefX, state.targetX, 0.18);
+            state.chefX = clamp(state.chefX, 0.05, 0.95);
+          }
 
           if (state.menuDone && !state.autoServe) {
             state.autoServe = true;
@@ -1019,25 +928,10 @@
           updateUI();
         }
 
-        // ---- 角度指示器 ----
-        function updateAngleMeter(norm) {
-          if (!angleMeter) return;
-          const percent = ((norm + 1) / 2) * 100;
-          angleCursor.style.left = `${clamp(percent, 0, 100)}%`;
-          // 颜色反馈
-          const abs = Math.abs(norm);
-          if (abs > 0.6) angleCursor.style.background = "#2ecc71";
-          else if (abs > 0.25) angleCursor.style.background = "#f1c40f";
-          else angleCursor.style.background = "#e74c3c";
-        }
-
-        // ---- 图片加载 ----
         const imgs = {};
-
         function loadImgs(cb) {
           let n = 0;
           const t = 7;
-
           function on() {
             n++;
             if (n === t) cb();
@@ -1107,7 +1001,6 @@
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
         }
 
-        // ---- 绘制 ----
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -1426,17 +1319,6 @@
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
-
-          // ---- 头控状态指示 ----
-          if (state.headDetected) {
-            headStatus.textContent = state.calibrated
-              ? "🧠 已校准"
-              : "⏳ 校准中...";
-            headStatus.style.color = state.calibrated ? "#27ae60" : "#f39c12";
-          } else {
-            headStatus.textContent = "⏳ 等待头部...";
-            headStatus.style.color = "#888";
-          }
         }
 
         if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1462,7 +1344,6 @@
           };
         }
 
-        // ---- UI ----
         function updateUI() {
           const m = Math.floor(state.time / 60),
             s = Math.floor(state.time % 60);
@@ -1470,9 +1351,7 @@
           topGoldEl.textContent = `💰 ${state.gold}`;
           topDishesEl.textContent = `🍽️ ${state.dishes}`;
         }
-
         let last = 0;
-
         function loop(ts) {
           const dt = last ? Math.min((ts - last) / 1000, 0.05) : 0.016;
           last = ts;
@@ -1480,7 +1359,6 @@
           draw();
           requestAnimationFrame(loop);
         }
-
         function getRank(g) {
           if (g >= 200) return "👑 巅峰厨神";
           if (g >= 150) return "🌟 荣耀厨王";
@@ -1490,7 +1368,6 @@
           if (g >= 30) return "🍳 初级厨师";
           return "👶 学徒";
         }
-
         function endGame() {
           if (state.over) return;
           state.over = true;
@@ -1503,10 +1380,7 @@
             state.totalGold,
           );
           document.getElementById("resultModal").classList.remove("hidden");
-          angleMeter.style.display = "none";
-          headStatus.style.display = "none";
         }
-
         function reset() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
@@ -1524,11 +1398,9 @@
           state.maxCombo = 0;
           state.chefX = 0.5;
           state.targetX = 0.5;
-          state.headAngle = 0;
-          state.zeroAngle = 0;
-          state.headY = 0.5;
-          state.calibrated = false;
-          state.headDetected = false;
+          // 头控数据保留，不清零，便于再次校准时使用当前角度
+          state.calibrated = false; // 等待下次校准
+          // state.headAngle 保持 FaceMesh 最新值，不清零
           state.ings = [];
           state.pot = {};
           state.menu = [];
@@ -1562,23 +1434,15 @@
           document.getElementById("startOverlay").classList.remove("hidden");
           genMenu();
           updateUI();
-          angleMeter.style.display = "none";
-          headStatus.style.display = "none";
         }
-
         function start() {
           reset();
+          // 校准将在 update 的第一帧自动完成（需要 camReady 为 true）
           state.playing = true;
           document.getElementById("startOverlay").classList.add("hidden");
           startBGM();
           updateUI();
-          angleMeter.style.display = "block";
-          headStatus.style.display = "block";
-          // 重置校准状态，让 onResults 重新校准
-          state.calibrated = false;
-          state.zeroAngle = 0;
         }
-
         function togglePause() {
           if (!state.playing || state.over) return;
           state.paused = !state.paused;
@@ -1590,14 +1454,12 @@
             startBGM();
           }
         }
-
         function restartGame() {
           if (state.paused) togglePause();
           reset();
           start();
         }
 
-        // ---- 触屏支持 ----
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -1627,22 +1489,7 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---- 双击切换方向 ----
-        document.body.addEventListener("dblclick", () => {
-          if (state.playing && state.headDetected) {
-            state.reverseControl = !state.reverseControl;
-            state.floatingTexts.push({
-              text: state.reverseControl ? "🔄 反转 ON" : "🔄 反转 OFF",
-              x: canvas.width / 2,
-              y: canvas.height * 0.3,
-              life: 1.2,
-              color: "#3498db",
-            });
-            if (navigator.vibrate) navigator.vibrate(30);
-          }
-        });
-
-        // ---- FaceMesh 初始化 ----
+        // ---- FaceMesh 初始化，只更新 headAngle ----
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1650,8 +1497,8 @@
           });
           fm.setOptions({
             maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.6,
+            refineLandmarks: false, // 降低负载
+            minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5,
           });
           fm.onResults((results) => {
@@ -1661,40 +1508,17 @@
             ) {
               const lm = results.multiFaceLandmarks[0];
               const leftEye = lm[33],
-                rightEye = lm[263],
-                noseTip = lm[1];
-              if (leftEye && rightEye && noseTip) {
+                rightEye = lm[263];
+              if (leftEye && rightEye) {
                 const dy = rightEye.y - leftEye.y;
                 const dx = rightEye.x - leftEye.x;
-                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                // 只更新角度，不在这里计算目标位置 (移到 update 中)
-                state.headAngle = angle;
-                state.headY = clamp(noseTip.y, 0, 1);
-                state.headDetected = true;
-
-                // ===== 自动校准 (只在未校准时执行) =====
-                if (!state.calibrated) {
-                  // 第一次检测到面部时，以当前角度为基准
-                  state.zeroAngle = angle;
-                  state.calibrated = true;
-                  state.floatingTexts.push({
-                    text: "🎯 头控已校准!",
-                    x: canvas.width / 2,
-                    y: canvas.height * 0.25,
-                    life: 1.8,
-                    color: "#2ecc71",
-                  });
-                  if (navigator.vibrate) navigator.vibrate(50);
-                }
+                state.headAngle = Math.atan2(dy, dx) * (180 / Math.PI);
               }
-            } else {
-              state.headDetected = false;
             }
           });
           return fm;
         }
 
-        // ---- 摄像头启动 ----
         async function startCam() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
@@ -1709,6 +1533,7 @@
             const fm = initFaceMesh();
             state.fm = fm;
 
+            // 帧循环，与滑雪游戏类似
             function processFrame() {
               if (video.readyState >= 2 && !state._busy) {
                 state._busy = true;
@@ -1720,14 +1545,16 @@
                     state._busy = false;
                   });
               }
-              if (video.requestVideoFrameCallback)
+              if (video.requestVideoFrameCallback) {
                 video.requestVideoFrameCallback(processFrame);
-              else requestAnimationFrame(processFrame);
+              } else {
+                requestAnimationFrame(processFrame);
+              }
             }
             processFrame();
             state.camReady = true;
             document.getElementById("cameraModal").classList.add("hidden");
-            start();
+            start(); // 游戏开始，校准由 update 第一帧自动完成
             initAudio();
             return true;
           } catch (err) {
@@ -1737,15 +1564,12 @@
         }
 
         function startWithoutCamera() {
-          state.camReady = true;
-          state.headDetected = true; // 让界面不显示"等待头部"
-          state.calibrated = true;
+          state.camReady = false; // 无摄像头时不进行头控校准
           document.getElementById("cameraModal").classList.add("hidden");
           start();
           initAudio();
         }
 
-        // ---- 头像上传 ----
         function handleAvatarUpload() {
           const file = avatarInput.files[0];
           if (!file) return;
@@ -1760,7 +1584,6 @@
           reader.readAsDataURL(file);
         }
 
-        // ---- 事件绑定 ----
         document
           .getElementById("cameraAllowBtn")
           .addEventListener("click", startCam);
@@ -1809,8 +1632,9 @@
             } else if (s === "sfx") sfx = v === "on";
           });
         });
-
-        // ---- 启动 ----
+        document.body.addEventListener("dblclick", () => {
+          if (state.playing) state.zeroAngle = state.headAngle;
+        }); // 双击重置校准
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
