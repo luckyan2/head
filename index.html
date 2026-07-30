@@ -262,7 +262,6 @@
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
       <div id="debug-angle">角度: 0.0</div>
-      <!-- 调试显示 -->
       <!-- 开启摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
@@ -507,7 +506,7 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
-          headControlReverse: false, // 新增：反向控制开关
+          headControlReverse: false,
         };
 
         const TYPES = [
@@ -1489,7 +1488,9 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 头控核心（修改）----------
+        // ---------- 头控核心（仿滑雪游戏）----------
+        let isProcessing = false; // 仅用于防止重叠发送
+
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1514,7 +1515,7 @@
                 const dx = rightEye.x - leftEye.x;
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 state.headAngle = angle;
-                // 校准：如果未校准，取当前角度作为零位
+                // 校准：首次检测到人脸时取零位
                 if (!state.calibrated) {
                   state.zeroAngle = angle;
                   state.calibrated = true;
@@ -1522,32 +1523,29 @@
                 }
                 // 计算偏移
                 let useAngle = angle - state.zeroAngle;
-                // 限制范围 ±30 度，映射到 [-1,1]
                 const maxTilt = 30;
                 let tilt = clamp(useAngle / maxTilt, -1, 1);
-                // 反向控制（默认不反向，头左→左，头右→右）
                 if (state.headControlReverse) tilt = -tilt;
-                // 映射到目标位置（0~1），加一点死区避免抖动
+                // 死区
                 const deadZone = 0.02;
                 if (Math.abs(tilt) < deadZone) tilt = 0;
                 state.targetX = clamp(0.5 + tilt * 0.45, 0.05, 0.95);
-                // 调试显示
                 if (debugAngle)
                   debugAngle.textContent = `角度: ${angle.toFixed(1)}° 偏移: ${tilt.toFixed(2)}`;
               }
             } else {
-              // 未检测到人脸，不更新目标，保持上次位置
+              // 未检测到人脸，可显示提示
+              if (debugAngle) debugAngle.textContent = "未检测到人脸";
             }
           });
           return fm;
         }
 
-        // 视频帧循环（简化，与滑雪游戏类似）
-        let isProcessing = false;
+        // 视频帧循环 - 完全仿照滑雪游戏
         function startCameraLoop() {
-          if (isProcessing) return;
-          isProcessing = true;
-          if (video.readyState >= 2 && state.fm) {
+          // 如果 video 未就绪或没有 faceMesh，则跳过本次
+          if (video.readyState >= 2 && state.fm && !isProcessing) {
+            isProcessing = true;
             state.fm
               .send({ image: video })
               .then(() => {
@@ -1557,11 +1555,13 @@
                 console.warn("MediaPipe 发送错误:", err);
                 isProcessing = false;
               });
-          } else {
-            isProcessing = false;
           }
-          // 无论是否处理，继续调度下一帧（使用 requestAnimationFrame 更稳定）
-          requestAnimationFrame(startCameraLoop);
+          // 无论是否处理，都调度下一帧 (使用 requestVideoFrameCallback 或 requestAnimationFrame)
+          if (video.requestVideoFrameCallback) {
+            video.requestVideoFrameCallback(startCameraLoop);
+          } else {
+            requestAnimationFrame(startCameraLoop);
+          }
         }
 
         async function startCam() {
@@ -1579,15 +1579,16 @@
             });
             video.srcObject = stream;
             await video.play();
-            // 设置视频实际尺寸（可选，帮助 MediaPipe）
+            // 设置视频尺寸（帮助 MediaPipe）
             video.width = video.videoWidth || 320;
             video.height = video.videoHeight || 240;
 
             const fm = initFaceMesh();
             state.fm = fm;
-            // 开始循环
-            state.calibrated = false; // 重置校准
+            // 重置校准
+            state.calibrated = false;
             isProcessing = false;
+            // 启动循环
             startCameraLoop();
 
             state.camReady = true;
@@ -1622,7 +1623,7 @@
           reader.readAsDataURL(file);
         }
 
-        // 双击重置校准（替代原来的双击）
+        // 双击重置校准
         document.body.addEventListener("dblclick", () => {
           if (state.playing) {
             state.zeroAngle = state.headAngle;
