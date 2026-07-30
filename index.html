@@ -101,7 +101,7 @@
         opacity: 0.01;
         pointer-events: none;
       }
-      /* 调试信息层 */
+      /* 调试信息 */
       #debug-info {
         position: absolute;
         top: 10px;
@@ -115,6 +115,7 @@
         border-radius: 4px;
         pointer-events: none;
         opacity: 0.9;
+        white-space: nowrap;
       }
       .modal-overlay {
         position: absolute;
@@ -508,7 +509,7 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
-          faceDetected: false, // 用于校准
+          faceDetected: false,
         };
 
         const TYPES = [
@@ -1492,9 +1493,9 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ========== 重写的头控核心（高可靠） ==========
+        // ========== 使用 Camera 工具类（官方推荐） ==========
         let faceMeshInstance = null;
-        let isProcessing = false;
+        let cameraInstance = null;
 
         function initFaceMesh() {
           const fm = new FaceMesh({
@@ -1503,7 +1504,7 @@
           });
           fm.setOptions({
             maxNumFaces: 1,
-            refineLandmarks: false, // 提高速度
+            refineLandmarks: false,
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5,
           });
@@ -1523,7 +1524,6 @@
                 state.headAngle = angle;
                 state.headY = clamp(noseTip.y, 0, 1);
 
-                // 首次检测到面部时自动校准
                 if (!state.faceDetected) {
                   state.faceDetected = true;
                   state.zeroAngle = angle;
@@ -1545,31 +1545,6 @@
           return fm;
         }
 
-        // 推理循环：使用 requestAnimationFrame 持续发送
-        function startInferenceLoop() {
-          function loop() {
-            if (
-              faceMeshInstance &&
-              video.srcObject &&
-              video.readyState >= 2 &&
-              !isProcessing
-            ) {
-              isProcessing = true;
-              faceMeshInstance
-                .send({ image: video })
-                .then(() => {
-                  isProcessing = false;
-                })
-                .catch((err) => {
-                  console.warn("FaceMesh send error:", err);
-                  isProcessing = false;
-                });
-            }
-            requestAnimationFrame(loop);
-          }
-          loop();
-        }
-
         async function startCam() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
@@ -1580,32 +1555,27 @@
               video: { facingMode: "user", width: 320, height: 240 },
             });
             video.srcObject = stream;
-            await new Promise((resolve) => {
-              video.onloadedmetadata = resolve;
-            });
             await video.play();
-
-            // 等待视频有实际帧
-            await new Promise((resolve) => {
-              const check = () => {
-                if (video.readyState >= 2) resolve();
-                else requestAnimationFrame(check);
-              };
-              check();
-            });
 
             debugEl.textContent = "⏳ 加载 FaceMesh 模型...";
             faceMeshInstance = initFaceMesh();
 
-            // 给模型一点加载时间
-            await new Promise((r) => setTimeout(r, 1000));
-
-            // 启动推理循环
-            startInferenceLoop();
+            // 使用 Camera 工具类驱动推理
+            cameraInstance = new Camera(video, {
+              onFrame: async () => {
+                if (faceMeshInstance) {
+                  await faceMeshInstance.send({ image: video });
+                }
+              },
+              width: 320,
+              height: 240,
+            });
+            await cameraInstance.start();
 
             state.camReady = true;
             document.getElementById("cameraModal").classList.add("hidden");
 
+            // 启动游戏
             start();
             initAudio();
             return true;
@@ -1616,7 +1586,6 @@
           }
         }
 
-        // ========== 触屏模式（无摄像头） ==========
         function startWithoutCamera() {
           state.camReady = true;
           document.getElementById("cameraModal").classList.add("hidden");
