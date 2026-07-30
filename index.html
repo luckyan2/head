@@ -100,7 +100,6 @@
         opacity: 0.01;
         pointer-events: none;
       }
-      /* 头控状态指示器（左上角） */
       .head-indicator {
         position: absolute;
         top: 8px;
@@ -269,12 +268,10 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
-      <!-- 头控状态指示器（左上角） -->
       <div id="headIndicator" class="head-indicator">
-        🧠 <span class="off">●</span> 等待...
+        🧠 <span class="off">●</span> 初始化...
       </div>
 
-      <!-- 开启摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -302,7 +299,6 @@
           />
         </div>
       </div>
-      <!-- 暂停弹窗 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -344,7 +340,6 @@
           </div>
         </div>
       </div>
-      <!-- 结算弹窗 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -371,7 +366,6 @@
           </div>
         </div>
       </div>
-      <!-- 开始游戏弹窗 -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -386,7 +380,7 @@
     </div>
     <script>
       (() => {
-        // ---------- DOM 引用 ----------
+        // ---------- DOM ----------
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
@@ -487,7 +481,7 @@
           }
         }
 
-        // ---------- 游戏配置 ----------
+        // ---------- 游戏状态 ----------
         const ROWS = 10,
           COLS = 4,
           GAME_DURATION = 90,
@@ -532,7 +526,7 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
-          // 头控状态（参考成功案例）
+          // 头控状态
           faceDetected: false,
           isProcessing: false,
           frameCount: 0,
@@ -669,7 +663,7 @@
           return a + (b - a) * t;
         }
 
-        // ---------- 游戏逻辑 ----------
+        // ---------- 游戏逻辑（保持不变） ----------
         function genMenu() {
           const demands = [];
           if (
@@ -943,11 +937,9 @@
           updateFly(dt);
           updateFloatingTexts(dt);
 
-          // 头控移动（参考成功案例的平滑方式）
           if (state.hurtTimer > 0) {
             state.hurtTimer -= dt;
           } else {
-            // 使用更平滑的 lerp，与成功案例一致
             const lerpFactor = 1 - Math.exp(-10 * dt);
             state.chefX =
               state.chefX + (state.targetX - state.chefX) * lerpFactor;
@@ -965,7 +957,6 @@
           updateHeadIndicator();
         }
 
-        // ---------- 头控指示器 ----------
         function updateHeadIndicator() {
           const status = state.faceDetected ? "on" : "off";
           const label = state.faceDetected ? "人脸 ✓" : "未检测";
@@ -1054,7 +1045,7 @@
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
         }
 
-        // ---------- 绘制 ----------
+        // ---------- 绘制（游戏画面） ----------
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -1555,7 +1546,7 @@
         });
 
         // ================================================================
-        //  ★★★ 核心修复：完全参考成功案例重写 FaceMesh 视频处理 ★★★
+        //  ★★★ 核心修复：完全采用成功案例的视频处理模式 ★★★
         // ================================================================
 
         function initFaceMesh() {
@@ -1569,7 +1560,6 @@
             minDetectionConfidence: 0.5,
             minTrackingConfidence: 0.5,
           });
-          // ★ 关键：onResults 只做一件事 —— 更新状态变量（与成功案例完全一致）
           fm.onResults((results) => {
             state.faceDetected = false;
             if (
@@ -1586,7 +1576,6 @@
                 state.headAngle = angle;
                 state.faceDetected = true;
 
-                // 自动校准（首次检测到人脸时）
                 if (!state.calibrated && state.faceDetected) {
                   state.zeroAngle = angle;
                   state.calibrated = true;
@@ -1594,11 +1583,9 @@
                     '🧠 <span class="on">●</span> 已校准 ✓';
                 }
 
-                // 计算目标位置（与成功案例的 tilt 逻辑一致）
                 let useAngle = state.calibrated
                   ? angle - state.zeroAngle
                   : angle;
-                // 灵敏度：每 10° 对应 80% 范围
                 let tilt = clamp(useAngle / 10, -1, 1);
                 state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
               }
@@ -1607,7 +1594,7 @@
           return fm;
         }
 
-        // ★ 视频处理循环：完全参考成功案例 —— requestVideoFrameCallback 优先
+        // ★ 视频处理循环：与成功案例完全一致
         function startVideoLoop() {
           if (video.readyState >= 2 && !state.isProcessing) {
             state.isProcessing = true;
@@ -1620,18 +1607,16 @@
                 state.isProcessing = false;
               });
           }
-          // 优先使用 requestVideoFrameCallback（原生视频帧回调，更稳定）
+          // 优先使用 requestVideoFrameCallback
           if (video.requestVideoFrameCallback) {
             video.requestVideoFrameCallback(startVideoLoop);
           } else {
-            // 降级到 requestAnimationFrame
             requestAnimationFrame(startVideoLoop);
           }
         }
 
         // 重写 startCam
         async function startCam() {
-          // 清理之前的状态
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
@@ -1648,6 +1633,17 @@
             video.srcObject = stream;
             await video.play();
 
+            // ★ 关键：等待视频元数据加载完成（readyState >= 2）
+            await new Promise((resolve) => {
+              if (video.readyState >= 2) {
+                resolve();
+              } else {
+                video.addEventListener("loadedmetadata", resolve, {
+                  once: true,
+                });
+              }
+            });
+
             // 初始化 FaceMesh
             state.fm = initFaceMesh();
             state.camReady = true;
@@ -1658,7 +1654,6 @@
             // 启动视频处理循环
             startVideoLoop();
 
-            // 关闭弹窗，开始游戏
             document.getElementById("cameraModal").classList.add("hidden");
             start();
             initAudio();
@@ -1762,7 +1757,7 @@
             } else if (s === "sfx") sfx = v === "on";
           });
         });
-        // 双击重新校准（与成功案例一致）
+        // 双击重新校准
         document.body.addEventListener("dblclick", () => {
           if (state.playing && state.faceDetected) {
             state.zeroAngle = state.headAngle;
@@ -1786,7 +1781,6 @@
           document.addEventListener("click", () => initAudio(), { once: true });
         });
 
-        // 页面关闭清理
         window.addEventListener("beforeunload", () => {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
