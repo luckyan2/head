@@ -6,12 +6,13 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头控+自动出餐</title>
+    <title>像素厨房 · 头控+新出餐</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
       * {
         margin: 0;
@@ -173,6 +174,11 @@
         transform: translateY(4px);
         box-shadow: 0 0px 0 #b9770e;
       }
+      .modal-card .btn-small {
+        padding: 10px 20px;
+        font-size: 11px;
+        border-width: 3px;
+      }
       .modal-card .btn-secondary {
         background: #ecf0f1;
         border-color: #bdc3c7;
@@ -229,20 +235,39 @@
         font-size: 12px;
         color: #7a7268;
       }
-      /* 调试信息 */
-      #debug-info {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 50;
-        color: #fff;
-        background: rgba(0, 0, 0, 0.6);
+      .toggle-wrap {
+        display: flex;
+        gap: 4px;
+      }
+      #head-status {
+        font-size: 11px;
+        color: #27ae60;
         padding: 4px 8px;
-        font-size: 12px;
-        font-family: monospace;
-        border-radius: 4px;
-        pointer-events: none;
-        opacity: 0.8;
+        background: rgba(39, 174, 96, 0.12);
+        border-radius: 12px;
+        display: inline-block;
+        margin-top: 6px;
+      }
+      #head-status.off {
+        color: #e74c3c;
+        background: rgba(231, 76, 60, 0.12);
+      }
+      .status-dot {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        margin-right: 6px;
+        vertical-align: middle;
+      }
+      .status-dot.on {
+        background: #27ae60;
+      }
+      .status-dot.off {
+        background: #e74c3c;
+      }
+      .status-dot.wait {
+        background: #f39c12;
       }
     </style>
   </head>
@@ -257,14 +282,40 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
-      <div id="debug-info">⏳ 初始化...</div>
+
+      <!-- 摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
           <p>向左歪头 → 接左道食材<br />向右歪头 → 接右道食材</p>
+          <div id="head-status" class="off">
+            <span class="status-dot off"></span>等待启动
+          </div>
           <button class="btn" id="cameraAllowBtn">📸 允许并开始</button>
+          <button
+            class="btn btn-small"
+            id="touchModeBtn"
+            style="background: #dcdcdc; border-color: #b0b0b0; color: #555"
+          >
+            🎮 触屏玩法
+          </button>
+          <button
+            class="btn btn-small"
+            id="uploadAvatarBtn"
+            style="background: #dcdcdc; border-color: #b0b0b0; color: #555"
+          >
+            📷 上传头像
+          </button>
+          <input
+            type="file"
+            id="avatarInput"
+            accept="image/*"
+            style="display: none"
+          />
         </div>
       </div>
+
+      <!-- 暂停弹窗 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -306,6 +357,8 @@
           </div>
         </div>
       </div>
+
+      <!-- 结算弹窗 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -325,10 +378,15 @@
               <div class="label">连击</div>
             </div>
           </div>
-          <button class="btn" id="retryBtn">🔄 再来一局</button
-          ><button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
+          <button class="btn" id="retryBtn">🔄 再来一局</button>
+          <button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
+          <div style="font-size: 10px; margin-top: 15px; color: #888">
+            我的邮箱：xxx
+          </div>
         </div>
       </div>
+
+      <!-- 开始游戏弹窗 -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -343,14 +401,16 @@
     </div>
     <script>
       (() => {
+        // ===== 核心修复：头控使用 Camera 工具类 + requestAnimationFrame 双重保障 =====
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
-        const debugEl = document.getElementById("debug-info");
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
         const topDishesEl = document.getElementById("top-dishes");
+        const avatarInput = document.getElementById("avatarInput");
+        const headStatusEl = document.getElementById("head-status");
 
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
@@ -365,12 +425,14 @@
           GAME_DURATION = 90,
           INITIAL_GOLD = 50;
         let audioCtx;
+
         function initAudio() {
           if (!audioCtx)
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
         let bgm = true,
           sfx = true;
+
         function tone(f, d, t = "sine", v = 0.2) {
           if (!sfx || !audioCtx) return;
           try {
@@ -389,30 +451,37 @@
             o.stop(audioCtx.currentTime + d);
           } catch (_) {}
         }
+
         function sfxPickup() {
           tone(880, 0.08);
         }
+
         function sfxCook() {
           tone(660, 0.12, "square");
           setTimeout(() => tone(880, 0.12, "square"), 120);
         }
+
         function sfxServe() {
           tone(1100, 0.1);
           setTimeout(() => tone(1320, 0.1), 100);
         }
+
         function sfxMiss() {
           tone(300, 0.2, "sawtooth");
         }
+
         function sfxCombo() {
           tone(1000, 0.06);
           setTimeout(() => tone(1200, 0.06), 80);
           setTimeout(() => tone(1400, 0.06), 160);
         }
+
         function sfxGold() {
           tone(1500, 0.1);
           setTimeout(() => tone(1800, 0.1), 100);
         }
         let bgmInt;
+
         function startBGM() {
           if (!bgm) return;
           stopBGM();
@@ -428,6 +497,7 @@
             );
           }, 400);
         }
+
         function stopBGM() {
           if (bgmInt) {
             clearInterval(bgmInt);
@@ -435,6 +505,7 @@
           }
         }
 
+        // ===== 游戏状态 =====
         const state = {
           playing: false,
           paused: false,
@@ -452,6 +523,7 @@
           zeroAngle: 0,
           headY: 0.5,
           calibrated: false,
+          calibrationReady: false,
           ings: [],
           pot: {},
           menu: [],
@@ -459,7 +531,7 @@
           dish: "",
           reward: 0,
           cost: 0,
-          leftD: { dish: "番茄炒蛋", emoji: "🍳" }, // 初始先给一个菜品
+          leftD: { dish: "番茄炒蛋", emoji: "🍳" },
           rightD: { dish: "...", emoji: "..." },
           fly: [],
           beltOff: 0,
@@ -471,7 +543,14 @@
           rightEating: false,
           eatTimers: [],
           autoServe: false,
-          rightDemandTimer: null, // 用于延迟右边需求
+          rightDemandTimer: null,
+          avatarImg: null,
+          hurtTimer: 0,
+          faceDetected: false,
+          detectionCount: 0,
+          _busy: false,
+          cameraRunning: false,
+          frameCount: 0,
         };
 
         const TYPES = [
@@ -592,18 +671,21 @@
         function rand(min, max) {
           return Math.random() * (max - min) + min;
         }
+
         function randi(min, max) {
           return Math.floor(rand(min, max + 1));
         }
+
         function clamp(v, min, max) {
           return Math.max(min, Math.min(max, v));
         }
+
         function lerp(a, b, t) {
           return a + (b - a) * t;
         }
 
+        // ===== 菜单生成 =====
         function genMenu() {
-          // 收集当前有效的菜品需求（非省略号、非绿勾）
           const demands = [];
           if (
             state.leftD &&
@@ -618,7 +700,6 @@
           )
             demands.push({ side: "right", dish: state.rightD.dish });
           if (demands.length === 0) {
-            // 如果都没有，随机选一个生成新需求
             const sides = ["left", "right"];
             const pick = sides[randi(0, 1)];
             const recipe = RECIPES[randi(0, RECIPES.length - 1)];
@@ -691,7 +772,7 @@
             state.gold += 5;
             state.totalGold += 5;
             matched = true;
-            state.leftD.dish = "✅"; // 显示绿勾
+            state.leftD.dish = "✅";
             state.leftEating = true;
             if (state.eatTimers.left) clearTimeout(state.eatTimers.left);
             state.eatTimers.left = setTimeout(() => {
@@ -721,6 +802,13 @@
           }
           sfxServe();
           sfxGold();
+          state.floatingTexts.push({
+            text: `💰+${profit}`,
+            x: state.chefX * canvas.width,
+            y: canvas.height * 0.55,
+            life: 1.5,
+            color: "#f1c40f",
+          });
           if (!matched) state.combo = Math.floor(state.combo / 2);
           if (state.gold < 0) state.gold = 0;
           genMenu();
@@ -766,6 +854,7 @@
           });
         }
 
+        // ===== 更新逻辑 =====
         function updateIngs() {
           const cellH = canvas.height / ROWS;
           for (let i = state.ings.length - 1; i >= 0; i--) {
@@ -786,23 +875,45 @@
               ing.y > cellH * 3.8 &&
               ing.y < cellH * 6.2
             ) {
-              if (state.gold < ing.cost) continue;
-              state.gold -= ing.cost;
-              state.ingr++;
-              state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
-              sfxPickup();
+              const isNeeded = state.menu.some((item) => item.id === ing.id);
+              if (isNeeded) {
+                if (state.gold < ing.cost) continue;
+                state.gold -= ing.cost;
+                state.ingr++;
+                state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
+                sfxPickup();
+                state.floatingTexts.push({
+                  text: `💰-${ing.cost}`,
+                  x: ing.x,
+                  y: ing.y,
+                  life: 1.2,
+                  color: "#e74c3c",
+                });
+              } else {
+                if (state.gold < 5) continue;
+                state.gold -= 5;
+                state.hurtTimer = 0.3;
+                const dir = ing.x - cx > 0 ? 1 : -1;
+                state.floatingTexts.push({
+                  text: ing.emoji,
+                  x: ing.x,
+                  y: ing.y,
+                  life: 0.8,
+                  vx: dir * (400 + rand(0, 200)),
+                  vy: -350 - rand(0, 150),
+                  color: ing.color,
+                });
+                state.floatingTexts.push({
+                  text: `💰-5`,
+                  x: ing.x,
+                  y: ing.y,
+                  life: 1.2,
+                  color: "#e74c3c",
+                });
+                sfxMiss();
+              }
               state.ings.splice(i, 1);
-              state.floatingTexts.push({
-                text: `💰-${ing.cost}`,
-                x: ing.x,
-                y: ing.y,
-                life: 1.2,
-              });
               checkMenu();
-              continue;
-            }
-            if (ing.y > cellH * 6.5) {
-              state.ings.splice(i, 1);
             }
           }
         }
@@ -829,11 +940,19 @@
         function updateFloatingTexts(dt) {
           for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
             const ft = state.floatingTexts[i];
-            ft.y -= 30 * dt;
+            if (ft.vx !== undefined) {
+              ft.x += ft.vx * dt;
+              ft.y += ft.vy * dt;
+              ft.vy += 600 * dt;
+            } else {
+              ft.y -= 30 * dt;
+            }
             ft.life -= dt;
             if (ft.life <= 0) state.floatingTexts.splice(i, 1);
           }
         }
+
+        let _lastFrameTime = 0;
 
         function update(dt) {
           if (!state.playing || state.paused || state.over) return;
@@ -852,8 +971,15 @@
           updateIngs();
           updateFly(dt);
           updateFloatingTexts(dt);
-          state.chefX = lerp(state.chefX, state.targetX, 0.18);
-          state.chefX = clamp(state.chefX, 0.05, 0.95);
+
+          if (state.hurtTimer > 0) {
+            state.hurtTimer -= dt;
+          } else {
+            // 头控更新：平滑跟随 targetX
+            state.chefX = lerp(state.chefX, state.targetX, 0.18);
+            state.chefX = clamp(state.chefX, 0.05, 0.95);
+          }
+
           if (state.menuDone && !state.autoServe) {
             state.autoServe = true;
             autoServe();
@@ -864,10 +990,13 @@
           updateUI();
         }
 
+        // ===== 图片加载 =====
         const imgs = {};
+
         function loadImgs(cb) {
           let n = 0;
           const t = 7;
+
           function on() {
             n++;
             if (n === t) cb();
@@ -881,6 +1010,7 @@
           };
           imgs.belt.src =
             "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -890,6 +1020,7 @@
           };
           imgs.chef.src =
             "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
+
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -899,6 +1030,7 @@
           };
           imgs.pot.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -908,6 +1040,7 @@
           };
           imgs.guestL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -917,6 +1050,7 @@
           };
           imgs.guestR.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -926,6 +1060,7 @@
           };
           imgs.eatL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -937,6 +1072,7 @@
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
         }
 
+        // ===== 绘制 =====
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -997,7 +1133,7 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          const decoPotW = tw * 1.3,
+          const decoPotW = tw * 1.6,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
           ctx.fillStyle = "#b0b0b0";
@@ -1012,7 +1148,6 @@
           if (imgs.chef) {
             ctx.save();
             ctx.translate(chefX, chefY + chefSz * 0.4);
-            ctx.rotate((state.chefX - 0.5) * 0.6);
             ctx.drawImage(
               imgs.chef,
               -chefSz / 2,
@@ -1022,6 +1157,29 @@
             );
             ctx.restore();
           }
+
+          if (
+            state.avatarImg &&
+            state.avatarImg.complete &&
+            state.avatarImg.naturalWidth > 0
+          ) {
+            ctx.save();
+            const avatarX = chefX;
+            const avatarY = chefY + chefSz * 0.4 - chefSz * 0.65;
+            const avatarRadius = chefSz * 0.22;
+            ctx.beginPath();
+            ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
+            ctx.clip();
+            ctx.drawImage(
+              state.avatarImg,
+              avatarX - avatarRadius,
+              avatarY - avatarRadius,
+              avatarRadius * 2,
+              avatarRadius * 2,
+            );
+            ctx.restore();
+          }
+
           if (imgs.pot)
             ctx.drawImage(
               imgs.pot,
@@ -1069,6 +1227,19 @@
             );
           ctx.restore();
 
+          if (state.hurtTimer > 0) {
+            ctx.save();
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = "#ff0000";
+            const coverX = chefX - chefSz * 0.8;
+            const coverY = chefY - chefSz * 0.5;
+            const coverW = chefSz * 1.6;
+            const coverH = chefSz * 2.0;
+            ctx.fillRect(coverX, coverY, coverW, coverH);
+            ctx.restore();
+          }
+
+          // 客人区域
           const restTop = cH * 6.25,
             restH = cH * 2.8;
           ctx.fillStyle = "#f0ebdc";
@@ -1082,11 +1253,9 @@
             ltW = cW * 1.6,
             ltY = restTop + 20,
             ltH = restH - 40;
-          // 左客人图片
           if (state.leftEating && imgs.eatL)
             ctx.drawImage(imgs.eatL, ltX, ltY, ltW, ltH);
           else if (imgs.guestL) ctx.drawImage(imgs.guestL, ltX, ltY, ltW, ltH);
-          // 左需求框（始终显示）
           if (state.leftD) {
             const bx = ltX + 5,
               by = ltY - 30;
@@ -1156,6 +1325,7 @@
             }
           }
 
+          // 菜单
           const menuW = cW * 1.1,
             baseH = 90,
             rowH = 30;
@@ -1163,7 +1333,7 @@
           const menuX = (W - menuW) / 2,
             menuY = 0;
           ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, menuY, W, 40);
+          ctx.fillRect(0, menuY, W, 60);
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.beginPath();
           ctx.roundRect(menuX, menuY, menuW, menuH, 8);
@@ -1217,21 +1387,12 @@
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
-            ctx.font = 'bold 14px "Press Start 2P",monospace';
-            ctx.fillStyle = "#f1c40f";
+            ctx.font = 'bold 14px "Press Start 2P", monospace';
+            ctx.fillStyle = ft.color || "#f1c40f";
             ctx.textAlign = "center";
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
-
-          // 调试信息（显示头部角度和targetX）
-          ctx.save();
-          ctx.font = "16px monospace";
-          ctx.fillStyle = "#000";
-          ctx.fillText(`角度: ${state.headAngle.toFixed(2)}°`, 10, 30);
-          ctx.fillText(`目标: ${state.targetX.toFixed(2)}`, 10, 60);
-          ctx.fillText(`已校准: ${state.calibrated}`, 10, 90);
-          ctx.restore();
         }
 
         if (!CanvasRenderingContext2D.prototype.roundRect) {
@@ -1257,14 +1418,31 @@
           };
         }
 
+        // ===== UI 更新 =====
         function updateUI() {
           const m = Math.floor(state.time / 60),
             s = Math.floor(state.time % 60);
           topTimeEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
           topGoldEl.textContent = `💰 ${state.gold}`;
           topDishesEl.textContent = `🍽️ ${state.dishes}`;
+          // 更新头部状态指示
+          if (state.faceDetected && state.calibrated) {
+            headStatusEl.className = "";
+            headStatusEl.innerHTML = `<span class="status-dot on"></span>头控已校准 (${Math.round(state.headAngle)}°)`;
+          } else if (state.faceDetected) {
+            headStatusEl.className = "";
+            headStatusEl.innerHTML = `<span class="status-dot wait"></span>检测到面部 · 校准中...`;
+          } else if (state.camReady) {
+            headStatusEl.className = "off";
+            headStatusEl.innerHTML = `<span class="status-dot off"></span>等待面部检测...`;
+          } else {
+            headStatusEl.className = "off";
+            headStatusEl.innerHTML = `<span class="status-dot off"></span>摄像头未就绪`;
+          }
         }
+
         let last = 0;
+
         function loop(ts) {
           const dt = last ? Math.min((ts - last) / 1000, 0.05) : 0.016;
           last = ts;
@@ -1272,6 +1450,7 @@
           draw();
           requestAnimationFrame(loop);
         }
+
         function getRank(g) {
           if (g >= 200) return "👑 巅峰厨神";
           if (g >= 150) return "🌟 荣耀厨王";
@@ -1281,6 +1460,7 @@
           if (g >= 30) return "🍳 初级厨师";
           return "👶 学徒";
         }
+
         function endGame() {
           if (state.over) return;
           state.over = true;
@@ -1294,11 +1474,16 @@
           );
           document.getElementById("resultModal").classList.remove("hidden");
         }
+
+        // ===== 重置 =====
         function reset() {
+          // 停止摄像头
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
           }
+          state.cameraRunning = false;
+          state.camReady = false;
           state.playing = false;
           state.paused = false;
           state.over = false;
@@ -1315,6 +1500,9 @@
           state.zeroAngle = 0;
           state.headY = 0.5;
           state.calibrated = false;
+          state.calibrationReady = false;
+          state.faceDetected = false;
+          state.detectionCount = 0;
           state.ings = [];
           state.pot = {};
           state.menu = [];
@@ -1323,13 +1511,15 @@
           state.floatingTexts = [];
           state.leftEating = false;
           state.rightEating = false;
-          state.eatTimers.forEach((t) => clearTimeout(t));
-          state.eatTimers = [];
-          if (state.rightDemandTimer) clearTimeout(state.rightDemandTimer);
+          state.hurtTimer = 0;
           state.autoServe = false;
           state.beltOff = 0;
           state.qTimer = 0;
-          // 初始需求：左边有菜，右边省略号
+          state._busy = false;
+          state.frameCount = 0;
+          state.eatTimers.forEach((t) => clearTimeout(t));
+          state.eatTimers = [];
+          if (state.rightDemandTimer) clearTimeout(state.rightDemandTimer);
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
           state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
           state.rightD = { dish: "...", emoji: "..." };
@@ -1349,6 +1539,7 @@
           genMenu();
           updateUI();
         }
+
         function start() {
           reset();
           state.playing = true;
@@ -1356,6 +1547,7 @@
           startBGM();
           updateUI();
         }
+
         function togglePause() {
           if (!state.playing || state.over) return;
           state.paused = !state.paused;
@@ -1367,12 +1559,19 @@
             startBGM();
           }
         }
+
         function restartGame() {
           if (state.paused) togglePause();
           reset();
-          start();
+          // 如果摄像头已就绪，直接开始；否则显示摄像头弹窗
+          if (state.camReady) {
+            start();
+          } else {
+            document.getElementById("cameraModal").classList.remove("hidden");
+          }
         }
 
+        // ===== 触屏控制 =====
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -1402,130 +1601,223 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ---------- 核心修复：摄像头与 FaceMesh 初始化 ----------
+        // ===== ★★★ 核心修复：头控使用 Camera 工具类 + 可靠的面部追踪 ★★★ =====
+        let cameraInstance = null;
+
         function initFaceMesh() {
-          const fm = new FaceMesh({
-            locateFile: (file) =>
-              `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
-          });
-          fm.setOptions({
-            maxNumFaces: 1,
-            refineLandmarks: true,
-            minDetectionConfidence: 0.6,
-            minTrackingConfidence: 0.5,
-          });
-          fm.onResults((results) => {
-            if (
-              results.multiFaceLandmarks &&
-              results.multiFaceLandmarks.length
-            ) {
-              const lm = results.multiFaceLandmarks[0];
-              const leftEye = lm[33],
-                rightEye = lm[263],
-                noseTip = lm[1];
-              if (leftEye && rightEye && noseTip) {
-                const dy = rightEye.y - leftEye.y;
-                const dx = rightEye.x - leftEye.x;
-                let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-                state.headAngle = angle;
-                state.headY = clamp(noseTip.y, 0, 1);
-                // 使用校准角度
-                let useAngle = state.calibrated
-                  ? angle - state.zeroAngle
-                  : angle;
-                let tilt = clamp(useAngle / 10, -1, 1);
-                state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
-                // 更新调试信息
-                debugEl.textContent = `角度: ${angle.toFixed(2)}° | 偏移: ${useAngle.toFixed(2)} | 目标: ${state.targetX.toFixed(2)}`;
+          try {
+            const fm = new FaceMesh({
+              locateFile: (file) =>
+                `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
+            });
+            fm.setOptions({
+              maxNumFaces: 1,
+              refineLandmarks: true,
+              minDetectionConfidence: 0.6,
+              minTrackingConfidence: 0.5,
+            });
+            fm.onResults((results) => {
+              if (
+                results.multiFaceLandmarks &&
+                results.multiFaceLandmarks.length > 0
+              ) {
+                const lm = results.multiFaceLandmarks[0];
+                const leftEye = lm[33];
+                const rightEye = lm[263];
+                const noseTip = lm[1];
+                if (leftEye && rightEye && noseTip) {
+                  const dy = rightEye.y - leftEye.y;
+                  const dx = rightEye.x - leftEye.x;
+                  let angle = Math.atan2(dy, dx) * (180 / Math.PI);
+                  state.headAngle = angle;
+                  state.headY = clamp(noseTip.y, 0, 1);
+                  state.faceDetected = true;
+                  state.detectionCount++;
+
+                  // 校准：连续检测到 5 帧后进行校准
+                  if (!state.calibrated && state.detectionCount > 5) {
+                    state.zeroAngle = angle;
+                    state.calibrated = true;
+                    state.calibrationReady = true;
+                    console.log("✅ 头控校准完成, 零角度:", angle);
+                    updateUI();
+                  }
+
+                  // 应用头部控制
+                  if (state.calibrated) {
+                    let useAngle = angle - state.zeroAngle;
+                    // 限制角度范围，避免过度敏感
+                    let tilt = clamp(useAngle / 12, -1, 1);
+                    // 死区：小角度不响应，避免抖动
+                    if (Math.abs(useAngle) < 1.5) {
+                      // 保持当前位置
+                    } else {
+                      state.targetX = clamp(0.5 - tilt * 0.75, 0.05, 0.95);
+                    }
+                  } else {
+                    // 校准中：轻微跟随，但不完全锁定
+                    let rawTilt = clamp(angle / 15, -1, 1);
+                    state.targetX = clamp(0.5 - rawTilt * 0.3, 0.2, 0.8);
+                  }
+                }
+              } else {
+                state.faceDetected = false;
+                state.detectionCount = 0;
+                // 面部丢失时，目标缓慢回到中间
+                if (state.calibrated) {
+                  state.targetX = lerp(state.targetX, 0.5, 0.02);
+                }
+                updateUI();
               }
-            } else {
-              debugEl.textContent = "⏳ 未检测到面部...";
-            }
-          });
-          return fm;
+            });
+            return fm;
+          } catch (err) {
+            console.error("FaceMesh 初始化失败:", err);
+            return null;
+          }
         }
 
         async function startCam() {
+          // 清理旧摄像头
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
           }
+          if (cameraInstance) {
+            try {
+              await cameraInstance.stop();
+            } catch (_) {}
+            cameraInstance = null;
+          }
+
           try {
+            // 提高分辨率以获得更好的面部检测
             const stream = await navigator.mediaDevices.getUserMedia({
-              video: { facingMode: "user", width: 320, height: 240 },
+              video: {
+                facingMode: "user",
+                width: { ideal: 640 },
+                height: { ideal: 480 },
+              },
             });
             video.srcObject = stream;
-
-            // 等待视频元数据加载
-            await new Promise((resolve) => {
-              video.onloadedmetadata = resolve;
-            });
             await video.play();
 
-            // 等待视频有实际帧（readyState >= 2）
-            await new Promise((resolve) => {
-              const check = () => {
-                if (video.readyState >= 2) resolve();
-                else requestAnimationFrame(check);
-              };
-              check();
-            });
+            // 设置视频实际尺寸
+            video.width = video.videoWidth || 640;
+            video.height = video.videoHeight || 480;
+
+            state.camReady = true;
+            state.cameraRunning = true;
 
             // 初始化 FaceMesh
             const fm = initFaceMesh();
+            if (!fm) {
+              alert("FaceMesh 加载失败，请检查网络后刷新重试");
+              return false;
+            }
             state.fm = fm;
 
-            // 等待模型加载（简单延时 2 秒，确保 WASM 和模型加载完成）
-            await new Promise((resolve) => setTimeout(resolve, 2000));
+            // ★★★ 使用 Camera 工具类 ★★★
+            cameraInstance = new Camera(video, {
+              onFrame: async () => {
+                if (!state.cameraRunning) return;
+                try {
+                  await fm.send({ image: video });
+                } catch (err) {
+                  // 静默处理，避免循环中断
+                }
+              },
+              width: 640,
+              height: 480,
+            });
+            await cameraInstance.start();
 
-            // 开始推理循环（使用 requestAnimationFrame 保证稳定性）
-            let processing = false;
-            function processFrame() {
-              if (video.readyState >= 2 && !processing && state.playing) {
-                processing = true;
-                fm.send({ image: video })
-                  .then(() => {
-                    processing = false;
-                  })
-                  .catch((err) => {
-                    console.warn("FaceMesh send error:", err);
-                    processing = false;
-                  });
+            // 额外用 requestAnimationFrame 做保底刷新，确保 UI 响应
+            let rafId = null;
+
+            function keepAlive() {
+              if (!state.cameraRunning) {
+                if (rafId) cancelAnimationFrame(rafId);
+                return;
               }
-              // 如果游戏未开始或已结束，可以继续轮询但不发送
-              requestAnimationFrame(processFrame);
+              // 如果 FaceMesh 长时间没检测到面部，尝试重置
+              if (state.faceDetected === false && state.calibrated) {
+                // 面部丢失超过一段时间，缓慢回到中间
+                state.targetX = lerp(state.targetX, 0.5, 0.01);
+              }
+              rafId = requestAnimationFrame(keepAlive);
             }
-            processFrame();
+            keepAlive();
 
-            state.camReady = true;
-            document.getElementById("cameraModal").classList.add("hidden");
-
-            // 1 秒后校准（假设此时人脸正对镜头）
+            // 校准超时：如果 5 秒后还没校准，强制校准一次
             setTimeout(() => {
-              state.zeroAngle = state.headAngle;
-              state.calibrated = true;
-              debugEl.textContent += " ✅ 已校准";
-            }, 1000);
+              if (!state.calibrated && state.faceDetected) {
+                state.zeroAngle = state.headAngle;
+                state.calibrated = true;
+                state.calibrationReady = true;
+                console.log("⏰ 强制校准完成, 零角度:", state.zeroAngle);
+                updateUI();
+              } else if (!state.faceDetected) {
+                console.warn("⚠️ 未检测到面部，请确保面部在摄像头视野中");
+              }
+            }, 5000);
 
+            document.getElementById("cameraModal").classList.add("hidden");
             start();
             initAudio();
+
+            // 更新状态指示
+            updateUI();
             return true;
           } catch (err) {
-            alert("摄像头错误: " + err.message);
-            debugEl.textContent = "❌ 摄像头失败: " + err.message;
+            console.error("摄像头启动失败:", err);
+            alert("摄像头启动失败: " + err.message);
             return false;
           }
         }
 
-        // ----- 事件绑定 -----
+        // ===== 无摄像头模式 =====
+        function startWithoutCamera() {
+          state.camReady = true;
+          state.cameraRunning = true;
+          document.getElementById("cameraModal").classList.add("hidden");
+          start();
+          initAudio();
+          // 模拟头部控制（用鼠标或触屏替代）
+          updateUI();
+        }
+
+        // ===== 头像上传 =====
+        function handleAvatarUpload() {
+          const file = avatarInput.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+              state.avatarImg = img;
+            };
+            img.src = e.target.result;
+          };
+          reader.readAsDataURL(file);
+        }
+
+        // ===== 事件绑定 =====
         document
           .getElementById("cameraAllowBtn")
           .addEventListener("click", startCam);
         document
+          .getElementById("touchModeBtn")
+          .addEventListener("click", startWithoutCamera);
+        document
+          .getElementById("uploadAvatarBtn")
+          .addEventListener("click", () => avatarInput.click());
+        avatarInput.addEventListener("change", handleAvatarUpload);
+        document
           .getElementById("startGameBtn")
           .addEventListener("click", () => {
             if (!state.camReady) {
-              alert("请先允许摄像头权限");
+              alert("请先允许摄像头权限或选择触屏玩法");
               return;
             }
             start();
@@ -1539,14 +1831,19 @@
           .addEventListener("click", restartGame);
         document.getElementById("retryBtn").addEventListener("click", () => {
           reset();
-          if (state.camReady) start();
-          else startCam();
+          if (state.camReady) {
+            start();
+          } else {
+            document.getElementById("cameraModal").classList.remove("hidden");
+          }
         });
         document.getElementById("rankBtn").addEventListener("click", () => {
           alert(
             `我的评级：${getRank(state.totalGold)}\n总金币：${state.totalGold}`,
           );
         });
+
+        // 设置开关
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
@@ -1562,21 +1859,36 @@
             } else if (s === "sfx") sfx = v === "on";
           });
         });
+
+        // 双击重新校准
         document.body.addEventListener("dblclick", () => {
-          if (state.playing) {
+          if (state.playing && state.faceDetected) {
             state.zeroAngle = state.headAngle;
-            debugEl.textContent += " 🔄 手动归零";
+            state.calibrated = true;
+            state.calibrationReady = true;
+            console.log("🔄 手动重新校准, 零角度:", state.zeroAngle);
+            updateUI();
           }
         });
 
-        // 加载图片资源并启动循环
+        // 初始化音频上下文（需要用户手势）
+        document.addEventListener("click", () => initAudio(), { once: true });
+
+        // ===== 加载完成 =====
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
           document.getElementById("startOverlay").classList.add("hidden");
+          // 启动渲染循环
           requestAnimationFrame(loop);
         });
-        document.addEventListener("click", () => initAudio(), { once: true });
+
+        // 窗口尺寸变化时重置 canvas
+        window.addEventListener("resize", () => {
+          resizeCanvas();
+        });
+
+        console.log("🍳 像素厨房已加载，头控使用 Camera 工具类 + RAF 双保障");
       })();
     </script>
   </body>
