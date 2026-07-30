@@ -14,6 +14,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
+      /* 全局重置 */
       * {
         margin: 0;
         padding: 0;
@@ -31,6 +32,7 @@
         font-family: "Press Start 2P", monospace;
         touch-action: none;
       }
+      /* 顶部状态栏容器 */
       .outer-top-bar {
         width: 100%;
         max-width: 420px;
@@ -38,6 +40,7 @@
         margin-bottom: 6px;
         padding: 0 4px;
       }
+      /* 状态栏单个盒子（积分、金币、时间） */
       .top-box {
         flex: 1;
         background: rgba(255, 248, 240, 0.85);
@@ -65,6 +68,7 @@
       #top-dishes {
         color: #2c3e50;
       }
+      /* 游戏主容器 */
       #game-wrapper {
         position: relative;
         width: 100%;
@@ -101,6 +105,7 @@
         opacity: 0.01;
         pointer-events: none;
       }
+      /* 弹窗通用遮罩 */
       .modal-overlay {
         position: absolute;
         top: 0;
@@ -129,6 +134,7 @@
           transform: scale(1);
         }
       }
+      /* 弹窗卡片（开启摄像头、暂停、结算通用） 可修改背景色、字体、圆角 */
       .modal-card {
         background: #fff;
         border-radius: 16px;
@@ -156,6 +162,7 @@
         line-height: 2;
         margin: 12px 0 20px;
       }
+      /* 主按钮 */
       .modal-card .btn {
         display: inline-block;
         padding: 16px 24px;
@@ -248,6 +255,7 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
+      <!-- 开启摄像头弹窗：可修改背景色、文字、按钮样式 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
@@ -265,6 +273,7 @@
           />
         </div>
       </div>
+      <!-- 暂停弹窗：可修改背景、按钮样式 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -306,6 +315,7 @@
           </div>
         </div>
       </div>
+      <!-- 结算弹窗：可修改背景、分数颜色等 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -329,6 +339,7 @@
           <button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
         </div>
       </div>
+      <!-- 开始游戏弹窗 -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -371,6 +382,7 @@
         }
         let bgm = true,
           sfx = true;
+        // 音效生成函数，可替换为自己的音频文件
         function tone(f, d, t = "sine", v = 0.2) {
           if (!sfx || !audioCtx) return;
           try {
@@ -391,28 +403,29 @@
         }
         function sfxPickup() {
           tone(880, 0.08);
-        }
+        } // 拾取音效
         function sfxCook() {
           tone(660, 0.12, "square");
           setTimeout(() => tone(880, 0.12, "square"), 120);
-        }
+        } // 菜品完成音效
         function sfxServe() {
           tone(1100, 0.1);
           setTimeout(() => tone(1320, 0.1), 100);
-        }
+        } // 上菜音效
         function sfxMiss() {
           tone(300, 0.2, "sawtooth");
-        }
+        } // 失败音效
         function sfxCombo() {
           tone(1000, 0.06);
           setTimeout(() => tone(1200, 0.06), 80);
           setTimeout(() => tone(1400, 0.06), 160);
-        }
+        } // 连击音效
         function sfxGold() {
           tone(1500, 0.1);
           setTimeout(() => tone(1800, 0.1), 100);
-        }
+        } // 金币音效
         let bgmInt;
+        // 背景音乐循环，可替换为音乐文件
         function startBGM() {
           if (!bgm) return;
           stopBGM();
@@ -725,7 +738,8 @@
             x: state.chefX * canvas.width,
             y: canvas.height * 0.55,
             life: 1.5,
-          });
+            color: "#f1c40f",
+          }); // 金币增加，黄色
           if (!matched) state.combo = Math.floor(state.combo / 2);
           if (state.gold < 0) state.gold = 0;
           genMenu();
@@ -793,21 +807,47 @@
             ) {
               if (state.gold < ing.cost) continue;
               state.gold -= ing.cost;
-              state.ingr++;
-              state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
-              sfxPickup();
-              state.ings.splice(i, 1);
+              const isNeeded = state.menu.some((item) => item.id === ing.id); // 判断是否为当前菜谱所需食材
+              if (isNeeded) {
+                // 正确食材：入锅，笑脸动画
+                state.ingr++;
+                state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
+                sfxPickup();
+                state.floatingTexts.push({
+                  text: "😊",
+                  x: cx + (Math.random() > 0.5 ? 1 : -1) * 25,
+                  y: canvas.height * 0.5,
+                  life: 0.8,
+                  color: "#f1c40f",
+                });
+              } else {
+                // 干扰食材：弹飞动画，哭脸，不入锅
+                state.floatingTexts.push({
+                  text: ing.emoji,
+                  x: ing.x,
+                  y: ing.y,
+                  life: 0.7,
+                  vx: (Math.random() - 0.5) * 250,
+                  vy: -200,
+                  color: ing.color,
+                });
+                state.floatingTexts.push({
+                  text: "😢",
+                  x: cx + (Math.random() > 0.5 ? 1 : -1) * 30,
+                  y: canvas.height * 0.5,
+                  life: 1.0,
+                  color: "#e74c3c",
+                });
+              }
               state.floatingTexts.push({
                 text: `💰-${ing.cost}`,
                 x: ing.x,
                 y: ing.y,
                 life: 1.2,
-              });
-              checkMenu();
-              continue;
-            }
-            if (ing.y > cellH * 6.5) {
+                color: "#e74c3c",
+              }); // 金币扣除，红色
               state.ings.splice(i, 1);
+              checkMenu();
             }
           }
         }
@@ -834,7 +874,14 @@
         function updateFloatingTexts(dt) {
           for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
             const ft = state.floatingTexts[i];
-            ft.y -= 30 * dt;
+            if (ft.vx !== undefined) {
+              // 弹飞速度
+              ft.x += ft.vx * dt;
+              ft.y += ft.vy * dt;
+              ft.vy += 400 * dt; // 模拟重力
+            } else {
+              ft.y -= 30 * dt; // 普通向上飘
+            }
             ft.life -= dt;
             if (ft.life <= 0) state.floatingTexts.splice(i, 1);
           }
@@ -869,7 +916,7 @@
           updateUI();
         }
 
-        // ==================== 图片资源 ====================
+        // ==================== 图片资源加载（可替换链接） ====================
         const imgs = {};
         function loadImgs(cb) {
           let n = 0;
@@ -878,7 +925,7 @@
             n++;
             if (n === t) cb();
           }
-          // ★★★★★ 替换传送带背景图：修改下面的 src 链接 ★★★★★
+          // 传送带背景图（可替换为整张厨房背景）
           imgs.belt = new Image();
           imgs.belt.crossOrigin = "anonymous";
           imgs.belt.onload = on;
@@ -888,7 +935,7 @@
           };
           imgs.belt.src =
             "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          // ★★★★★ 替换厨师图片：修改下面的 src 链接 ★★★★★
+          // 厨师图片（可替换）
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -898,7 +945,7 @@
           };
           imgs.chef.src =
             "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
-          // ★★★★★ 替换锅图片：修改下面的 src 链接 ★★★★★
+          // 锅图片（可替换）
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -908,7 +955,7 @@
           };
           imgs.pot.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          // ★★★★★ 替换左客人点餐图：修改下面的 src 链接 ★★★★★
+          // 左客人点餐图（可替换）
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -918,7 +965,7 @@
           };
           imgs.guestL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          // ★★★★★ 替换右客人点餐图：修改下面的 src 链接 ★★★★★
+          // 右客人点餐图（可替换）
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -928,7 +975,7 @@
           };
           imgs.guestR.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          // ★★★★★ 替换左客人吃饭图：修改下面的 src 链接 ★★★★★
+          // 左客人吃饭图（可替换）
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -938,7 +985,7 @@
           };
           imgs.eatL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          // ★★★★★ 替换右客人吃饭图：修改下面的 src 链接 ★★★★★
+          // 右客人吃饭图（可替换）
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -980,6 +1027,7 @@
             ctx.fillStyle = "rgba(180,170,155,0.1)";
             ctx.fillRect(rTx, y + 15, tw, 4);
           }
+          // 绘制下落食材（所有emoji可替换为图片）
           state.ings.forEach((ing) => {
             if (!ing || !ing.alive) return;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
@@ -1012,7 +1060,7 @@
 
           const decoPotW = tw * 1.6,
             decoHPot = potH,
-            decoPotY = potY - potH / 2; // 装饰条宽度增加
+            decoPotY = potY - potH / 2;
           ctx.fillStyle = "#b0b0b0";
           ctx.fillRect(leftCenter - decoPotW / 2, decoPotY, decoPotW, decoHPot);
           ctx.fillRect(
@@ -1022,11 +1070,10 @@
             decoHPot,
           );
 
-          // 厨师绘制（取消旋转，只平移）
+          // 厨师绘制（无旋转）
           if (imgs.chef) {
             ctx.save();
             ctx.translate(chefX, chefY + chefSz * 0.4);
-            // ctx.rotate((state.chefX-0.5)*0.6); // 已注释，取消倾斜
             ctx.drawImage(
               imgs.chef,
               -chefSz / 2,
@@ -1037,7 +1084,7 @@
             ctx.restore();
           }
 
-          // 头像绘制
+          // 上传头像圆形裁剪
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -1068,6 +1115,7 @@
               potW,
               potH,
             );
+          // 锅中食材（可替换为图片）
           const potItems = Object.keys(state.pot).filter(
             (k) => state.pot[k] > 0,
           );
@@ -1107,6 +1155,7 @@
             );
           ctx.restore();
 
+          // 餐厅区域与客人
           const restTop = cH * 6.25,
             restH = cH * 2.8;
           ctx.fillStyle = "#f0ebdc";
@@ -1192,6 +1241,7 @@
             }
           }
 
+          // 菜单（可替换图标）
           const menuW = cW * 1.1,
             baseH = 90,
             rowH = 30;
@@ -1250,11 +1300,12 @@
               yOff += rowH;
             });
           }
+          // 浮动文字/动画（金币、表情、弹飞食材）
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
-            ctx.font = 'bold 14px "Press Start 2P",monospace';
-            ctx.fillStyle = "#f1c40f";
+            ctx.font = 'bold 14px "Press Start 2P", monospace';
+            ctx.fillStyle = ft.color || "#f1c40f";
             ctx.textAlign = "center";
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
