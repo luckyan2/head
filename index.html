@@ -720,7 +720,6 @@
           }
           sfxServe();
           sfxGold();
-          // 添加金币飘字
           state.floatingTexts.push({
             text: `💰+${profit}`,
             x: state.chefX * canvas.width,
@@ -870,6 +869,7 @@
           updateUI();
         }
 
+        // ==================== 图片资源 ====================
         const imgs = {};
         function loadImgs(cb) {
           let n = 0;
@@ -878,6 +878,7 @@
             n++;
             if (n === t) cb();
           }
+          // ★★★★★ 替换传送带背景图：修改下面的 src 链接 ★★★★★
           imgs.belt = new Image();
           imgs.belt.crossOrigin = "anonymous";
           imgs.belt.onload = on;
@@ -887,6 +888,7 @@
           };
           imgs.belt.src =
             "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // ★★★★★ 替换厨师图片：修改下面的 src 链接 ★★★★★
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -896,6 +898,7 @@
           };
           imgs.chef.src =
             "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
+          // ★★★★★ 替换锅图片：修改下面的 src 链接 ★★★★★
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -905,6 +908,7 @@
           };
           imgs.pot.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // ★★★★★ 替换左客人点餐图：修改下面的 src 链接 ★★★★★
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -914,6 +918,7 @@
           };
           imgs.guestL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // ★★★★★ 替换右客人点餐图：修改下面的 src 链接 ★★★★★
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -923,6 +928,7 @@
           };
           imgs.guestR.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // ★★★★★ 替换左客人吃饭图：修改下面的 src 链接 ★★★★★
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -932,6 +938,7 @@
           };
           imgs.eatL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          // ★★★★★ 替换右客人吃饭图：修改下面的 src 链接 ★★★★★
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -1003,9 +1010,9 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          const decoPotW = tw * 1.3,
+          const decoPotW = tw * 1.6,
             decoHPot = potH,
-            decoPotY = potY - potH / 2;
+            decoPotY = potY - potH / 2; // 装饰条宽度增加
           ctx.fillStyle = "#b0b0b0";
           ctx.fillRect(leftCenter - decoPotW / 2, decoPotY, decoPotW, decoHPot);
           ctx.fillRect(
@@ -1015,10 +1022,11 @@
             decoHPot,
           );
 
+          // 厨师绘制（取消旋转，只平移）
           if (imgs.chef) {
             ctx.save();
             ctx.translate(chefX, chefY + chefSz * 0.4);
-            ctx.rotate((state.chefX - 0.5) * 0.6);
+            // ctx.rotate((state.chefX-0.5)*0.6); // 已注释，取消倾斜
             ctx.drawImage(
               imgs.chef,
               -chefSz / 2,
@@ -1029,7 +1037,7 @@
             ctx.restore();
           }
 
-          // 绘制头像
+          // 头像绘制
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -1191,7 +1199,7 @@
           const menuX = (W - menuW) / 2,
             menuY = 0;
           ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, menuY, W, 60); // 高度增加
+          ctx.fillRect(0, menuY, W, 60);
           ctx.fillStyle = "rgba(255,248,240,0.92)";
           ctx.beginPath();
           ctx.roundRect(menuX, menuY, menuW, menuH, 8);
@@ -1391,7 +1399,6 @@
           start();
         }
 
-        // 触屏移动厨师
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -1421,7 +1428,6 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // 面部追踪
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1503,7 +1509,7 @@
         }
 
         function startWithoutCamera() {
-          state.camReady = true; // 标记为已准备，但不启用面部追踪
+          state.camReady = true;
           document.getElementById("cameraModal").classList.add("hidden");
           start();
           initAudio();
