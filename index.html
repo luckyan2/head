@@ -101,21 +101,27 @@
         opacity: 0.01;
         pointer-events: none;
       }
-      /* 调试信息 */
-      #debug-info {
+      /* 头控状态指示器（画布左上角） */
+      .head-indicator {
         position: absolute;
-        top: 10px;
-        left: 10px;
-        z-index: 50;
-        color: #fff;
+        top: 8px;
+        left: 8px;
+        z-index: 10;
         background: rgba(0, 0, 0, 0.7);
-        padding: 4px 8px;
-        font-size: 12px;
-        font-family: monospace;
-        border-radius: 4px;
+        border-radius: 8px;
+        padding: 6px 10px;
+        color: #0f0;
+        font-size: 10px;
+        font-family: "Press Start 2P", monospace;
         pointer-events: none;
-        opacity: 0.9;
-        white-space: nowrap;
+        line-height: 1.6;
+        opacity: 0.85;
+      }
+      .head-indicator .off {
+        color: #f44;
+      }
+      .head-indicator .on {
+        color: #0f0;
       }
       .modal-overlay {
         position: absolute;
@@ -264,7 +270,11 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
-      <div id="debug-info">⏳ 初始化...</div>
+      <!-- 头控状态指示器（左上角） -->
+      <div id="headIndicator" class="head-indicator">
+        🧠 <span class="off">●</span> 等待...
+      </div>
+
       <!-- 开启摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
@@ -380,12 +390,12 @@
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
-        const debugEl = document.getElementById("debug-info");
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
         const topDishesEl = document.getElementById("top-dishes");
         const avatarInput = document.getElementById("avatarInput");
+        const headIndicator = document.getElementById("headIndicator");
 
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
@@ -509,7 +519,11 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
+          // 头控调试
+          headActive: false,
           faceDetected: false,
+          frameCount: 0,
+          lastSendTime: 0,
         };
 
         const TYPES = [
@@ -837,7 +851,6 @@
                 state.pot[ing.id] = (state.pot[ing.id] || 0) + 1;
                 sfxPickup();
               } else {
-                // 干扰食材：弹飞动画 + 红色覆盖停顿
                 state.hurtTimer = 0.3;
                 state.floatingTexts.push({
                   text: ing.emoji,
@@ -929,8 +942,24 @@
             }, 1000);
           }
           updateUI();
+          // 更新头控指示器
+          updateHeadIndicator();
         }
 
+        // ---------- 头控指示器 ----------
+        function updateHeadIndicator() {
+          const status = state.faceDetected ? "on" : "off";
+          const label = state.faceDetected ? "人脸 ✓" : "未检测";
+          const angleStr = state.faceDetected
+            ? ` ${Math.round(state.headAngle)}°`
+            : "";
+          const targetStr = state.faceDetected
+            ? ` →${(state.targetX * 100).toFixed(0)}%`
+            : "";
+          headIndicator.innerHTML = `🧠 <span class="${status}">●</span> ${label}${angleStr}${targetStr}`;
+        }
+
+        // ---------- 图片加载 ----------
         const imgs = {};
         function loadImgs(cb) {
           let n = 0;
@@ -1004,6 +1033,7 @@
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
         }
 
+        // ---------- 绘制 ----------
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -1415,6 +1445,7 @@
           state.rightEating = false;
           state.hurtTimer = 0;
           state.faceDetected = false;
+          state.headActive = false;
           state.eatTimers.forEach((t) => clearTimeout(t));
           state.eatTimers = [];
           if (state.rightDemandTimer) clearTimeout(state.rightDemandTimer);
@@ -1439,6 +1470,8 @@
           document.getElementById("startOverlay").classList.remove("hidden");
           genMenu();
           updateUI();
+          headIndicator.innerHTML =
+            '🧠 <span class="off">●</span> 等待摄像头...';
         }
         function start() {
           reset();
@@ -1493,10 +1526,9 @@
           if (state.playing && !state.over) togglePause();
         });
 
-        // ========== 使用 Camera 工具类（官方推荐） ==========
-        let faceMeshInstance = null;
-        let cameraInstance = null;
-
+        // ============================================================
+        //  ★★★ 核心修复：重写视频处理 + 头控逻辑 ★★★
+        // ============================================================
         function initFaceMesh() {
           const fm = new FaceMesh({
             locateFile: (file) =>
@@ -1504,52 +1536,117 @@
           });
           fm.setOptions({
             maxNumFaces: 1,
-            refineLandmarks: false,
-            minDetectionConfidence: 0.5,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.6,
             minTrackingConfidence: 0.5,
           });
           fm.onResults((results) => {
+            // 只要有结果就认为人脸检测在工作
+            state.faceDetected = false;
             if (
               results.multiFaceLandmarks &&
               results.multiFaceLandmarks.length
             ) {
               const lm = results.multiFaceLandmarks[0];
-              const leftEye = lm[33],
-                rightEye = lm[263],
-                noseTip = lm[1];
+              const leftEye = lm[33];
+              const rightEye = lm[263];
+              const noseTip = lm[1];
               if (leftEye && rightEye && noseTip) {
+                state.faceDetected = true;
                 const dy = rightEye.y - leftEye.y;
                 const dx = rightEye.x - leftEye.x;
                 let angle = Math.atan2(dy, dx) * (180 / Math.PI);
                 state.headAngle = angle;
                 state.headY = clamp(noseTip.y, 0, 1);
 
-                if (!state.faceDetected) {
-                  state.faceDetected = true;
+                // 首次检测到人脸时自动校准零点
+                if (!state.calibrated && state.faceDetected) {
                   state.zeroAngle = angle;
                   state.calibrated = true;
-                  debugEl.textContent = `✅ 已校准，角度: ${angle.toFixed(2)}°`;
+                  state.headActive = true;
+                  headIndicator.innerHTML =
+                    '🧠 <span class="on">●</span> 已校准 ✓';
                 }
 
                 let useAngle = state.calibrated
                   ? angle - state.zeroAngle
                   : angle;
+                // 灵敏度：每 10° 对应 80% 范围
                 let tilt = clamp(useAngle / 10, -1, 1);
                 state.targetX = clamp(0.5 - tilt * 0.8, 0.05, 0.95);
-                debugEl.textContent = `🎯 角度: ${angle.toFixed(2)}° | 目标: ${state.targetX.toFixed(2)}`;
+                state.headActive = true;
               }
-            } else {
-              debugEl.textContent = "⏳ 未检测到面部...";
             }
+            // 如果连续 2 秒没检测到人脸，重置校准状态（但保留 zeroAngle）
+            // 由外部定时器处理
           });
           return fm;
         }
 
+        // 视频处理循环：使用 requestAnimationFrame + 节流
+        let videoLoopRunning = false;
+        let videoLoopId = null;
+        let lastSendTimestamp = 0;
+        const SEND_INTERVAL_MS = 40; // 25fps，平衡性能与响应
+
+        function startVideoLoop() {
+          if (videoLoopRunning) return;
+          videoLoopRunning = true;
+          lastSendTimestamp = 0;
+
+          function processFrame(timestamp) {
+            if (!videoLoopRunning) return;
+
+            try {
+              // 视频已就绪且未在处理中
+              if (video.readyState >= 2 && !state._busy && state.fm) {
+                // 节流控制：限制 send 调用频率
+                if (timestamp - lastSendTimestamp >= SEND_INTERVAL_MS) {
+                  state._busy = true;
+                  state.fm
+                    .send({ image: video })
+                    .then(() => {
+                      state._busy = false;
+                    })
+                    .catch((err) => {
+                      state._busy = false;
+                      // 静默处理，避免弹窗干扰
+                    });
+                  lastSendTimestamp = timestamp;
+                  state.frameCount++;
+                }
+              } else if (video.readyState < 2 && video.srcObject) {
+                // 视频尚未就绪，继续等待
+              }
+            } catch (e) {
+              // 防止循环中断
+            }
+
+            // 继续下一帧
+            videoLoopId = requestAnimationFrame(processFrame);
+          }
+
+          // 启动循环
+          videoLoopId = requestAnimationFrame(processFrame);
+        }
+
+        function stopVideoLoop() {
+          videoLoopRunning = false;
+          if (videoLoopId) {
+            cancelAnimationFrame(videoLoopId);
+            videoLoopId = null;
+          }
+        }
+
+        // 重写 startCam
         async function startCam() {
+          // 停止之前的循环和摄像头
+          stopVideoLoop();
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
           }
+
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
               video: { facingMode: "user", width: 320, height: 240 },
@@ -1557,42 +1654,69 @@
             video.srcObject = stream;
             await video.play();
 
-            debugEl.textContent = "⏳ 加载 FaceMesh 模型...";
-            faceMeshInstance = initFaceMesh();
-
-            // 使用 Camera 工具类驱动推理
-            cameraInstance = new Camera(video, {
-              onFrame: async () => {
-                if (faceMeshInstance) {
-                  await faceMeshInstance.send({ image: video });
-                }
-              },
-              width: 320,
-              height: 240,
-            });
-            await cameraInstance.start();
-
+            // 初始化 FaceMesh
+            const fm = initFaceMesh();
+            state.fm = fm;
             state.camReady = true;
-            document.getElementById("cameraModal").classList.add("hidden");
+            state.calibrated = false;
+            state.faceDetected = false;
+            state.headActive = false;
 
-            // 启动游戏
+            // 启动视频处理循环
+            startVideoLoop();
+
+            // 启动自动校准定时器（如果 3 秒后仍未检测到人脸，提示用户）
+            let calibTimer = setTimeout(() => {
+              if (!state.calibrated) {
+                headIndicator.innerHTML =
+                  '🧠 <span class="off">●</span> 请正视摄像头...';
+              }
+            }, 3000);
+
+            // 如果检测到人脸，清除提示
+            const checkCalib = setInterval(() => {
+              if (state.calibrated) {
+                clearInterval(checkCalib);
+                clearTimeout(calibTimer);
+                headIndicator.innerHTML =
+                  '🧠 <span class="on">●</span> 头控已激活';
+              }
+            }, 500);
+
+            // 关闭摄像头弹窗，开始游戏
+            document.getElementById("cameraModal").classList.add("hidden");
             start();
             initAudio();
+
+            // 更新指示器状态
+            headIndicator.innerHTML = '🧠 <span class="off">●</span> 检测中...';
+
             return true;
           } catch (err) {
             alert("摄像头错误: " + err.message);
-            debugEl.textContent = "❌ " + err.message;
             return false;
           }
         }
 
+        // 触屏模式（无头控）
         function startWithoutCamera() {
+          stopVideoLoop();
+          if (video.srcObject) {
+            video.srcObject.getTracks().forEach((t) => t.stop());
+            video.srcObject = null;
+          }
           state.camReady = true;
+          state.calibrated = false;
+          state.faceDetected = false;
+          state.headActive = false;
+          state.fm = null;
           document.getElementById("cameraModal").classList.add("hidden");
           start();
           initAudio();
+          headIndicator.innerHTML = '🧠 <span class="off">●</span> 触屏模式';
         }
 
+        // 头像上传
         function handleAvatarUpload() {
           const file = avatarInput.files[0];
           if (!file) return;
@@ -1607,7 +1731,7 @@
           reader.readAsDataURL(file);
         }
 
-        // ========== 事件绑定 ==========
+        // ---------- 事件绑定 ----------
         document
           .getElementById("cameraAllowBtn")
           .addEventListener("click", startCam);
@@ -1657,16 +1781,37 @@
           });
         });
         document.body.addEventListener("dblclick", () => {
-          if (state.playing) state.zeroAngle = state.headAngle;
+          if (state.playing && state.faceDetected) {
+            state.zeroAngle = state.headAngle;
+            state.calibrated = true;
+            headIndicator.innerHTML =
+              '🧠 <span class="on">●</span> 已重新校准 ✓';
+            setTimeout(() => {
+              if (state.faceDetected)
+                headIndicator.innerHTML =
+                  '🧠 <span class="on">●</span> 头控已激活';
+            }, 1200);
+          }
         });
 
+        // ---------- 启动 ----------
         loadImgs(() => {
           reset();
           document.getElementById("cameraModal").classList.remove("hidden");
           document.getElementById("startOverlay").classList.add("hidden");
           requestAnimationFrame(loop);
+          // 预初始化音频上下文
+          document.addEventListener("click", () => initAudio(), { once: true });
         });
-        document.addEventListener("click", () => initAudio(), { once: true });
+
+        // 页面关闭时清理资源
+        window.addEventListener("beforeunload", () => {
+          stopVideoLoop();
+          if (video.srcObject) {
+            video.srcObject.getTracks().forEach((t) => t.stop());
+            video.srcObject = null;
+          }
+        });
       })();
     </script>
   </body>
