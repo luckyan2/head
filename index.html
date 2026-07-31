@@ -6,13 +6,22 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头控修复版</title>
+    <title>像素厨房 · 删了加头控出餐</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
-    <!-- 只依赖 face_mesh，不再用 camera_utils -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1640029078/face_mesh.js"></script>
+
+    <!-- MediaPipe FaceMesh CDN -->
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js"
+      crossorigin="anonymous"
+    ></script>
+
     <style>
       * {
         margin: 0;
@@ -30,6 +39,7 @@
         min-height: 100vh;
         font-family: "Press Start 2P", monospace;
         touch-action: none;
+        padding: 8px 0;
       }
       .outer-top-bar {
         width: 100%;
@@ -37,26 +47,29 @@
         display: flex;
         margin-bottom: 6px;
         padding: 0 4px;
+        gap: 4px;
+        flex-wrap: wrap;
+        justify-content: center;
       }
       .top-box {
         flex: 1;
+        min-width: 70px;
         background: rgba(255, 248, 240, 0.85);
         border-radius: 8px;
-        padding: 8px 4px;
+        padding: 6px 4px;
         text-align: center;
-        font-size: 14px;
+        font-size: 12px;
         color: #2c3e50;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-        margin: 0 4px;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 6px;
         white-space: nowrap;
       }
       #top-pause {
         cursor: pointer;
-        font-size: 22px;
+        font-size: 20px;
       }
       #top-gold {
         color: #e67e22;
@@ -64,6 +77,11 @@
       }
       #top-dishes {
         color: #2c3e50;
+      }
+      #top-head-status {
+        font-size: 14px;
+        min-width: 44px;
+        cursor: default;
       }
       #game-wrapper {
         position: relative;
@@ -90,65 +108,25 @@
         image-rendering: pixelated;
         touch-action: none;
       }
-      #webcam {
+      /* 摄像头预览（极小，仅用于驱动） */
+      #camera-preview {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        z-index: 1;
-        opacity: 0.01;
-        pointer-events: none;
-      }
-      /* 头控状态指示器 — 小圆点 */
-      #head-indicator {
-        position: absolute;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        bottom: 8px;
+        right: 8px;
+        width: 64px;
+        height: 48px;
+        border-radius: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
         z-index: 10;
-        background: rgba(0, 0, 0, 0.55);
-        backdrop-filter: blur(4px);
-        border-radius: 30px;
-        padding: 6px 16px 6px 12px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        color: #fff;
-        font-size: 11px;
-        font-family: "Press Start 2P", monospace;
-        border: 2px solid rgba(255, 255, 255, 0.15);
+        object-fit: cover;
+        background: #222;
+        opacity: 0.6;
         pointer-events: none;
         transition: opacity 0.3s;
       }
-      #head-indicator .dot {
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        background: #e74c3c;
-        box-shadow: 0 0 8px rgba(231, 76, 60, 0.5);
-        transition:
-          background 0.3s,
-          box-shadow 0.3s;
-        flex-shrink: 0;
+      #camera-preview.active {
+        opacity: 0.9;
       }
-      #head-indicator .dot.on {
-        background: #2ecc71;
-        box-shadow: 0 0 12px rgba(46, 204, 113, 0.7);
-      }
-      #head-indicator .label {
-        font-size: 9px;
-        letter-spacing: 1px;
-        opacity: 0.7;
-      }
-      #head-indicator .pos {
-        font-size: 10px;
-        min-width: 30px;
-        text-align: center;
-        color: #f1c40f;
-      }
-
       .modal-overlay {
         position: absolute;
         top: 0;
@@ -193,38 +171,41 @@
         margin-top: -80px;
       }
       .modal-card h2 {
-        font-size: 24px;
-        margin-bottom: 16px;
+        font-size: 22px;
+        margin-bottom: 12px;
         color: #e67e22;
         text-shadow: 2px 2px 0 #f1c40f;
       }
       .modal-card p {
-        font-size: 14px;
+        font-size: 13px;
         color: #5a5248;
         line-height: 2;
-        margin: 12px 0 20px;
+        margin: 10px 0 16px;
       }
       .modal-card .btn {
         display: inline-block;
-        padding: 16px 24px;
+        padding: 14px 22px;
         background: #f39c12;
         border: 4px solid #d68910;
         border-radius: 8px;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: bold;
         color: #2c2a26;
         cursor: pointer;
         box-shadow: 0 4px 0 #b9770e;
         font-family: "Press Start 2P", monospace;
-        margin: 6px;
+        margin: 4px;
+        transition:
+          transform 0.08s,
+          box-shadow 0.08s;
       }
       .modal-card .btn:active {
         transform: translateY(4px);
         box-shadow: 0 0px 0 #b9770e;
       }
       .modal-card .btn-small {
-        padding: 10px 20px;
-        font-size: 11px;
+        padding: 8px 16px;
+        font-size: 10px;
         border-width: 3px;
         box-shadow: 0 4px 0 #95a5a6;
       }
@@ -234,27 +215,42 @@
         box-shadow: 0 4px 0 #95a5a6;
         color: #2c3e50;
       }
+      .modal-card .btn-head {
+        background: #2ecc71;
+        border-color: #27ae60;
+        box-shadow: 0 4px 0 #1e8449;
+        color: #fff;
+      }
+      .modal-card .btn-head.active {
+        background: #e74c3c;
+        border-color: #c0392b;
+        box-shadow: 0 4px 0 #922b21;
+      }
+      .modal-card .btn-head:active {
+        transform: translateY(4px);
+        box-shadow: 0 0px 0 #1e8449;
+      }
       .modal-card .btn-group {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 8px;
         margin-top: 10px;
       }
       .settings-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 12px 0;
+        padding: 10px 0;
         border-bottom: 2px dotted #d0c8b8;
-        font-size: 13px;
+        font-size: 12px;
       }
       .toggle-btn {
-        padding: 6px 18px;
+        padding: 4px 14px;
         border-radius: 4px;
         border: 2px solid #b0a898;
         background: #f5efe6;
         color: #3d3a36;
-        font-size: 12px;
+        font-size: 11px;
         cursor: pointer;
         font-family: "Press Start 2P", monospace;
       }
@@ -264,7 +260,7 @@
         color: #2c2a26;
       }
       .score-number {
-        font-size: 56px;
+        font-size: 48px;
         font-weight: bold;
         color: #e67e22;
         text-shadow: 4px 4px 0 #f1c40f;
@@ -273,64 +269,137 @@
         display: flex;
         justify-content: center;
         gap: 24px;
-        margin: 16px 0 20px;
+        margin: 14px 0 18px;
       }
       .stat-item .num {
-        font-size: 24px;
+        font-size: 22px;
         font-weight: bold;
         color: #2c3e50;
       }
       .stat-item .label {
-        font-size: 12px;
+        font-size: 11px;
         color: #7a7268;
+      }
+      .start-avatar-btn {
+        background: #dcdcdc;
+        border-color: #b0b0b0;
+        color: #555;
+        margin-top: 6px;
+      }
+      #avatarInput {
+        display: none;
+      }
+      .head-indicator {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #95a5a6;
+        margin-right: 4px;
+        transition: background 0.3s;
+      }
+      .head-indicator.on {
+        background: #2ecc71;
+        box-shadow: 0 0 8px #2ecc71;
+      }
+      .head-indicator.error {
+        background: #e74c3c;
+        box-shadow: 0 0 8px #e74c3c;
+      }
+      .head-indicator.loading {
+        background: #f1c40f;
+        animation: pulse 0.8s infinite alternate;
+      }
+      @keyframes pulse {
+        0% {
+          opacity: 0.4;
+          transform: scale(0.9);
+        }
+        100% {
+          opacity: 1;
+          transform: scale(1.2);
+        }
+      }
+      .status-text {
+        font-size: 10px;
+        color: #7a7268;
+        max-width: 80px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      @media (max-width: 480px) {
+        .modal-card {
+          padding: 20px 16px 24px;
+          margin-top: -40px;
+        }
+        .modal-card h2 {
+          font-size: 18px;
+        }
+        .modal-card .btn {
+          padding: 12px 16px;
+          font-size: 11px;
+        }
+        .top-box {
+          font-size: 10px;
+          padding: 4px 2px;
+          min-width: 50px;
+        }
+        #top-head-status {
+          font-size: 12px;
+        }
+        #camera-preview {
+          width: 48px;
+          height: 36px;
+          bottom: 4px;
+          right: 4px;
+        }
       }
     </style>
   </head>
   <body>
+    <!-- 顶部状态栏 -->
     <div class="outer-top-bar">
       <div class="top-box" id="top-dishes">🍽️ 0</div>
       <div class="top-box" id="top-gold">💰 50</div>
       <div class="top-box">
-        <span id="top-time">01:30</span><span id="top-pause">⏸</span>
+        <span id="top-time">01:30</span>
+        <span id="top-pause">⏸</span>
+      </div>
+      <div class="top-box" id="top-head-status">
+        <span class="head-indicator" id="headIndicator"></span>
+        <span class="status-text" id="headStatusText">头控关</span>
       </div>
     </div>
+
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
-      <video id="webcam" playsinline muted></video>
 
-      <!-- 头控状态指示器 -->
-      <div id="head-indicator">
-        <span class="dot" id="headDot"></span>
-        <span class="label">头控</span>
-        <span class="pos" id="headPos">—</span>
-      </div>
+      <!-- 摄像头预览（极小） -->
+      <video id="camera-preview" playsinline muted></video>
 
-      <!-- 开启摄像头弹窗 -->
-      <div id="cameraModal" class="modal-overlay">
-        <div class="modal-card">
-          <h2>📷 开启摄像头</h2>
-          <p>向左歪头 → 左道<br />向右歪头 → 右道</p>
-          <button class="btn" id="cameraAllowBtn">📸 允许并开始</button>
-          <button
-            class="btn btn-small"
-            id="touchModeBtn"
-            style="background: #dcdcdc; border-color: #b0b0b0; color: #555"
-          >
-            🎮 触屏玩法
+      <!-- 开始游戏弹窗 -->
+      <div
+        id="startOverlay"
+        class="modal-overlay"
+        style="background: rgba(255, 248, 240, 0.75)"
+      >
+        <div class="modal-card" style="background: #fffefc">
+          <h2>👨‍🍳 像素厨房</h2>
+          <p style="font-size: 12px">触屏滑动 · 头控可选</p>
+          <button class="btn" id="startGameBtn">🔥 开始游戏</button>
+          <br />
+          <button class="btn btn-head" id="headControlToggle">
+            🎯 头控：关
           </button>
-          <button
-            class="btn btn-small"
-            id="uploadAvatarBtn"
-            style="background: #dcdcdc; border-color: #b0b0b0; color: #555"
-          >
+          <br />
+          <button class="btn btn-small start-avatar-btn" id="uploadAvatarBtn">
             📷 上传头像
           </button>
-          <input
-            type="file"
-            id="avatarInput"
-            accept="image/*"
-            style="display: none"
-          />
+          <input type="file" id="avatarInput" accept="image/*" />
+          <div style="font-size: 9px; color: #aaa; margin-top: 10px">
+            头控需摄像头权限 · 左右歪头控制厨师
+          </div>
         </div>
       </div>
 
@@ -338,7 +407,7 @@
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
-          <div style="margin: 16px 0">
+          <div style="margin: 14px 0">
             <div class="settings-row">
               <span>🎵 音乐</span>
               <div class="toggle-wrap">
@@ -367,6 +436,26 @@
                 </button>
               </div>
             </div>
+            <div class="settings-row">
+              <span>🎯 头控</span>
+              <div class="toggle-wrap">
+                <button
+                  class="toggle-btn"
+                  id="pauseHeadToggle"
+                  data-setting="head"
+                  data-val="on"
+                >
+                  开</button
+                ><button
+                  class="toggle-btn active"
+                  id="pauseHeadToggleOff"
+                  data-setting="head"
+                  data-val="off"
+                >
+                  关
+                </button>
+              </div>
+            </div>
           </div>
           <div class="btn-group">
             <button class="btn" id="resumeBtn">▶ 继续</button
@@ -382,10 +471,10 @@
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
           <div class="score-number" id="finalScore">0</div>
-          <div class="score-label">总金币</div>
+          <div style="font-size: 12px; color: #7a7268">总金币</div>
           <div
             id="finalRank"
-            style="font-size: 22px; margin: 15px 0; color: #e67e22"
+            style="font-size: 20px; margin: 12px 0; color: #e67e22"
           ></div>
           <div class="stat-row">
             <div class="stat-item">
@@ -399,40 +488,29 @@
           </div>
           <button class="btn" id="retryBtn">🔄 再来一局</button>
           <button class="btn btn-secondary" id="rankBtn">📊 我的评级</button>
-          <div style="font-size: 10px; margin-top: 15px; color: #888">
-            我的邮箱：xxx
-          </div>
-        </div>
-      </div>
-
-      <!-- 开始游戏弹窗 -->
-      <div
-        id="startOverlay"
-        class="modal-overlay"
-        style="background: rgba(255, 248, 240, 0.75)"
-      >
-        <div class="modal-card" style="background: #fffefc">
-          <h2>👨‍🍳 像素厨房</h2>
-          <p style="font-size: 13px">头部控制 · 接食材 · 自动上菜</p>
-          <button class="btn" id="startGameBtn">🔥 开始游戏</button>
         </div>
       </div>
     </div>
 
     <script>
       (() => {
-        // ---------- DOM refs ----------
+        // ============================================================
+        // 1. DOM 引用
+        // ============================================================
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
-        const video = document.getElementById("webcam");
         const topTimeEl = document.getElementById("top-time");
         const topPauseEl = document.getElementById("top-pause");
         const topGoldEl = document.getElementById("top-gold");
         const topDishesEl = document.getElementById("top-dishes");
         const avatarInput = document.getElementById("avatarInput");
-        const headDot = document.getElementById("headDot");
-        const headPos = document.getElementById("headPos");
+        const cameraVideo = document.getElementById("camera-preview");
+        const headIndicator = document.getElementById("headIndicator");
+        const headStatusText = document.getElementById("headStatusText");
 
+        // ============================================================
+        // 2. Canvas 尺寸
+        // ============================================================
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
           canvas.width = r.width;
@@ -441,11 +519,9 @@
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
 
-        // ---------- 常量 & 状态 ----------
-        const ROWS = 10,
-          COLS = 4,
-          GAME_DURATION = 90,
-          INITIAL_GOLD = 50;
+        // ============================================================
+        // 3. 音效 & 音频
+        // ============================================================
         let audioCtx;
 
         function initAudio() {
@@ -527,6 +603,14 @@
           }
         }
 
+        // ============================================================
+        // 4. 游戏核心状态
+        // ============================================================
+        const ROWS = 10,
+          COLS = 4,
+          GAME_DURATION = 90,
+          INITIAL_GOLD = 50;
+
         const state = {
           playing: false,
           paused: false,
@@ -541,8 +625,6 @@
           chefX: 0.5,
           targetX: 0.5,
           smoothTargetX: 0.5,
-          headAngle: 0,
-          headY: 0.5,
           ings: [],
           pot: {},
           menu: [],
@@ -555,8 +637,6 @@
           fly: [],
           beltOff: 0,
           qTimer: 0,
-          camReady: false,
-          fm: null,
           floatingTexts: [],
           leftEating: false,
           rightEating: false,
@@ -565,14 +645,23 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
-          // 头控专用
-          headDetected: false,
-          headFrameCount: 0,
-          faceMeshReady: false,
-          _frameBusy: false,
+          touchActive: false,
+          touchStartX: 0,
+          _touchBaseX: 0.5,
+          // 头控相关
+          headControlEnabled: false,
+          headControlActive: false,
+          headTilt: 0, // -1 ~ 1, 负=左倾, 正=右倾
+          headSmoothTilt: 0,
+          headCameraReady: false,
+          headMeshReady: false,
+          headDetecting: false,
+          headError: null,
         };
 
-        // ---------- 食谱数据 ----------
+        // ============================================================
+        // 5. 游戏数据：食材 & 菜谱
+        // ============================================================
         const TYPES = [
           {
             id: "tomato",
@@ -704,7 +793,9 @@
           return a + (b - a) * t;
         }
 
-        // ---------- 游戏逻辑 ----------
+        // ============================================================
+        // 6. 菜谱 & 订单逻辑
+        // ============================================================
         function genMenu() {
           const demands = [];
           if (
@@ -874,6 +965,9 @@
           });
         }
 
+        // ============================================================
+        // 7. 更新逻辑（含头控）
+        // ============================================================
         function updateIngs() {
           const cellH = canvas.height / ROWS;
           for (let i = state.ings.length - 1; i >= 0; i--) {
@@ -988,17 +1082,34 @@
           updateFly(dt);
           updateFloatingTexts(dt);
 
-          // ---- 头控平滑 ----
-          const headSmooth = 0.18;
-          state.smoothTargetX = lerp(
-            state.smoothTargetX,
-            state.targetX,
-            headSmooth,
-          );
+          // ---- 头控融合 ----
+          // 如果头控启用且检测到有效倾斜，则用头控覆盖 targetX
+          if (
+            state.headControlEnabled &&
+            state.headDetecting &&
+            state.headMeshReady
+          ) {
+            // headTilt: -1 ~ 1, 负=左倾, 正=右倾
+            const tilt = state.headSmoothTilt;
+            // 映射到 0.05 ~ 0.95
+            const mappedX = 0.5 + tilt * 0.45;
+            state.targetX = clamp(mappedX, 0.05, 0.95);
+            // 更新头控指示器
+            updateHeadIndicator(
+              true,
+              `头控 ${Math.abs(tilt) > 0.05 ? (tilt < 0 ? "←左倾" : "右倾→") : "居中"}`,
+            );
+          } else if (state.headControlEnabled && !state.headDetecting) {
+            // 头控开启但未检测到面部
+            updateHeadIndicator(false, "寻找面部...");
+          }
+
+          // 平滑移动厨师
+          state.smoothTargetX = lerp(state.smoothTargetX, state.targetX, 0.2);
           if (state.hurtTimer > 0) {
             state.hurtTimer -= dt;
           } else {
-            state.chefX = lerp(state.chefX, state.smoothTargetX, 0.12);
+            state.chefX = lerp(state.chefX, state.smoothTargetX, 0.1);
             state.chefX = clamp(state.chefX, 0.05, 0.95);
           }
 
@@ -1010,18 +1121,11 @@
             }, 1000);
           }
           updateUI();
-
-          // 更新头控指示器
-          if (state.headDetected) {
-            headDot.className = "dot on";
-            headPos.textContent = Math.round(state.targetX * 100) + "%";
-          } else {
-            headDot.className = "dot";
-            headPos.textContent = "—";
-          }
         }
 
-        // ---------- 绘图 ----------
+        // ============================================================
+        // 8. 渲染
+        // ============================================================
         const imgs = {};
 
         function loadImgs(cb) {
@@ -1156,6 +1260,7 @@
             potH = potSz * 0.7;
           const potX = chefX,
             potY = cH * 6.0;
+
           const decoPotW = tw * 1.6,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
@@ -1416,6 +1521,7 @@
           });
         }
 
+        // roundRect polyfill
         if (!CanvasRenderingContext2D.prototype.roundRect) {
           CanvasRenderingContext2D.prototype.roundRect = function (
             x,
@@ -1439,6 +1545,9 @@
           };
         }
 
+        // ============================================================
+        // 9. UI 更新
+        // ============================================================
         function updateUI() {
           const m = Math.floor(state.time / 60),
             s = Math.floor(state.time % 60);
@@ -1447,7 +1556,25 @@
           topDishesEl.textContent = `🍽️ ${state.dishes}`;
         }
 
-        // ---------- 游戏循环 ----------
+        function updateHeadIndicator(active, text) {
+          if (active) {
+            headIndicator.className = "head-indicator on";
+            headStatusText.textContent = text || "头控中";
+          } else if (state.headControlEnabled && !state.headDetecting) {
+            headIndicator.className = "head-indicator loading";
+            headStatusText.textContent = text || "寻找面部";
+          } else if (state.headControlEnabled && state.headError) {
+            headIndicator.className = "head-indicator error";
+            headStatusText.textContent = "❌ 头控异常";
+          } else {
+            headIndicator.className = "head-indicator";
+            headStatusText.textContent = "头控关";
+          }
+        }
+
+        // ============================================================
+        // 10. 游戏循环
+        // ============================================================
         let last = 0;
 
         function loop(ts) {
@@ -1458,7 +1585,9 @@
           requestAnimationFrame(loop);
         }
 
-        // ---------- 结算 ----------
+        // ============================================================
+        // 11. 游戏结束 & 重置
+        // ============================================================
         function getRank(g) {
           if (g >= 200) return "👑 巅峰厨神";
           if (g >= 150) return "🌟 荣耀厨王";
@@ -1474,6 +1603,10 @@
           state.over = true;
           state.playing = false;
           stopBGM();
+          // 关闭头控
+          if (state.headControlEnabled) {
+            stopHeadControl();
+          }
           document.getElementById("finalScore").textContent = state.totalGold;
           document.getElementById("statDishes").textContent = state.dishes;
           document.getElementById("statCombo").textContent = state.maxCombo;
@@ -1484,10 +1617,6 @@
         }
 
         function resetGameState() {
-          if (video.srcObject) {
-            video.srcObject.getTracks().forEach((t) => t.stop());
-            video.srcObject = null;
-          }
           state.playing = false;
           state.paused = false;
           state.over = false;
@@ -1501,8 +1630,6 @@
           state.chefX = 0.5;
           state.targetX = 0.5;
           state.smoothTargetX = 0.5;
-          state.headAngle = 0;
-          state.headY = 0.5;
           state.ings = [];
           state.pot = {};
           state.menu = [];
@@ -1518,7 +1645,8 @@
           state.autoServe = false;
           state.beltOff = 0;
           state.qTimer = 0;
-          state.headDetected = false;
+          state.headTilt = 0;
+          state.headSmoothTilt = 0;
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
           state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
           state.rightD = { dish: "...", emoji: "..." };
@@ -1537,8 +1665,6 @@
           document.getElementById("startOverlay").classList.add("hidden");
           genMenu();
           updateUI();
-          headDot.className = "dot";
-          headPos.textContent = "—";
         }
 
         function startGame() {
@@ -1546,6 +1672,10 @@
           state.playing = true;
           startBGM();
           updateUI();
+          // 如果头控已开启但未启动，尝试启动
+          if (state.headControlEnabled && !state.headControlActive) {
+            startHeadControl();
+          }
         }
 
         function togglePause() {
@@ -1554,205 +1684,269 @@
           if (state.paused) {
             document.getElementById("pauseModal").classList.remove("hidden");
             stopBGM();
+            if (state.headControlActive) pauseHeadControl();
           } else {
             document.getElementById("pauseModal").classList.add("hidden");
             startBGM();
+            if (state.headControlEnabled) resumeHeadControl();
           }
         }
 
-        // ---------- 触屏 ----------
-        canvas.addEventListener("touchstart", (e) => {
-          e.preventDefault();
-          if (!state.playing || state.paused || state.over) return;
-          const t = e.touches[0];
-          state.touchActive = true;
-          state.touchStartX = t.clientX;
-          state._touchBaseX = state.targetX;
-        });
-        canvas.addEventListener("touchmove", (e) => {
-          e.preventDefault();
-          if (
-            !state.touchActive ||
-            !state.playing ||
-            state.paused ||
-            state.over
-          )
-            return;
-          const t = e.touches[0];
-          const dx = t.clientX - state.touchStartX;
-          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.05, 0.95);
-        });
-        canvas.addEventListener("touchend", (e) => {
-          e.preventDefault();
-          state.touchActive = false;
-        });
-        canvas.addEventListener("click", (e) => {
-          if (state.playing && !state.over) togglePause();
-        });
+        // ============================================================
+        // 12. 头控核心 (MediaPipe FaceMesh)
+        // ============================================================
+        let faceMesh = null;
+        let camera = null;
+        let headControlInitialized = false;
+        let headControlPaused = false;
+        let headFrameCount = 0;
 
-        // ---------- 头控（全新实现） ----------
-        let faceMeshInstance = null;
-        let videoFrameLoopId = null;
-
-        function initFaceMesh() {
-          try {
-            const fm = new FaceMesh({
-              locateFile: (file) =>
-                `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1640029078/${file}`,
-            });
-            fm.setOptions({
-              maxNumFaces: 1,
-              refineLandmarks: true,
-              minDetectionConfidence: 0.6,
-              minTrackingConfidence: 0.5,
-            });
-
-            fm.onResults((results) => {
+        function initHeadControl() {
+          return new Promise((resolve, reject) => {
+            try {
+              // 检查 MediaPipe 是否加载
               if (
-                results.multiFaceLandmarks &&
-                results.multiFaceLandmarks.length > 0
+                typeof FaceMesh === "undefined" ||
+                typeof Camera === "undefined"
               ) {
-                const landmarks = results.multiFaceLandmarks[0];
-                // 鼻尖 landmark[1] 最稳定
-                const noseTip = landmarks[1];
-                if (noseTip) {
-                  // 镜像：左转 → 左移
-                  const rawX = 1 - noseTip.x;
-                  state.targetX = clamp(rawX, 0.05, 0.95);
-                  state.headY = clamp(noseTip.y, 0.2, 0.8);
-                  state.headDetected = true;
-                  state.headFrameCount++;
-                  // 每30帧输出一次日志（不刷屏）
-                  if (state.headFrameCount % 30 === 0) {
-                    console.log(
-                      `[头控] 鼻尖 x=${noseTip.x.toFixed(3)} → targetX=${state.targetX.toFixed(3)}`,
+                reject(new Error("MediaPipe 库未加载，请检查网络连接。"));
+                return;
+              }
+              // 创建 FaceMesh 实例
+              faceMesh = new FaceMesh({
+                locateFile: (file) => {
+                  return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                },
+              });
+
+              faceMesh.setOptions({
+                maxNumFaces: 1,
+                refineLandmarks: true,
+                minDetectionConfidence: 0.5,
+                minTrackingConfidence: 0.5,
+              });
+
+              faceMesh.onResults((results) => {
+                if (!state.headControlEnabled || state.paused || state.over)
+                  return;
+                if (
+                  results.multiFaceLandmarks &&
+                  results.multiFaceLandmarks.length > 0
+                ) {
+                  const landmarks = results.multiFaceLandmarks[0];
+                  // 关键点索引: 左眼外角(33), 右眼外角(263), 鼻尖(1)
+                  const leftEye = landmarks[33];
+                  const rightEye = landmarks[263];
+                  const nose = landmarks[1];
+                  if (leftEye && rightEye && nose) {
+                    // 计算左右眼y坐标差 (头部倾斜)
+                    const diff = leftEye.y - rightEye.y;
+                    // 映射到 -1 ~ 1 (放大系数 3.5，使轻微歪头即有反应)
+                    let rawTilt = clamp(diff * 3.5, -1, 1);
+                    // 死区: 小于 0.05 视为居中
+                    if (Math.abs(rawTilt) < 0.04) rawTilt = 0;
+                    state.headTilt = rawTilt;
+                    // 平滑
+                    state.headSmoothTilt = lerp(
+                      state.headSmoothTilt,
+                      state.headTilt,
+                      0.25,
                     );
-                  }
-                }
-              } else {
-                // 未检测到人脸，但不重置 targetX，避免抖动
-                if (state.headDetected) {
-                  // 连续丢失超过60帧才认为丢失
-                  if (state.headFrameCount > 60) {
-                    state.headDetected = false;
-                    state.headFrameCount = 0;
-                    console.warn("[头控] 人脸丢失");
+                    state.headDetecting = true;
+                    state.headError = null;
+                    headFrameCount++;
                   } else {
-                    state.headFrameCount++;
+                    state.headDetecting = false;
                   }
+                } else {
+                  state.headDetecting = false;
                 }
-              }
-              state._frameBusy = false;
-            });
+              });
 
-            fm.onError((err) => {
-              console.error("[头控] FaceMesh 错误:", err);
-              state._frameBusy = false;
-            });
+              // 摄像头
+              camera = new Camera(cameraVideo, {
+                onFrame: async () => {
+                  if (
+                    state.headControlEnabled &&
+                    !state.paused &&
+                    !state.over
+                  ) {
+                    try {
+                      await faceMesh.send({ image: cameraVideo });
+                    } catch (e) {
+                      // 静默处理
+                    }
+                  }
+                },
+                width: 320,
+                height: 240,
+              });
 
-            return fm;
-          } catch (e) {
-            console.error("[头控] 初始化 FaceMesh 失败:", e);
-            return null;
-          }
+              // 启动摄像头
+              camera
+                .start()
+                .then(() => {
+                  state.headCameraReady = true;
+                  state.headMeshReady = true;
+                  state.headControlActive = true;
+                  state.headDetecting = false;
+                  headControlInitialized = true;
+                  headControlPaused = false;
+                  cameraVideo.classList.add("active");
+                  updateHeadIndicator(false, "启动中...");
+                  resolve();
+                })
+                .catch((err) => {
+                  state.headError = err.message || "摄像头启动失败";
+                  state.headCameraReady = false;
+                  state.headControlActive = false;
+                  cameraVideo.classList.remove("active");
+                  updateHeadIndicator(false, "❌ 摄像头失败");
+                  reject(err);
+                });
+            } catch (err) {
+              state.headError = err.message || "头控初始化失败";
+              state.headControlActive = false;
+              reject(err);
+            }
+          });
         }
 
-        // 视频帧处理循环 (使用 requestAnimationFrame)
-        function startVideoFrameLoop() {
-          if (videoFrameLoopId) {
-            cancelAnimationFrame(videoFrameLoopId);
-            videoFrameLoopId = null;
+        function startHeadControl() {
+          if (state.headControlActive && headControlInitialized) return;
+          if (headControlInitialized && state.headControlPaused) {
+            resumeHeadControl();
+            return;
           }
+          updateHeadIndicator(false, "启动摄像头...");
+          initHeadControl()
+            .then(() => {
+              state.headControlEnabled = true;
+              state.headControlActive = true;
+              state.headDetecting = false;
+              updateHeadIndicator(false, "寻找面部...");
+              // 更新按钮状态
+              document.getElementById("headControlToggle").textContent =
+                "🎯 头控：开";
+              document
+                .getElementById("headControlToggle")
+                .classList.add("active");
+              document
+                .getElementById("pauseHeadToggle")
+                .classList.add("active");
+              document
+                .getElementById("pauseHeadToggleOff")
+                .classList.remove("active");
+            })
+            .catch((err) => {
+              console.warn("头控启动失败:", err);
+              state.headControlEnabled = false;
+              state.headControlActive = false;
+              state.headError = err.message || "启动失败";
+              updateHeadIndicator(false, "❌ 头控失败");
+              document.getElementById("headControlToggle").textContent =
+                "🎯 头控：关";
+              document
+                .getElementById("headControlToggle")
+                .classList.remove("active");
+              // 弹窗提示
+              alert(
+                "头控启动失败: " +
+                  (err.message || "请检查摄像头权限和网络连接。"),
+              );
+            });
+        }
 
-          async function processFrame() {
-            if (!state.faceMeshReady || !video.srcObject) {
-              videoFrameLoopId = requestAnimationFrame(processFrame);
-              return;
-            }
+        function stopHeadControl() {
+          state.headControlEnabled = false;
+          state.headControlActive = false;
+          state.headDetecting = false;
+          state.headTilt = 0;
+          state.headSmoothTilt = 0;
+          headControlPaused = false;
+          if (camera) {
+            try {
+              camera.stop();
+            } catch (_) {}
+          }
+          if (faceMesh) {
+            try {
+              faceMesh.close();
+            } catch (_) {}
+          }
+          cameraVideo.classList.remove("active");
+          headControlInitialized = false;
+          faceMesh = null;
+          camera = null;
+          updateHeadIndicator(false, "头控关");
+          // 恢复触屏控制
+          state.touchActive = false;
+          document.getElementById("headControlToggle").textContent =
+            "🎯 头控：关";
+          document
+            .getElementById("headControlToggle")
+            .classList.remove("active");
+          document.getElementById("pauseHeadToggle").classList.remove("active");
+          document.getElementById("pauseHeadToggleOff").classList.add("active");
+        }
 
-            if (
-              video.readyState >= 2 &&
-              !state._frameBusy &&
-              faceMeshInstance
-            ) {
-              state._frameBusy = true;
+        function pauseHeadControl() {
+          if (state.headControlActive && !headControlPaused) {
+            headControlPaused = true;
+            state.headControlActive = false;
+            if (camera) {
               try {
-                await faceMeshInstance.send({ image: video });
-              } catch (e) {
-                // 静默处理，避免刷屏
-                if (state._frameBusy) state._frameBusy = false;
-              }
+                camera.stop();
+              } catch (_) {}
             }
-
-            videoFrameLoopId = requestAnimationFrame(processFrame);
+            updateHeadIndicator(false, "⏸ 暂停");
           }
-
-          videoFrameLoopId = requestAnimationFrame(processFrame);
         }
 
-        // ---------- 摄像头启动 ----------
-        async function startCam() {
-          // 如果已有流，先停止
-          if (video.srcObject) {
-            video.srcObject.getTracks().forEach((t) => t.stop());
-            video.srcObject = null;
-          }
-
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                facingMode: "user",
-                width: { ideal: 320 },
-                height: { ideal: 240 },
-              },
-            });
-            video.srcObject = stream;
-            await video.play();
-            console.log("[摄像头] 已启动");
-
-            // 初始化 FaceMesh
-            if (!faceMeshInstance) {
-              faceMeshInstance = initFaceMesh();
-              if (!faceMeshInstance) {
-                alert("头控初始化失败，请使用触屏玩法");
-                return false;
-              }
+        function resumeHeadControl() {
+          if (state.headControlEnabled && headControlPaused) {
+            headControlPaused = false;
+            state.headControlActive = true;
+            if (camera) {
+              try {
+                camera.start();
+              } catch (_) {}
             }
-
-            state.faceMeshReady = true;
-            state.camReady = true;
-
-            // 启动视频帧循环
-            startVideoFrameLoop();
-
-            // 关闭弹窗，开始游戏
-            document.getElementById("cameraModal").classList.add("hidden");
-            startGame();
-            initAudio();
-            return true;
-          } catch (err) {
-            console.error("[摄像头] 错误:", err);
-            alert("摄像头启动失败: " + err.message + "\n请使用「触屏玩法」");
-            return false;
+            updateHeadIndicator(false, "寻找面部...");
           }
         }
 
-        // ---------- 无摄像头（触屏） ----------
-        function startWithoutCamera() {
-          state.camReady = true;
-          state.faceMeshReady = false;
-          if (faceMeshInstance) {
-            // 清理
+        function toggleHeadControl() {
+          if (state.headControlEnabled) {
+            // 关闭
+            stopHeadControl();
+            // 如果游戏正在运行，恢复触屏
+          } else {
+            // 开启
+            if (!state.playing || state.paused || state.over) {
+              // 游戏未开始，仅开启头控状态，等游戏开始时再真正启动
+              state.headControlEnabled = true;
+              state.headControlActive = false;
+              state.headDetecting = false;
+              document.getElementById("headControlToggle").textContent =
+                "🎯 头控：开 (等待游戏)";
+              document
+                .getElementById("headControlToggle")
+                .classList.add("active");
+              updateHeadIndicator(false, "等待游戏开始");
+              // 如果游戏已开始，立即启动
+              if (state.playing && !state.paused && !state.over) {
+                startHeadControl();
+              }
+            } else {
+              startHeadControl();
+            }
           }
-          document.getElementById("cameraModal").classList.add("hidden");
-          startGame();
-          initAudio();
-          console.log("[触屏模式] 已启动，使用触摸控制");
-          headDot.className = "dot";
-          headPos.textContent = "触屏";
         }
 
-        // ---------- 头像上传 ----------
+        // ============================================================
+        // 13. 头像上传
+        // ============================================================
         function handleAvatarUpload() {
           const file = avatarInput.files[0];
           if (!file) return;
@@ -1767,37 +1961,126 @@
           reader.readAsDataURL(file);
         }
 
-        // ---------- DOM 事件绑定 ----------
+        // ============================================================
+        // 14. 触屏控制 (与头控共存，头控优先)
+        // ============================================================
+        canvas.addEventListener("touchstart", (e) => {
+          e.preventDefault();
+          if (!state.playing || state.paused || state.over) return;
+          // 如果头控启用且活跃，触屏不干扰
+          if (
+            state.headControlEnabled &&
+            state.headControlActive &&
+            state.headDetecting
+          )
+            return;
+          const t = e.touches[0];
+          state.touchActive = true;
+          state.touchStartX = t.clientX;
+          state._touchBaseX = state.targetX;
+        });
+        canvas.addEventListener("touchmove", (e) => {
+          e.preventDefault();
+          if (
+            !state.touchActive ||
+            !state.playing ||
+            state.paused ||
+            state.over
+          )
+            return;
+          if (
+            state.headControlEnabled &&
+            state.headControlActive &&
+            state.headDetecting
+          )
+            return;
+          const t = e.touches[0];
+          const dx = t.clientX - state.touchStartX;
+          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.05, 0.95);
+        });
+        canvas.addEventListener("touchend", (e) => {
+          e.preventDefault();
+          state.touchActive = false;
+        });
+        // 鼠标支持 (调试)
+        canvas.addEventListener("mousedown", (e) => {
+          if (!state.playing || state.paused || state.over) return;
+          if (
+            state.headControlEnabled &&
+            state.headControlActive &&
+            state.headDetecting
+          )
+            return;
+          state.touchActive = true;
+          state.touchStartX = e.clientX;
+          state._touchBaseX = state.targetX;
+        });
+        canvas.addEventListener("mousemove", (e) => {
+          if (
+            !state.touchActive ||
+            !state.playing ||
+            state.paused ||
+            state.over
+          )
+            return;
+          if (
+            state.headControlEnabled &&
+            state.headControlActive &&
+            state.headDetecting
+          )
+            return;
+          const dx = e.clientX - state.touchStartX;
+          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.05, 0.95);
+        });
+        canvas.addEventListener("mouseup", () => {
+          state.touchActive = false;
+        });
+        canvas.addEventListener("mouseleave", () => {
+          state.touchActive = false;
+        });
+
+        // 点击暂停 (防误触)
+        let clickTimer = null;
+        canvas.addEventListener("click", (e) => {
+          if (state.playing && !state.over && !state.touchActive) {
+            if (clickTimer) clearTimeout(clickTimer);
+            clickTimer = setTimeout(() => togglePause(), 150);
+          }
+        });
+
+        // ============================================================
+        // 15. 事件绑定
+        // ============================================================
+        // 开始游戏
         document
-          .getElementById("cameraAllowBtn")
-          .addEventListener("click", startCam);
-        document
-          .getElementById("touchModeBtn")
-          .addEventListener("click", startWithoutCamera);
+          .getElementById("startGameBtn")
+          .addEventListener("click", () => {
+            document.getElementById("startOverlay").classList.add("hidden");
+            // 如果头控已开启但未激活，尝试启动
+            if (
+              state.headControlEnabled &&
+              !state.headControlActive &&
+              !headControlInitialized
+            ) {
+              startHeadControl();
+            }
+            startGame();
+            initAudio();
+          });
+
+        // 头像上传
         document
           .getElementById("uploadAvatarBtn")
           .addEventListener("click", () => avatarInput.click());
         avatarInput.addEventListener("change", handleAvatarUpload);
 
-        document
-          .getElementById("startGameBtn")
-          .addEventListener("click", () => {
-            if (!state.camReady) {
-              // 如果摄像头还没准备好，尝试启动
-              if (!video.srcObject) {
-                startCam();
-              } else {
-                alert("请先允许摄像头权限或选择触屏玩法");
-              }
-            } else {
-              startGame();
-            }
-          });
-
+        // 暂停/继续
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
         });
+
+        // 重新开始
         document.getElementById("restartBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
           resetGameState();
@@ -1813,10 +2096,63 @@
           );
         });
 
+        // 头控开关 (主菜单)
+        document
+          .getElementById("headControlToggle")
+          .addEventListener("click", toggleHeadControl);
+
+        // 头控开关 (暂停菜单)
+        document
+          .getElementById("pauseHeadToggle")
+          .addEventListener("click", function () {
+            if (!state.headControlEnabled) {
+              // 开启头控
+              state.headControlEnabled = true;
+              this.classList.add("active");
+              document
+                .getElementById("pauseHeadToggleOff")
+                .classList.remove("active");
+              document.getElementById("headControlToggle").textContent =
+                "🎯 头控：开";
+              document
+                .getElementById("headControlToggle")
+                .classList.add("active");
+              if (state.playing && !state.paused && !state.over) {
+                startHeadControl();
+              } else {
+                updateHeadIndicator(false, "等待游戏开始");
+              }
+            } else {
+              // 关闭头控 (通过 toggleHeadControl 处理)
+              toggleHeadControl();
+              // 更新暂停菜单按钮状态
+              if (!state.headControlEnabled) {
+                this.classList.remove("active");
+                document
+                  .getElementById("pauseHeadToggleOff")
+                  .classList.add("active");
+              }
+            }
+          });
+
+        document
+          .getElementById("pauseHeadToggleOff")
+          .addEventListener("click", function () {
+            if (state.headControlEnabled) {
+              toggleHeadControl();
+              this.classList.add("active");
+              document
+                .getElementById("pauseHeadToggle")
+                .classList.remove("active");
+            }
+          });
+
+        // 音效开关
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
               v = this.dataset.val;
+            if (s === "head") return; // 头控由上面处理
             this.parentElement
               .querySelectorAll(".toggle-btn")
               .forEach((x) => x.classList.remove("active"));
@@ -1829,38 +2165,38 @@
           });
         });
 
-        // ---------- 初始化 ----------
+        // ============================================================
+        // 16. 启动游戏
+        // ============================================================
         loadImgs(() => {
           resetGameState();
-          // 显示摄像头弹窗
-          document.getElementById("cameraModal").classList.remove("hidden");
-          document.getElementById("startOverlay").classList.add("hidden");
-          // 启动游戏循环
+          document.getElementById("startOverlay").classList.remove("hidden");
+          document.getElementById("resultModal").classList.add("hidden");
+          document.getElementById("pauseModal").classList.add("hidden");
+          updateHeadIndicator(false, "头控关");
           requestAnimationFrame(loop);
         });
 
         // 点击页面初始化音频
         document.addEventListener("click", () => initAudio(), { once: true });
 
-        // ---------- 页面关闭时清理 ----------
+        // 页面关闭时释放摄像头
         window.addEventListener("beforeunload", () => {
-          if (video.srcObject) {
-            video.srcObject.getTracks().forEach((t) => t.stop());
-          }
-          if (videoFrameLoopId) {
-            cancelAnimationFrame(videoFrameLoopId);
-          }
-          if (faceMeshInstance) {
+          if (camera) {
             try {
-              faceMeshInstance.close();
+              camera.stop();
             } catch (_) {}
           }
-          stopBGM();
+          if (faceMesh) {
+            try {
+              faceMesh.close();
+            } catch (_) {}
+          }
         });
 
-        console.log("[像素厨房] 头控修复版已加载");
-        console.log("[头控] 使用 MediaPipe FaceMesh 0.4.1640029078");
-        console.log("[头控] 鼻尖 landmark[1] 控制左右，镜像映射");
+        console.log(
+          '🍳 像素厨房已启动！头控功能: 点击"头控"按钮开启摄像头控制。',
+        );
       })();
     </script>
   </body>
