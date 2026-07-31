@@ -48,17 +48,18 @@
         margin-bottom: 6px;
         padding: 0 4px;
         gap: 4px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
         justify-content: center;
       }
       .top-box {
         flex: 1;
-        min-width: 60px;
+        min-width: 0;
         background: rgba(255, 248, 240, 0.85);
         border-radius: 8px;
-        padding: 6px 4px;
+        padding: 8px 4px;
         text-align: center;
-        font-size: 11px;
+        font-size: 14px;
+        /* 整体放大 */
         color: #2c3e50;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         display: flex;
@@ -67,9 +68,17 @@
         gap: 4px;
         white-space: nowrap;
       }
+      /* 左侧三个盒子稍窄 */
+      .top-box:not(:last-child) {
+        flex: 0.8;
+      }
+      /* 最右侧倒计时盒子宽一点 */
+      .top-box:last-child {
+        flex: 1.3;
+      }
       #top-pause {
         cursor: pointer;
-        font-size: 18px;
+        font-size: 22px;
       }
       #top-gold {
         color: #e67e22;
@@ -79,11 +88,19 @@
         color: #2c3e50;
       }
       #top-head-status {
-        font-size: 12px;
-        min-width: 70px;
+        font-size: 14px;
+        min-width: 80px;
         cursor: default;
-        flex: 1.2;
+        flex: 0.9;
         gap: 2px;
+      }
+      .status-text {
+        font-size: 11px;
+        color: #7a7268;
+        max-width: 70px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
       #game-wrapper {
         position: relative;
@@ -141,7 +158,7 @@
         justify-content: center;
         align-items: center;
         z-index: 100;
-        padding: 24px;
+        padding: 20px;
         animation: fadeIn 0.3s ease;
       }
       .modal-overlay.hidden {
@@ -158,19 +175,20 @@
         }
       }
 
-      /* 开始界面：标题在弹窗外部上方 */
-      .start-title {
-        font-size: 28px;
+      /* 标题在弹窗外部上方 */
+      .modal-title {
+        font-size: 34px;
         color: #e67e22;
         text-shadow: 3px 3px 0 #f1c40f;
-        margin-bottom: 12px;
+        margin-bottom: 6px;
         text-align: center;
         letter-spacing: 2px;
+        line-height: 1.3;
       }
       .modal-card {
         background: #fff;
         border-radius: 16px;
-        padding: 28px 24px 32px;
+        padding: 24px 24px 28px;
         max-width: 360px;
         width: 100%;
         text-align: center;
@@ -181,6 +199,8 @@
           0 12px 30px rgba(0, 0, 0, 0.08);
         font-family: "Press Start 2P", monospace;
         position: relative;
+        margin-top: -40px;
+        /* 整体上移 */
       }
       .modal-card .close-btn {
         position: absolute;
@@ -197,22 +217,20 @@
         color: #e74c3c;
       }
       .modal-card .subtitle-big {
-        font-size: 26px;
-        /* 放大 */
+        font-size: 28px;
         color: #e67e22;
         font-weight: bold;
-        margin: 0 0 10px 0;
+        margin: 0 0 12px 0;
         letter-spacing: 2px;
       }
       .modal-card .subtitle-small {
-        font-size: 10px;
+        font-size: 13px;
         color: #7a7268;
-        margin-bottom: 20px;
-        /* 加大间距 */
-        line-height: 1.8;
+        margin-bottom: 22px;
+        line-height: 2;
       }
       .modal-card p {
-        font-size: 13px;
+        font-size: 14px;
         color: #5a5248;
         line-height: 2;
         margin: 10px 0 16px;
@@ -223,7 +241,7 @@
         background: #f39c12;
         border: 4px solid #d68910;
         border-radius: 8px;
-        font-size: 13px;
+        font-size: 14px;
         font-weight: bold;
         color: #2c2a26;
         cursor: pointer;
@@ -241,13 +259,13 @@
         box-shadow: 0 0px 0 #b9770e;
       }
       .modal-card .btn-small {
-        padding: 10px 18px;
-        font-size: 10px;
-        border-width: 3px;
-        box-shadow: 0 4px 0 #95a5a6;
-        max-width: 200px;
+        padding: 12px 20px;
+        font-size: 12px;
+        border-width: 4px;
+        box-shadow: 0 4px 0 #8e8e8e;
+        max-width: 220px;
       }
-      /* 灰色按钮（触屏玩法、更换形象） */
+      /* 灰色按钮统一 */
       .modal-card .btn-secondary {
         background: #dcdcdc;
         border-color: #b0b0b0;
@@ -258,9 +276,9 @@
         transform: translateY(4px);
         box-shadow: 0 0px 0 #8e8e8e;
       }
-      /* 允许并开始 特殊样式：更大字体和更长按钮 */
+      /* 允许并开始 特殊样式 */
       .btn-start-camera {
-        font-size: 18px !important;
+        font-size: 20px !important;
         padding: 18px 28px !important;
         max-width: 280px !important;
         background: #2ecc71;
@@ -290,15 +308,15 @@
       .modal-card .btn-group {
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        margin-top: 10px;
+        gap: 10px;
+        margin-top: 12px;
         align-items: center;
       }
       .modal-card .btn-row {
         display: flex;
         flex-direction: column;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
         width: 100%;
       }
       .settings-row {
@@ -307,7 +325,7 @@
         align-items: center;
         padding: 10px 0;
         border-bottom: 2px dotted #d0c8b8;
-        font-size: 11px;
+        font-size: 13px;
       }
       .toggle-btn {
         padding: 4px 14px;
@@ -315,7 +333,7 @@
         border: 2px solid #b0a898;
         background: #f5efe6;
         color: #3d3a36;
-        font-size: 10px;
+        font-size: 12px;
         cursor: pointer;
         font-family: "Press Start 2P", monospace;
       }
@@ -325,7 +343,7 @@
         color: #2c2a26;
       }
       .score-number {
-        font-size: 48px;
+        font-size: 52px;
         font-weight: bold;
         color: #e67e22;
         text-shadow: 4px 4px 0 #f1c40f;
@@ -333,16 +351,16 @@
       .stat-row {
         display: flex;
         justify-content: center;
-        gap: 24px;
+        gap: 28px;
         margin: 14px 0 18px;
       }
       .stat-item .num {
-        font-size: 22px;
+        font-size: 24px;
         font-weight: bold;
         color: #2c3e50;
       }
       .stat-item .label {
-        font-size: 11px;
+        font-size: 13px;
         color: #7a7268;
       }
       .start-avatar-btn {
@@ -356,11 +374,11 @@
       }
       .head-indicator {
         display: inline-block;
-        width: 10px;
-        height: 10px;
+        width: 12px;
+        height: 12px;
         border-radius: 50%;
         background: #95a5a6;
-        margin-right: 2px;
+        margin-right: 4px;
         transition: background 0.3s;
         flex-shrink: 0;
       }
@@ -385,14 +403,6 @@
           opacity: 1;
           transform: scale(1.2);
         }
-      }
-      .status-text {
-        font-size: 9px;
-        color: #7a7268;
-        max-width: 70px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
       }
 
       /* 头像更换专用样式 */
@@ -434,7 +444,7 @@
       }
       .avatar-circle .placeholder {
         color: white;
-        font-size: 12px;
+        font-size: 13px;
         text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
         text-align: center;
         line-height: 1.4;
@@ -462,44 +472,44 @@
       @media (max-width: 480px) {
         .modal-card {
           padding: 20px 16px 24px;
-          margin-top: 0;
+          margin-top: -20px;
         }
-        .start-title {
-          font-size: 22px;
-          margin-bottom: 8px;
+        .modal-title {
+          font-size: 26px;
+          margin-bottom: 4px;
         }
         .modal-card .subtitle-big {
-          font-size: 20px;
+          font-size: 22px;
         }
         .modal-card .btn {
           padding: 12px 16px;
-          font-size: 11px;
+          font-size: 12px;
           max-width: 200px;
         }
         .btn-start-camera {
-          font-size: 16px !important;
+          font-size: 17px !important;
           padding: 14px 20px !important;
           max-width: 220px !important;
         }
         .top-box {
-          font-size: 9px;
+          font-size: 11px;
           padding: 4px 2px;
-          min-width: 44px;
+          min-width: 0;
         }
         #top-head-status {
-          font-size: 10px;
+          font-size: 11px;
           min-width: 60px;
-          flex: 1.4;
+          flex: 0.9;
+        }
+        .status-text {
+          font-size: 9px;
+          max-width: 50px;
         }
         #camera-preview {
           width: 48px;
           height: 36px;
           bottom: 4px;
           right: 4px;
-        }
-        .status-text {
-          font-size: 8px;
-          max-width: 50px;
         }
         .avatar-preview-container {
           width: 160px;
@@ -508,6 +518,12 @@
         .avatar-circle {
           width: 64px;
           height: 64px;
+        }
+        .score-number {
+          font-size: 40px;
+        }
+        .stat-item .num {
+          font-size: 20px;
         }
       }
     </style>
@@ -533,15 +549,14 @@
       <!-- 摄像头预览 -->
       <video id="camera-preview" playsinline muted></video>
 
-      <!-- ===== 开始游戏弹窗（标题移到外部上方） ===== -->
+      <!-- ===== 开始游戏弹窗 ===== -->
       <div
         id="startOverlay"
         class="modal-overlay"
         style="background: rgba(255, 248, 240, 0.75)"
       >
-        <!-- 标题在弹窗外部 -->
-        <div class="start-title">👨‍🍳 像素厨房</div>
-        <div class="modal-card" style="background: #fffefc; margin-top: 0">
+        <div class="modal-title">👨‍🍳 像素厨房</div>
+        <div class="modal-card" style="background: #fffefc">
           <div class="subtitle-big">📷 开启摄像头</div>
           <div class="subtitle-small">触屏滑动 · 头控可选</div>
 
@@ -566,7 +581,7 @@
             accept="image/*"
             style="display: none"
           />
-          <div style="font-size: 8px; color: #aaa; margin-top: 12px">
+          <div style="font-size: 10px; color: #aaa; margin-top: 14px">
             允许摄像头后可用头控制厨师左右移动
           </div>
         </div>
@@ -576,7 +591,7 @@
       <div id="avatarModal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 360px; padding: 20px">
           <button class="close-btn" id="avatarCloseBtn">&times;</button>
-          <h2 style="font-size: 18px; margin-bottom: 10px">👨‍🍳 更换形象</h2>
+          <h2 style="font-size: 20px; margin-bottom: 10px">👨‍🍳 更换形象</h2>
           <div class="avatar-preview-container">
             <img id="avatarChefBg" class="chef-bg" src="" alt="厨师" />
             <div class="avatar-circle" id="avatarCircle">
@@ -593,9 +608,9 @@
 
       <!-- ===== 暂停弹窗 ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
+        <div class="modal-title" style="font-size: 30px">⏸ 暂停</div>
         <div class="modal-card">
-          <h2>⏸ 暂停</h2>
-          <div style="margin: 14px 0">
+          <div style="margin: 10px 0">
             <div class="settings-row">
               <span>🎵 音乐</span>
               <div class="toggle-wrap">
@@ -634,15 +649,17 @@
         </div>
       </div>
 
-      <!-- 结算弹窗 -->
+      <!-- ===== 结算弹窗（时间到放在外部） ===== -->
       <div id="resultModal" class="modal-overlay hidden">
+        <div class="modal-title">🍳 时间到！</div>
         <div class="modal-card">
-          <h2>🍳 时间到！</h2>
           <div class="score-number" id="finalScore">0</div>
-          <div style="font-size: 12px; color: #7a7268">总金币</div>
+          <div style="font-size: 14px; color: #7a7268; margin: 6px 0">
+            总金币
+          </div>
           <div
             id="finalRank"
-            style="font-size: 20px; margin: 12px 0; color: #e67e22"
+            style="font-size: 22px; margin: 10px 0; color: #e67e22"
           ></div>
           <div class="stat-row">
             <div class="stat-item">
@@ -836,6 +853,10 @@
           headDetecting: false,
           headError: null,
           headStarting: false,
+          // 新增：标记是否已检测到面部（用于控制食材生成）
+          headFaceDetected: false,
+          // 触屏模式标识
+          touchOnlyMode: false,
         };
 
         // ============================================================
@@ -1117,10 +1138,18 @@
         }
 
         // ============================================================
-        // 7. 更新逻辑（头控灵敏度提升 + 食材平滑）
+        // 7. 更新逻辑（头控灵敏度提升 + 食材平滑 + 等待面部）
         // ============================================================
         function addIngredient() {
           if (!state.playing || state.paused || state.over) return;
+          // 如果头控模式开启但尚未检测到面部，则暂停生成
+          if (
+            state.headControlEnabled &&
+            !state.headFaceDetected &&
+            !state.touchOnlyMode
+          ) {
+            return;
+          }
           const cellH = canvas.height / ROWS;
           if (
             state.ings.length &&
@@ -1141,13 +1170,13 @@
             x: sx,
             y: cellH * 0.2,
             sx,
-            sp: 1.8 + rand(0, 0.6),
+            sp: 2.2 + rand(0, 0.6), // 速度稍微加快
             sz: 32 + rand(0, 8),
             alive: true,
           });
         }
 
-        function updateIngs() {
+        function updateIngs(dt) {
           const cellH = canvas.height / ROWS;
           for (let i = state.ings.length - 1; i >= 0; i--) {
             const ing = state.ings[i];
@@ -1155,9 +1184,8 @@
               state.ings.splice(i, 1);
               continue;
             }
-            // 平滑移动，避免卡顿：使用固定增量，但依赖dt，这里dt由外部传入，我们直接累加
-            // 在update中调用时已乘dt，这里不再乘，直接加sp
-            ing.y += ing.sp;
+            // 乘以 dt 保证平滑
+            ing.y += ing.sp * dt * 60; // 乘以60保持与之前速度相当（原来每帧移动sp，现在每秒移动sp*60）
             ing.x = ing.sx + Math.sin(ing.y * 0.02 + Date.now() * 0.0005) * 2;
             if (ing.y > cellH * 6.8) {
               state.ings.splice(i, 1);
@@ -1259,29 +1287,37 @@
             state.qTimer = 0;
             addIngredient();
           }
-          updateIngs();
+          updateIngs(dt);
           updateFly(dt);
           updateFloatingTexts(dt);
 
-          // ---- 头控融合（灵敏度大幅提升） ----
+          // ---- 头控融合 ----
           if (
             state.headControlEnabled &&
             state.headDetecting &&
             state.headMeshReady
           ) {
             const tilt = state.headSmoothTilt;
-            // 映射范围扩大到 0.6，且死区极小
             const mappedX = 0.5 + tilt * 0.6;
             state.targetX = clamp(mappedX, 0.03, 0.97);
             updateHeadIndicator(
               true,
               `头控 ${Math.abs(tilt) > 0.02 ? (tilt < 0 ? "←左倾" : "右倾→") : "居中"}`,
             );
+            // 检测到面部
+            if (!state.headFaceDetected) {
+              state.headFaceDetected = true;
+              // 如果之前因为等待面部而未生成食材，现在可以开始生成了
+            }
           } else if (state.headControlEnabled && !state.headDetecting) {
             updateHeadIndicator(false, "寻找面部...");
+            // 如果头控启用但未检测到，且不是触屏模式，则标记为未检测到
+            if (!state.touchOnlyMode) {
+              state.headFaceDetected = false;
+            }
           }
 
-          // 平滑系数进一步提高，响应更快 (0.38 -> 0.52)
+          // 平滑移动
           state.smoothTargetX = lerp(state.smoothTargetX, state.targetX, 0.52);
           if (state.hurtTimer > 0) {
             state.hurtTimer -= dt;
@@ -1776,13 +1812,14 @@
         // 11. 游戏结束 & 重置
         // ============================================================
         function getRank(g) {
+          // 去掉刀具符号
           if (g >= 200) return "👑 巅峰厨神";
           if (g >= 150) return "🌟 荣耀厨王";
           if (g >= 120) return "🔥 特级厨师";
           if (g >= 90) return "⭐ 高级厨师";
-          if (g >= 60) return "🔪 中级厨师";
-          if (g >= 30) return "🍳 初级厨师";
-          return "👶 学徒";
+          if (g >= 60) return "中级厨师";
+          if (g >= 30) return "初级厨师";
+          return "学徒";
         }
 
         function endGame() {
@@ -1833,6 +1870,7 @@
           state.qTimer = 0;
           state.headTilt = 0;
           state.headSmoothTilt = 0;
+          state.headFaceDetected = false; // 重置面部检测状态
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
           state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
           state.rightD = { dish: "...", emoji: "..." };
@@ -1858,12 +1896,17 @@
           state.playing = true;
           startBGM();
           updateUI();
+          // 如果头控启用且未激活，尝试启动
           if (
             state.headControlEnabled &&
             !state.headControlActive &&
             !state.headStarting
           ) {
             startHeadControl();
+          }
+          // 如果是触屏模式，直接允许食材生成
+          if (state.touchOnlyMode) {
+            state.headFaceDetected = true;
           }
         }
 
@@ -1882,7 +1925,7 @@
         }
 
         // ============================================================
-        // 12. 头控核心（进一步优化响应）
+        // 12. 头控核心
         // ============================================================
         let faceMesh = null;
         let camera = null;
@@ -1931,11 +1974,9 @@
                   const rightEye = landmarks[263];
                   if (leftEye && rightEye) {
                     const diff = leftEye.y - rightEye.y;
-                    // 增大增益，死区更小
                     let rawTilt = clamp(diff * 5.0, -1, 1);
                     if (Math.abs(rawTilt) < 0.02) rawTilt = 0;
                     state.headTilt = rawTilt;
-                    // 平滑系数提高，减少延迟
                     state.headSmoothTilt = lerp(
                       state.headSmoothTilt,
                       state.headTilt,
@@ -1944,6 +1985,10 @@
                     state.headDetecting = true;
                     state.headError = null;
                     headFrameCount++;
+                    // 检测到面部，标记已检测
+                    if (!state.headFaceDetected && !state.touchOnlyMode) {
+                      state.headFaceDetected = true;
+                    }
                   } else {
                     state.headDetecting = false;
                   }
@@ -2039,6 +2084,7 @@
           state.headStarting = false;
           state.headTilt = 0;
           state.headSmoothTilt = 0;
+          state.headFaceDetected = false;
           headControlPaused = false;
           if (camera) {
             try {
@@ -2233,20 +2279,28 @@
         // 15. 事件绑定
         // ============================================================
 
+        // “允许并开始”：头控模式
         document
           .getElementById("startWithCameraBtn")
           .addEventListener("click", () => {
             document.getElementById("startOverlay").classList.add("hidden");
             initAudio();
+            state.touchOnlyMode = false;
+            // 先标记头控启用，但等待面部检测才生成食材
+            state.headControlEnabled = true;
+            state.headFaceDetected = false;
             startGame();
             startHeadControl().catch((err) => {
               console.warn("头控启动失败，使用触屏模式:", err);
               state.headControlEnabled = false;
               state.headControlActive = false;
+              state.touchOnlyMode = true;
+              state.headFaceDetected = true;
               updateHeadIndicator(false, "触屏模式");
             });
           });
 
+        // “触屏玩法”：纯触屏
         document
           .getElementById("startTouchBtn")
           .addEventListener("click", () => {
@@ -2255,10 +2309,14 @@
             if (state.headControlEnabled) {
               stopHeadControl();
             }
+            state.touchOnlyMode = true;
+            state.headFaceDetected = true; // 允许食材生成
+            state.headControlEnabled = false;
             startGame();
             updateHeadIndicator(false, "触屏模式");
           });
 
+        // 头像更换
         openAvatarBtn.addEventListener("click", openAvatarModal);
         avatarCloseBtn.addEventListener("click", () => closeAvatarModal(false));
         avatarModal.addEventListener("click", (e) => {
@@ -2269,36 +2327,58 @@
         );
         avatarFileInput.addEventListener("change", handleAvatarFileChange);
 
+        // 暂停/继续
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
         });
 
+        // 重新开始（暂停界面）
         document.getElementById("restartBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
           const headWasOn = state.headControlEnabled;
+          const wasTouchOnly = state.touchOnlyMode;
           if (headWasOn) stopHeadControl();
           resetGameState();
+          state.touchOnlyMode = wasTouchOnly;
+          if (wasTouchOnly) {
+            state.headFaceDetected = true;
+          } else {
+            state.headFaceDetected = false;
+            state.headControlEnabled = true;
+          }
           startGame();
-          if (headWasOn) {
+          if (headWasOn && !wasTouchOnly) {
             startHeadControl().catch(() => {});
           }
         });
+
+        // 再来一局（结算界面）
         document.getElementById("retryBtn").addEventListener("click", () => {
           const headWasOn = state.headControlEnabled;
+          const wasTouchOnly = state.touchOnlyMode;
           if (headWasOn) stopHeadControl();
           resetGameState();
+          state.touchOnlyMode = wasTouchOnly;
+          if (wasTouchOnly) {
+            state.headFaceDetected = true;
+          } else {
+            state.headFaceDetected = false;
+            state.headControlEnabled = true;
+          }
           startGame();
-          if (headWasOn) {
+          if (headWasOn && !wasTouchOnly) {
             startHeadControl().catch(() => {});
           }
         });
+
         document.getElementById("rankBtn").addEventListener("click", () => {
           alert(
             `我的评级：${getRank(state.totalGold)}\n总金币：${state.totalGold}`,
           );
         });
 
+        // 音效开关
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
@@ -2320,6 +2400,7 @@
         // ============================================================
         loadImgs(() => {
           resetGameState();
+          // 默认显示开始界面
           document.getElementById("startOverlay").classList.remove("hidden");
           document.getElementById("resultModal").classList.add("hidden");
           document.getElementById("pauseModal").classList.add("hidden");
@@ -2342,7 +2423,7 @@
           }
         });
 
-        console.log("🍳 像素厨房已启动！头控灵敏度已优化，食材移动更平滑。");
+        console.log("🍳 像素厨房已启动！头控灵敏度优化，食材平滑生成。");
       })();
     </script>
   </body>
