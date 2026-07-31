@@ -158,7 +158,7 @@
         opacity: 0.9;
       }
 
-      /* 弹窗整体布局 - 调整位置 */
+      /* 弹窗整体布局 - 进一步下移 */
       .modal-overlay {
         position: absolute;
         top: 0;
@@ -172,7 +172,7 @@
         justify-content: flex-start;
         align-items: center;
         z-index: 100;
-        padding: 28px 16px 20px;
+        padding: 36px 16px 20px;
         /* 增加顶部padding，整体下移 */
         animation: fadeIn 0.3s ease;
       }
@@ -190,12 +190,13 @@
         }
       }
 
-      /* 标题在弹窗外部上方 */
+      /* 标题在弹窗外部上方，与卡片留间距 */
       .modal-title {
         font-size: 34px;
         color: #e67e22;
         text-shadow: 3px 3px 0 #f1c40f;
-        margin-bottom: 14px;
+        margin-bottom: 20px;
+        /* 增加与卡片的间距 */
         text-align: center;
         letter-spacing: 2px;
         line-height: 1.3;
@@ -340,7 +341,8 @@
         padding: 8px 0;
         border-bottom: 2px dotted #d0c8b8;
         font-size: 13px;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        /* 防止换行 */
         gap: 6px;
       }
       .settings-row:last-child {
@@ -348,9 +350,11 @@
       }
       .settings-row .toggle-wrap {
         display: flex;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
+        /* 强制一行 */
         gap: 4px;
         justify-content: flex-end;
+        align-items: center;
       }
       .toggle-btn {
         padding: 3px 10px;
@@ -358,15 +362,26 @@
         border: 2px solid #b0a898;
         background: #f5efe6;
         color: #3d3a36;
-        font-size: 10px;
+        font-size: 14px;
+        /* 增大字体 */
         cursor: pointer;
         font-family: "Press Start 2P", monospace;
         white-space: nowrap;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
       .toggle-btn.active {
         background: #f1c40f;
         border-color: #d4ac0d;
         color: #2c2a26;
+      }
+      /* 速度按钮中的小方块（0.75x和1.25x） */
+      .toggle-btn.speed-square {
+        width: 32px;
+        padding: 0;
+        font-size: 12px;
       }
       .score-number {
         font-size: 52px;
@@ -495,21 +510,21 @@
         margin-top: 16px;
       }
 
-      /* 头像弹窗单独下移 */
+      /* 头像弹窗单独下移更多 */
       #avatarModal {
-        padding-top: 48px;
+        padding-top: 56px;
       }
 
       @media (max-width: 480px) {
         .modal-overlay {
-          padding: 22px 12px 16px;
+          padding: 28px 12px 16px;
         }
         #avatarModal {
-          padding-top: 36px;
+          padding-top: 44px;
         }
         .modal-title {
           font-size: 26px;
-          margin-bottom: 10px;
+          margin-bottom: 14px;
         }
         .modal-card {
           padding: 16px 16px 20px;
@@ -566,8 +581,13 @@
           padding: 6px 0;
         }
         .toggle-btn {
-          font-size: 9px;
+          font-size: 12px;
           padding: 2px 8px;
+          height: 28px;
+        }
+        .toggle-btn.speed-square {
+          width: 28px;
+          font-size: 10px;
         }
         .settings-row .toggle-wrap {
           gap: 2px;
@@ -686,15 +706,19 @@
                 </button>
               </div>
             </div>
-            <!-- 传送带速度调节：5个选项 -->
+            <!-- 传送带速度调节：5个选项，0.75和1.25为小方块 -->
             <div class="settings-row">
               <span>📦 传送带速度</span>
               <div class="toggle-wrap">
                 <button class="toggle-btn" data-setting="speed" data-val="0.5">
                   0.5x
                 </button>
-                <button class="toggle-btn" data-setting="speed" data-val="0.75">
-                  0.75x
+                <button
+                  class="toggle-btn speed-square"
+                  data-setting="speed"
+                  data-val="0.75"
+                >
+                  ¾
                 </button>
                 <button
                   class="toggle-btn active"
@@ -703,8 +727,12 @@
                 >
                   1x
                 </button>
-                <button class="toggle-btn" data-setting="speed" data-val="1.25">
-                  1.25x
+                <button
+                  class="toggle-btn speed-square"
+                  data-setting="speed"
+                  data-val="1.25"
+                >
+                  ⁵⁄₄
                 </button>
                 <button class="toggle-btn" data-setting="speed" data-val="1.5">
                   1.5x
@@ -1249,7 +1277,6 @@
             lane === 0
               ? cellW * 0.5 + rand(0, cellW * 0.3)
               : cellW * 3.1 + rand(0, cellW * 0.2);
-          // 【速度调整】基础速度从 2.2 降至 1.8，更慢一些
           const baseSp = 1.8 + rand(0, 0.5);
           state.ings.push({
             ...type,
@@ -1938,8 +1965,24 @@
           document.getElementById("resultModal").classList.remove("hidden");
         }
 
-        // 重置所有头控状态
+        // 重置所有头控状态（彻底清理）
         function resetHeadControlState() {
+          // 先停止摄像头和模型
+          if (camera) {
+            try {
+              camera.stop();
+            } catch (_) {}
+            camera = null;
+          }
+          if (faceMesh) {
+            try {
+              faceMesh.close();
+            } catch (_) {}
+            faceMesh = null;
+          }
+          cameraVideo.classList.remove("active");
+          headControlInitialized = false;
+          headControlPaused = false;
           state.headControlEnabled = false;
           state.headControlActive = false;
           state.headDetecting = false;
@@ -1951,6 +1994,7 @@
           state.headCameraReady = false;
           state.headMeshReady = false;
           state.timerStarted = false;
+          updateHeadIndicator(false, "头控关");
         }
 
         function resetGameState() {
@@ -1982,11 +2026,9 @@
           state.autoServe = false;
           state.beltOff = 0;
           state.qTimer = 0;
-          // 重置所有头控状态
+          // 重置头控状态（但不重置 touchOnlyMode 和 speedMultiplier）
           resetHeadControlState();
-          // 重置触屏模式标记，但保留 speedMultiplier
-          state.touchOnlyMode = false;
-          // 保留 speedMultiplier 不变
+          // 保留 touchOnlyMode 和 speedMultiplier，在外部设置
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
           state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
           state.rightD = { dish: "...", emoji: "..." };
@@ -2040,7 +2082,7 @@
         }
 
         // ============================================================
-        // 12. 头控核心（修复重新开始问题）
+        // 12. 头控核心（彻底重新初始化）
         // ============================================================
         let faceMesh = null;
         let camera = null;
@@ -2057,13 +2099,21 @@
                 reject(new Error("MediaPipe 库未加载，请检查网络连接。"));
                 return;
               }
-              // 确保旧实例已清理
+              // 确保旧实例完全销毁
               if (faceMesh) {
                 try {
                   faceMesh.close();
                 } catch (_) {}
                 faceMesh = null;
               }
+              if (camera) {
+                try {
+                  camera.stop();
+                } catch (_) {}
+                camera = null;
+              }
+              cameraVideo.classList.remove("active");
+
               faceMesh = new FaceMesh({
                 locateFile: (file) => {
                   return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
@@ -2113,12 +2163,6 @@
                 }
               });
 
-              if (camera) {
-                try {
-                  camera.stop();
-                } catch (_) {}
-                camera = null;
-              }
               camera = new Camera(cameraVideo, {
                 onFrame: async () => {
                   if (
@@ -2207,16 +2251,16 @@
             try {
               camera.stop();
             } catch (_) {}
+            camera = null;
           }
           if (faceMesh) {
             try {
               faceMesh.close();
             } catch (_) {}
+            faceMesh = null;
           }
           cameraVideo.classList.remove("active");
           headControlInitialized = false;
-          faceMesh = null;
-          camera = null;
           updateHeadIndicator(false, "头控关");
         }
 
@@ -2452,18 +2496,16 @@
           if (state.paused) togglePause();
         });
 
-        // 重新开始（暂停界面） - 修复头控问题
+        // 重新开始（暂停界面）- 彻底修复头控
         document.getElementById("restartBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
           const headWasOn = state.headControlEnabled;
           const wasTouchOnly = state.touchOnlyMode;
-          // 完全停止头控，清理所有资源
-          if (headWasOn) {
-            stopHeadControl();
-          }
-          // 重置所有状态（包括头控状态）
+          // 彻底停止所有头控资源
+          stopHeadControl(); // 这个函数会清理 camera, faceMesh 并重置状态
+          // 重置游戏状态（重置大部分状态，但保留 speedMultiplier 和 touchOnlyMode 稍后重新设置）
           resetGameState();
-          // 根据模式重新设置
+          // 重新设置模式
           state.touchOnlyMode = wasTouchOnly;
           if (wasTouchOnly) {
             state.headFaceDetected = true;
@@ -2476,21 +2518,19 @@
           }
           // 启动游戏
           startGame();
-          // 如果是头控模式，延迟启动头控，确保资源释放
+          // 如果是头控模式，重新初始化头控（延迟确保资源释放）
           if (headWasOn && !wasTouchOnly) {
             setTimeout(() => {
               startHeadControl().catch(() => {});
-            }, 300);
+            }, 400);
           }
         });
 
-        // 再来一局（结算界面） - 同样修复
+        // 再来一局（结算界面）
         document.getElementById("retryBtn").addEventListener("click", () => {
           const headWasOn = state.headControlEnabled;
           const wasTouchOnly = state.touchOnlyMode;
-          if (headWasOn) {
-            stopHeadControl();
-          }
+          stopHeadControl();
           resetGameState();
           state.touchOnlyMode = wasTouchOnly;
           if (wasTouchOnly) {
@@ -2506,7 +2546,7 @@
           if (headWasOn && !wasTouchOnly) {
             setTimeout(() => {
               startHeadControl().catch(() => {});
-            }, 300);
+            }, 400);
           }
         });
 
@@ -2575,7 +2615,7 @@
           }
         });
 
-        console.log("🍳 像素厨房已启动！头控重新开始已修复，速度可调。");
+        console.log("🍳 像素厨房已启动！重新开始头控已修复，速度可调。");
       })();
     </script>
   </body>
