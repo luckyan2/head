@@ -157,6 +157,8 @@
       #camera-preview.active {
         opacity: 0.9;
       }
+
+      /* 弹窗整体布局 - 调整位置 */
       .modal-overlay {
         position: absolute;
         top: 0;
@@ -168,10 +170,10 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
-        /* 整体上移 */
         align-items: center;
         z-index: 100;
-        padding: 10px 16px 20px;
+        padding: 28px 16px 20px;
+        /* 增加顶部padding，整体下移 */
         animation: fadeIn 0.3s ease;
       }
       .modal-overlay.hidden {
@@ -193,7 +195,7 @@
         font-size: 34px;
         color: #e67e22;
         text-shadow: 3px 3px 0 #f1c40f;
-        margin-bottom: 16px;
+        margin-bottom: 14px;
         text-align: center;
         letter-spacing: 2px;
         line-height: 1.3;
@@ -214,7 +216,6 @@
         font-family: "Press Start 2P", monospace;
         position: relative;
         margin-top: 0;
-        /* 去掉负值，避免遮挡标题 */
         flex-shrink: 0;
       }
       .modal-card .close-btn {
@@ -257,7 +258,6 @@
         border: 4px solid #d68910;
         border-radius: 8px;
         font-size: 16px;
-        /* 增大字体 */
         font-weight: bold;
         color: #2c2a26;
         cursor: pointer;
@@ -337,22 +337,31 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding: 10px 0;
+        padding: 8px 0;
         border-bottom: 2px dotted #d0c8b8;
         font-size: 13px;
+        flex-wrap: wrap;
+        gap: 6px;
       }
       .settings-row:last-child {
         border-bottom: none;
       }
+      .settings-row .toggle-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        justify-content: flex-end;
+      }
       .toggle-btn {
-        padding: 4px 14px;
+        padding: 3px 10px;
         border-radius: 4px;
         border: 2px solid #b0a898;
         background: #f5efe6;
         color: #3d3a36;
-        font-size: 12px;
+        font-size: 10px;
         cursor: pointer;
         font-family: "Press Start 2P", monospace;
+        white-space: nowrap;
       }
       .toggle-btn.active {
         background: #f1c40f;
@@ -486,9 +495,17 @@
         margin-top: 16px;
       }
 
+      /* 头像弹窗单独下移 */
+      #avatarModal {
+        padding-top: 48px;
+      }
+
       @media (max-width: 480px) {
         .modal-overlay {
-          padding: 6px 12px 12px;
+          padding: 22px 12px 16px;
+        }
+        #avatarModal {
+          padding-top: 36px;
         }
         .modal-title {
           font-size: 26px;
@@ -549,8 +566,11 @@
           padding: 6px 0;
         }
         .toggle-btn {
-          font-size: 10px;
-          padding: 2px 10px;
+          font-size: 9px;
+          padding: 2px 8px;
+        }
+        .settings-row .toggle-wrap {
+          gap: 2px;
         }
       }
     </style>
@@ -666,12 +686,15 @@
                 </button>
               </div>
             </div>
-            <!-- 传送带速度调节 -->
+            <!-- 传送带速度调节：5个选项 -->
             <div class="settings-row">
               <span>📦 传送带速度</span>
               <div class="toggle-wrap">
                 <button class="toggle-btn" data-setting="speed" data-val="0.5">
                   0.5x
+                </button>
+                <button class="toggle-btn" data-setting="speed" data-val="0.75">
+                  0.75x
                 </button>
                 <button
                   class="toggle-btn active"
@@ -679,6 +702,9 @@
                   data-val="1"
                 >
                   1x
+                </button>
+                <button class="toggle-btn" data-setting="speed" data-val="1.25">
+                  1.25x
                 </button>
                 <button class="toggle-btn" data-setting="speed" data-val="1.5">
                   1.5x
@@ -915,9 +941,7 @@
           headStarting: false,
           headFaceDetected: false,
           touchOnlyMode: false,
-          // 倒计时是否开始（等待面部检测）
           timerStarted: false,
-          // 传送带速度倍率
           speedMultiplier: 1,
         };
 
@@ -1225,7 +1249,8 @@
             lane === 0
               ? cellW * 0.5 + rand(0, cellW * 0.3)
               : cellW * 3.1 + rand(0, cellW * 0.2);
-          const baseSp = 2.2 + rand(0, 0.6);
+          // 【速度调整】基础速度从 2.2 降至 1.8，更慢一些
+          const baseSp = 1.8 + rand(0, 0.5);
           state.ings.push({
             ...type,
             lane,
@@ -1337,7 +1362,6 @@
         function update(dt) {
           if (!state.playing || state.paused || state.over) return;
 
-          // 倒计时：仅当 timerStarted 为 true 时减少时间
           if (state.timerStarted) {
             state.time -= dt;
             if (state.time <= 0) {
@@ -1366,7 +1390,6 @@
             const tilt = state.headSmoothTilt;
             const mappedX = 0.5 + tilt * 0.6;
             state.targetX = clamp(mappedX, 0.03, 0.97);
-            // 简写方向文字
             let dirText = "中";
             if (Math.abs(tilt) > 0.03) {
               dirText = tilt < 0 ? "←左" : "右→";
@@ -1374,7 +1397,6 @@
             updateHeadIndicator(true, dirText);
             if (!state.headFaceDetected && !state.touchOnlyMode) {
               state.headFaceDetected = true;
-              // 如果倒计时未开始，则启动
               if (!state.timerStarted) {
                 state.timerStarted = true;
               }
@@ -1383,13 +1405,9 @@
             updateHeadIndicator(false, "寻找面部");
             if (!state.touchOnlyMode) {
               state.headFaceDetected = false;
-              // 如果之前倒计时开始了，但面部丢失，我们暂停倒计时？但一般不会，为了公平，一旦开始就不暂停。
-              // 但为了符合逻辑，我们可以在丢失面部时暂停倒计时，但用户要求“寻找面部成功后再开始倒计时”，所以第一次成功后就不再暂停。
-              // 所以我们仅当首次成功时才启动，之后不再关闭。
             }
           }
 
-          // 触屏模式直接启动计时
           if (state.touchOnlyMode && !state.timerStarted) {
             state.timerStarted = true;
           }
@@ -1841,7 +1859,6 @@
             s = Math.floor(state.time % 60);
           const timeStr = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
           topTimeEl.textContent = timeStr;
-          // 最后10秒变红闪烁
           if (state.time <= 10 && state.time > 0) {
             topTimeEl.classList.add("blink-red");
           } else {
@@ -1921,6 +1938,21 @@
           document.getElementById("resultModal").classList.remove("hidden");
         }
 
+        // 重置所有头控状态
+        function resetHeadControlState() {
+          state.headControlEnabled = false;
+          state.headControlActive = false;
+          state.headDetecting = false;
+          state.headStarting = false;
+          state.headFaceDetected = false;
+          state.headTilt = 0;
+          state.headSmoothTilt = 0;
+          state.headError = null;
+          state.headCameraReady = false;
+          state.headMeshReady = false;
+          state.timerStarted = false;
+        }
+
         function resetGameState() {
           state.playing = false;
           state.paused = false;
@@ -1950,11 +1982,11 @@
           state.autoServe = false;
           state.beltOff = 0;
           state.qTimer = 0;
-          state.headTilt = 0;
-          state.headSmoothTilt = 0;
-          state.headFaceDetected = false;
-          state.timerStarted = false;
-          // 不重置 speedMultiplier，保留用户设置
+          // 重置所有头控状态
+          resetHeadControlState();
+          // 重置触屏模式标记，但保留 speedMultiplier
+          state.touchOnlyMode = false;
+          // 保留 speedMultiplier 不变
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
           state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
           state.rightD = { dish: "...", emoji: "..." };
@@ -2008,7 +2040,7 @@
         }
 
         // ============================================================
-        // 12. 头控核心（修复重新开始识别问题）
+        // 12. 头控核心（修复重新开始问题）
         // ============================================================
         let faceMesh = null;
         let camera = null;
@@ -2025,6 +2057,7 @@
                 reject(new Error("MediaPipe 库未加载，请检查网络连接。"));
                 return;
               }
+              // 确保旧实例已清理
               if (faceMesh) {
                 try {
                   faceMesh.close();
@@ -2168,6 +2201,7 @@
           state.headTilt = 0;
           state.headSmoothTilt = 0;
           state.headFaceDetected = false;
+          state.headError = null;
           headControlPaused = false;
           if (camera) {
             try {
@@ -2418,48 +2452,61 @@
           if (state.paused) togglePause();
         });
 
-        // 重新开始（暂停界面）
+        // 重新开始（暂停界面） - 修复头控问题
         document.getElementById("restartBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
           const headWasOn = state.headControlEnabled;
           const wasTouchOnly = state.touchOnlyMode;
-          // 完全停止头控
-          if (headWasOn) stopHeadControl();
+          // 完全停止头控，清理所有资源
+          if (headWasOn) {
+            stopHeadControl();
+          }
+          // 重置所有状态（包括头控状态）
           resetGameState();
+          // 根据模式重新设置
           state.touchOnlyMode = wasTouchOnly;
-          state.headFaceDetected = false;
-          state.timerStarted = false;
           if (wasTouchOnly) {
             state.headFaceDetected = true;
             state.timerStarted = true;
+            state.headControlEnabled = false;
           } else {
+            state.headFaceDetected = false;
+            state.timerStarted = false;
             state.headControlEnabled = true;
           }
+          // 启动游戏
           startGame();
+          // 如果是头控模式，延迟启动头控，确保资源释放
           if (headWasOn && !wasTouchOnly) {
-            // 重新启动头控，并确保重新初始化
-            startHeadControl().catch(() => {});
+            setTimeout(() => {
+              startHeadControl().catch(() => {});
+            }, 300);
           }
         });
 
-        // 再来一局（结算界面）
+        // 再来一局（结算界面） - 同样修复
         document.getElementById("retryBtn").addEventListener("click", () => {
           const headWasOn = state.headControlEnabled;
           const wasTouchOnly = state.touchOnlyMode;
-          if (headWasOn) stopHeadControl();
+          if (headWasOn) {
+            stopHeadControl();
+          }
           resetGameState();
           state.touchOnlyMode = wasTouchOnly;
-          state.headFaceDetected = false;
-          state.timerStarted = false;
           if (wasTouchOnly) {
             state.headFaceDetected = true;
             state.timerStarted = true;
+            state.headControlEnabled = false;
           } else {
+            state.headFaceDetected = false;
+            state.timerStarted = false;
             state.headControlEnabled = true;
           }
           startGame();
           if (headWasOn && !wasTouchOnly) {
-            startHeadControl().catch(() => {});
+            setTimeout(() => {
+              startHeadControl().catch(() => {});
+            }, 300);
           }
         });
 
@@ -2469,13 +2516,12 @@
           );
         });
 
-        // 音效开关
+        // 音效和速度开关
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
               v = this.dataset.val;
             if (s === "speed") {
-              // 速度调节
               this.parentElement
                 .querySelectorAll(".toggle-btn")
                 .forEach((x) => x.classList.remove("active"));
@@ -2529,9 +2575,7 @@
           }
         });
 
-        console.log(
-          "🍳 像素厨房已启动！头控灵敏度优化，食材平滑生成，支持速度调节。",
-        );
+        console.log("🍳 像素厨房已启动！头控重新开始已修复，速度可调。");
       })();
     </script>
   </body>
