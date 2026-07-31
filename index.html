@@ -6,12 +6,13 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头控+新改出餐</title>
+    <title>像素厨房 · 头控+自动出餐</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
     <style>
       * {
         margin: 0;
@@ -177,7 +178,8 @@
         padding: 10px 20px;
         font-size: 11px;
         border-width: 3px;
-      }
+        box-shadow: 0 4px 0 #95a5a6;
+      } /* 灰色阴影 */
       .modal-card .btn-secondary {
         background: #ecf0f1;
         border-color: #bdc3c7;
@@ -234,36 +236,6 @@
         font-size: 12px;
         color: #7a7268;
       }
-      #head-status {
-        font-size: 12px;
-        color: #27ae60;
-        padding: 4px 10px;
-        background: rgba(39, 174, 96, 0.12);
-        border-radius: 12px;
-        display: inline-block;
-        margin-top: 8px;
-      }
-      #head-status.off {
-        color: #e74c3c;
-        background: rgba(231, 76, 60, 0.12);
-      }
-      .status-dot {
-        display: inline-block;
-        width: 10px;
-        height: 10px;
-        border-radius: 50%;
-        margin-right: 6px;
-        vertical-align: middle;
-      }
-      .status-dot.on {
-        background: #27ae60;
-      }
-      .status-dot.off {
-        background: #e74c3c;
-      }
-      .status-dot.wait {
-        background: #f39c12;
-      }
     </style>
   </head>
   <body>
@@ -277,13 +249,11 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
       <video id="webcam" playsinline muted></video>
+      <!-- 开启摄像头弹窗 -->
       <div id="cameraModal" class="modal-overlay">
         <div class="modal-card">
           <h2>📷 开启摄像头</h2>
           <p>向左歪头 → 接左道食材<br />向右歪头 → 接右道食材</p>
-          <div id="head-status" class="off">
-            <span class="status-dot off"></span>等待启动
-          </div>
           <button class="btn" id="cameraAllowBtn">📸 允许并开始</button>
           <button
             class="btn btn-small"
@@ -307,6 +277,7 @@
           />
         </div>
       </div>
+      <!-- 暂停弹窗 -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -348,6 +319,7 @@
           </div>
         </div>
       </div>
+      <!-- 结算弹窗 -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>🍳 时间到！</h2>
@@ -374,6 +346,7 @@
           </div>
         </div>
       </div>
+      <!-- 开始游戏弹窗（仅在首次或重置时显示） -->
       <div
         id="startOverlay"
         class="modal-overlay"
@@ -388,9 +361,6 @@
     </div>
     <script>
       (() => {
-        // ============================================================
-        // 1. DOM 引用与 Canvas 自适应
-        // ============================================================
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const video = document.getElementById("webcam");
@@ -399,7 +369,6 @@
         const topGoldEl = document.getElementById("top-gold");
         const topDishesEl = document.getElementById("top-dishes");
         const avatarInput = document.getElementById("avatarInput");
-        const headStatusEl = document.getElementById("head-status");
 
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
@@ -409,9 +378,10 @@
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
 
-        // ============================================================
-        // 2. 音频
-        // ============================================================
+        const ROWS = 10,
+          COLS = 4,
+          GAME_DURATION = 90,
+          INITIAL_GOLD = 50;
         let audioCtx;
         function initAudio() {
           if (!audioCtx)
@@ -483,13 +453,6 @@
           }
         }
 
-        // ============================================================
-        // 3. 游戏状态 & 常量
-        // ============================================================
-        const ROWS = 10,
-          COLS = 4,
-          GAME_DURATION = 90,
-          INITIAL_GOLD = 50;
         const state = {
           playing: false,
           paused: false,
@@ -503,9 +466,9 @@
           maxCombo: 0,
           chefX: 0.5,
           targetX: 0.5,
+          smoothTargetX: 0.5, // 平滑目标位置
           headAngle: 0,
-          zeroAngle: 0,
-          calibrated: false,
+          headY: 0.5,
           ings: [],
           pot: {},
           menu: [],
@@ -528,9 +491,6 @@
           rightDemandTimer: null,
           avatarImg: null,
           hurtTimer: 0,
-          faceDetected: false,
-          _busy: false,
-          cameraRunning: false,
         };
 
         const TYPES = [
@@ -661,9 +621,6 @@
           return a + (b - a) * t;
         }
 
-        // ============================================================
-        // 4. 游戏逻辑函数（菜单、食材、碰撞等）
-        // ============================================================
         function genMenu() {
           const demands = [];
           if (
@@ -704,6 +661,7 @@
           state.reward = recipe.reward;
           state.cost = cost;
         }
+
         function checkMenu() {
           if (state.menuDone) return true;
           let ok = true;
@@ -717,6 +675,7 @@
           }
           return false;
         }
+
         function startRightDemandTimer() {
           if (state.rightDemandTimer) clearTimeout(state.rightDemandTimer);
           state.rightDemandTimer = setTimeout(() => {
@@ -730,6 +689,7 @@
             }
           }, 10000);
         }
+
         function autoServe() {
           if (!state.playing || state.paused || state.over) return;
           if (!state.menuDone) return;
@@ -790,6 +750,7 @@
           genMenu();
           updateUI();
         }
+
         function getSmartType() {
           const needed = state.menu
             .filter((i) => state.pot[i.id] < i.n)
@@ -800,6 +761,7 @@
           }
           return TYPES[randi(0, TYPES.length - 1)];
         }
+
         function addIngredient() {
           if (!state.playing || state.paused || state.over) return;
           const cellH = canvas.height / ROWS;
@@ -827,6 +789,7 @@
             alive: true,
           });
         }
+
         function updateIngs() {
           const cellH = canvas.height / ROWS;
           for (let i = state.ings.length - 1; i >= 0; i--) {
@@ -882,13 +845,13 @@
                   life: 1.2,
                   color: "#e74c3c",
                 });
-                sfxMiss();
               }
               state.ings.splice(i, 1);
               checkMenu();
             }
           }
         }
+
         function updateFly(dt) {
           for (let i = state.fly.length - 1; i >= 0; i--) {
             const f = state.fly[i];
@@ -907,6 +870,7 @@
             }
           }
         }
+
         function updateFloatingTexts(dt) {
           for (let i = state.floatingTexts.length - 1; i >= 0; i--) {
             const ft = state.floatingTexts[i];
@@ -922,9 +886,6 @@
           }
         }
 
-        // ============================================================
-        // 5. 核心更新函数（包含头控）
-        // ============================================================
         function update(dt) {
           if (!state.playing || state.paused || state.over) return;
           state.time -= dt;
@@ -943,23 +904,12 @@
           updateFly(dt);
           updateFloatingTexts(dt);
 
-          // ---- 头控更新（修复核心） ----
-          if (state.calibrated && state.faceDetected) {
-            let tilt = (state.headAngle - state.zeroAngle) / 12; // 灵敏度可调
-            tilt = clamp(tilt, -1, 1);
-            // 死区：小角度不响应，避免抖动
-            if (Math.abs(state.headAngle - state.zeroAngle) > 1.5) {
-              state.targetX = clamp(0.5 - tilt * 0.75, 0.05, 0.95);
-            }
-          } else {
-            // 未校准或面部丢失时缓慢回中
-            state.targetX = lerp(state.targetX, 0.5, 0.02);
-          }
-          // 平滑移动厨师
+          // 平滑目标位置，避免抖动
+          state.smoothTargetX = lerp(state.smoothTargetX, state.targetX, 0.2);
           if (state.hurtTimer > 0) {
             state.hurtTimer -= dt;
           } else {
-            state.chefX = lerp(state.chefX, state.targetX, 0.18);
+            state.chefX = lerp(state.chefX, state.smoothTargetX, 0.1);
             state.chefX = clamp(state.chefX, 0.05, 0.95);
           }
 
@@ -973,10 +923,79 @@
           updateUI();
         }
 
-        // ============================================================
-        // 6. 绘图函数
-        // ============================================================
         const imgs = {};
+        function loadImgs(cb) {
+          let n = 0;
+          const t = 7;
+          function on() {
+            n++;
+            if (n === t) cb();
+          }
+          imgs.belt = new Image();
+          imgs.belt.crossOrigin = "anonymous";
+          imgs.belt.onload = on;
+          imgs.belt.onerror = () => {
+            imgs.belt = null;
+            on();
+          };
+          imgs.belt.src =
+            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          imgs.chef = new Image();
+          imgs.chef.crossOrigin = "anonymous";
+          imgs.chef.onload = on;
+          imgs.chef.onerror = () => {
+            imgs.chef = null;
+            on();
+          };
+          imgs.chef.src =
+            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
+          imgs.pot = new Image();
+          imgs.pot.crossOrigin = "anonymous";
+          imgs.pot.onload = on;
+          imgs.pot.onerror = () => {
+            imgs.pot = null;
+            on();
+          };
+          imgs.pot.src =
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          imgs.guestL = new Image();
+          imgs.guestL.crossOrigin = "anonymous";
+          imgs.guestL.onload = on;
+          imgs.guestL.onerror = () => {
+            imgs.guestL = null;
+            on();
+          };
+          imgs.guestL.src =
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          imgs.guestR = new Image();
+          imgs.guestR.crossOrigin = "anonymous";
+          imgs.guestR.onload = on;
+          imgs.guestR.onerror = () => {
+            imgs.guestR = null;
+            on();
+          };
+          imgs.guestR.src =
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          imgs.eatL = new Image();
+          imgs.eatL.crossOrigin = "anonymous";
+          imgs.eatL.onload = on;
+          imgs.eatL.onerror = () => {
+            imgs.eatL = null;
+            on();
+          };
+          imgs.eatL.src =
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+          imgs.eatR = new Image();
+          imgs.eatR.crossOrigin = "anonymous";
+          imgs.eatR.onload = on;
+          imgs.eatR.onerror = () => {
+            imgs.eatR = null;
+            on();
+          };
+          imgs.eatR.src =
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+        }
+
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -1061,15 +1080,16 @@
             );
             ctx.restore();
           }
+
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
             state.avatarImg.naturalWidth > 0
           ) {
             ctx.save();
-            const avatarX = chefX,
-              avatarY = chefY + chefSz * 0.4 - chefSz * 0.65,
-              avatarRadius = chefSz * 0.22;
+            const avatarX = chefX;
+            const avatarY = chefY + chefSz * 0.4 - chefSz * 0.65;
+            const avatarRadius = chefSz * 0.22;
             ctx.beginPath();
             ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
             ctx.clip();
@@ -1082,6 +1102,7 @@
             );
             ctx.restore();
           }
+
           if (imgs.pot)
             ctx.drawImage(
               imgs.pot,
@@ -1188,6 +1209,7 @@
               ctx.fillText(state.leftD.dish, bx + 37, by + 40);
             }
           }
+
           const rtX = cW * 2.2,
             rtW = cW * 1.6;
           if (state.rightEating && imgs.eatR)
@@ -1293,6 +1315,7 @@
             ctx.restore();
           });
         }
+
         if (!CanvasRenderingContext2D.prototype.roundRect) {
           CanvasRenderingContext2D.prototype.roundRect = function (
             x,
@@ -1316,29 +1339,20 @@
           };
         }
 
-        // ============================================================
-        // 7. UI 更新 & 游戏状态管理
-        // ============================================================
         function updateUI() {
           const m = Math.floor(state.time / 60),
             s = Math.floor(state.time % 60);
           topTimeEl.textContent = `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
           topGoldEl.textContent = `💰 ${state.gold}`;
           topDishesEl.textContent = `🍽️ ${state.dishes}`;
-          // 头部状态指示
-          if (state.calibrated && state.faceDetected) {
-            headStatusEl.className = "";
-            headStatusEl.innerHTML = `<span class="status-dot on"></span>头控已就绪 (${Math.round(state.headAngle - state.zeroAngle)}°)`;
-          } else if (state.faceDetected) {
-            headStatusEl.className = "";
-            headStatusEl.innerHTML = `<span class="status-dot wait"></span>检测到面部 · 校准中...`;
-          } else if (state.camReady) {
-            headStatusEl.className = "off";
-            headStatusEl.innerHTML = `<span class="status-dot off"></span>等待面部...`;
-          } else {
-            headStatusEl.className = "off";
-            headStatusEl.innerHTML = `<span class="status-dot off"></span>摄像头未启动`;
-          }
+        }
+        let last = 0;
+        function loop(ts) {
+          const dt = last ? Math.min((ts - last) / 1000, 0.05) : 0.016;
+          last = ts;
+          update(dt);
+          draw();
+          requestAnimationFrame(loop);
         }
         function getRank(g) {
           if (g >= 200) return "👑 巅峰厨神";
@@ -1362,13 +1376,12 @@
           );
           document.getElementById("resultModal").classList.remove("hidden");
         }
-        function reset() {
+
+        function resetGameState() {
           if (video.srcObject) {
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
           }
-          state.cameraRunning = false;
-          state.camReady = false;
           state.playing = false;
           state.paused = false;
           state.over = false;
@@ -1381,9 +1394,9 @@
           state.maxCombo = 0;
           state.chefX = 0.5;
           state.targetX = 0.5;
+          state.smoothTargetX = 0.5;
           state.headAngle = 0;
-          state.zeroAngle = 0;
-          state.calibrated = false;
+          state.headY = 0.5;
           state.ings = [];
           state.pot = {};
           state.menu = [];
@@ -1414,17 +1427,18 @@
           }, 10000);
           document.getElementById("resultModal").classList.add("hidden");
           document.getElementById("pauseModal").classList.add("hidden");
-          document.getElementById("startOverlay").classList.remove("hidden");
+          document.getElementById("startOverlay").classList.add("hidden");
           genMenu();
           updateUI();
         }
-        function start() {
-          reset();
+
+        function startGame() {
+          resetGameState();
           state.playing = true;
-          document.getElementById("startOverlay").classList.add("hidden");
           startBGM();
           updateUI();
         }
+
         function togglePause() {
           if (!state.playing || state.over) return;
           state.paused = !state.paused;
@@ -1436,15 +1450,8 @@
             startBGM();
           }
         }
-        function restartGame() {
-          if (state.paused) togglePause();
-          reset();
-          start();
-        }
 
-        // ============================================================
-        // 8. 触屏控制
-        // ============================================================
+        // 触控：拖动时直接设置目标，并禁止同时触发点击暂停
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -1470,77 +1477,38 @@
           e.preventDefault();
           state.touchActive = false;
         });
-        canvas.addEventListener("click", () => {
+        // 点击暂停（避免与拖拽冲突）
+        canvas.addEventListener("click", (e) => {
           if (state.playing && !state.over) togglePause();
         });
 
-        // ============================================================
-        // 9. ★★★ 头控核心：自循环 FaceMesh（参考滑雪游戏） ★★★
-        // ============================================================
-        let faceMesh = null;
-        let isProcessing = false;
-        let cameraLoopRAF = null;
-
+        // 头控：直接使用鼻尖x坐标（无校准）
         function initFaceMesh() {
-          faceMesh = new FaceMesh({
+          const fm = new FaceMesh({
             locateFile: (file) =>
               `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/${file}`,
           });
-          faceMesh.setOptions({
+          fm.setOptions({
             maxNumFaces: 1,
-            refineLandmarks: false,
-            minDetectionConfidence: 0.5,
+            refineLandmarks: true,
+            minDetectionConfidence: 0.6,
             minTrackingConfidence: 0.5,
           });
-          faceMesh.onResults(onFaceResults);
-          return faceMesh;
-        }
-
-        function onFaceResults(results) {
-          if (
-            results.multiFaceLandmarks &&
-            results.multiFaceLandmarks.length > 0
-          ) {
-            const lm = results.multiFaceLandmarks[0];
-            const leftEye = lm[33];
-            const rightEye = lm[263];
-            if (leftEye && rightEye) {
-              const dy = rightEye.y - leftEye.y;
-              const dx = rightEye.x - leftEye.x;
-              let angle = Math.atan2(dy, dx) * (180 / Math.PI);
-              state.headAngle = angle;
-              state.faceDetected = true;
-              if (!state.calibrated) {
-                state.zeroAngle = angle;
-                state.calibrated = true;
-                console.log("✅ 头控校准完成，零角度:", angle);
-                updateUI();
+          fm.onResults((results) => {
+            if (
+              results.multiFaceLandmarks &&
+              results.multiFaceLandmarks.length
+            ) {
+              const lm = results.multiFaceLandmarks[0];
+              const noseTip = lm[1];
+              if (noseTip) {
+                state.headY = clamp(noseTip.y, 0, 1);
+                // 镜像处理：x坐标反向
+                state.targetX = clamp(1 - noseTip.x, 0.05, 0.95);
               }
             }
-          } else {
-            state.faceDetected = false;
-          }
-          updateUI();
-        }
-
-        function startCameraLoop() {
-          if (!state.cameraRunning) return;
-          if (video.readyState >= 2 && !isProcessing) {
-            isProcessing = true;
-            faceMesh
-              .send({ image: video })
-              .then(() => {
-                isProcessing = false;
-              })
-              .catch(() => {
-                isProcessing = false;
-              });
-          }
-          if (video.requestVideoFrameCallback) {
-            video.requestVideoFrameCallback(startCameraLoop);
-          } else {
-            cameraLoopRAF = requestAnimationFrame(startCameraLoop);
-          }
+          });
+          return fm;
         }
 
         async function startCam() {
@@ -1548,155 +1516,50 @@
             video.srcObject.getTracks().forEach((t) => t.stop());
             video.srcObject = null;
           }
-          if (cameraLoopRAF) {
-            cancelAnimationFrame(cameraLoopRAF);
-            cameraLoopRAF = null;
-          }
           try {
             const stream = await navigator.mediaDevices.getUserMedia({
-              video: {
-                facingMode: "user",
-                width: { ideal: 320 },
-                height: { ideal: 240 },
-              },
+              video: { facingMode: "user", width: 320, height: 240 },
             });
             video.srcObject = stream;
             await video.play();
+            const fm = initFaceMesh();
+            state.fm = fm;
+            function processFrame() {
+              if (video.readyState >= 2 && !state._busy) {
+                state._busy = true;
+                fm.send({ image: video })
+                  .then(() => {
+                    state._busy = false;
+                  })
+                  .catch(() => {
+                    state._busy = false;
+                  });
+              }
+              if (video.requestVideoFrameCallback)
+                video.requestVideoFrameCallback(processFrame);
+              else requestAnimationFrame(processFrame);
+            }
+            processFrame();
             state.camReady = true;
-            state.cameraRunning = true;
-            if (!faceMesh) initFaceMesh();
-            startCameraLoop();
             document.getElementById("cameraModal").classList.add("hidden");
-            start();
+            startGame();
             initAudio();
-            updateUI();
             return true;
           } catch (err) {
-            console.error("摄像头启动失败:", err);
-            alert("摄像头启动失败: " + err.message);
+            alert("摄像头错误: " + err.message);
             return false;
           }
         }
 
         function startWithoutCamera() {
           state.camReady = true;
-          state.cameraRunning = true;
           document.getElementById("cameraModal").classList.add("hidden");
-          start();
+          startGame();
           initAudio();
-          updateUI();
         }
 
-        function stopCameraLoop() {
-          state.cameraRunning = false;
-          if (cameraLoopRAF) {
-            cancelAnimationFrame(cameraLoopRAF);
-            cameraLoopRAF = null;
-          }
-          if (video.srcObject) {
-            video.srcObject.getTracks().forEach((t) => t.stop());
-            video.srcObject = null;
-          }
-        }
-
-        // ============================================================
-        // 10. 图片加载 & 主循环
-        // ============================================================
-        function loadImgs(cb) {
-          let n = 0;
-          const t = 7;
-          function on() {
-            n++;
-            if (n === t) cb();
-          }
-          imgs.belt = new Image();
-          imgs.belt.crossOrigin = "anonymous";
-          imgs.belt.onload = on;
-          imgs.belt.onerror = () => {
-            imgs.belt = null;
-            on();
-          };
-          imgs.belt.src =
-            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          imgs.chef = new Image();
-          imgs.chef.crossOrigin = "anonymous";
-          imgs.chef.onload = on;
-          imgs.chef.onerror = () => {
-            imgs.chef = null;
-            on();
-          };
-          imgs.chef.src =
-            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
-          imgs.pot = new Image();
-          imgs.pot.crossOrigin = "anonymous";
-          imgs.pot.onload = on;
-          imgs.pot.onerror = () => {
-            imgs.pot = null;
-            on();
-          };
-          imgs.pot.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          imgs.guestL = new Image();
-          imgs.guestL.crossOrigin = "anonymous";
-          imgs.guestL.onload = on;
-          imgs.guestL.onerror = () => {
-            imgs.guestL = null;
-            on();
-          };
-          imgs.guestL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          imgs.guestR = new Image();
-          imgs.guestR.crossOrigin = "anonymous";
-          imgs.guestR.onload = on;
-          imgs.guestR.onerror = () => {
-            imgs.guestR = null;
-            on();
-          };
-          imgs.guestR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          imgs.eatL = new Image();
-          imgs.eatL.crossOrigin = "anonymous";
-          imgs.eatL.onload = on;
-          imgs.eatL.onerror = () => {
-            imgs.eatL = null;
-            on();
-          };
-          imgs.eatL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-          imgs.eatR = new Image();
-          imgs.eatR.crossOrigin = "anonymous";
-          imgs.eatR.onload = on;
-          imgs.eatR.onerror = () => {
-            imgs.eatR = null;
-            on();
-          };
-          imgs.eatR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-        }
-
-        let last = 0;
-        function loop(ts) {
-          const dt = last ? Math.min((ts - last) / 1000, 0.05) : 0.016;
-          last = ts;
-          update(dt);
-          draw();
-          requestAnimationFrame(loop);
-        }
-
-        // ============================================================
-        // 11. 事件绑定 & 初始化
-        // ============================================================
-        document
-          .getElementById("cameraAllowBtn")
-          .addEventListener("click", startCam);
-        document
-          .getElementById("touchModeBtn")
-          .addEventListener("click", startWithoutCamera);
-        document
-          .getElementById("uploadAvatarBtn")
-          .addEventListener("click", () => avatarInput.click());
-        avatarInput.addEventListener("change", function () {
-          const file = this.files[0];
+        function handleAvatarUpload() {
+          const file = avatarInput.files[0];
           if (!file) return;
           const reader = new FileReader();
           reader.onload = (e) => {
@@ -1707,25 +1570,37 @@
             img.src = e.target.result;
           };
           reader.readAsDataURL(file);
-        });
+        }
+
+        document
+          .getElementById("cameraAllowBtn")
+          .addEventListener("click", startCam);
+        document
+          .getElementById("touchModeBtn")
+          .addEventListener("click", startWithoutCamera);
+        document
+          .getElementById("uploadAvatarBtn")
+          .addEventListener("click", () => avatarInput.click());
+        avatarInput.addEventListener("change", handleAvatarUpload);
         document
           .getElementById("startGameBtn")
           .addEventListener("click", () => {
             if (!state.camReady) alert("请先允许摄像头权限或选择触屏玩法");
-            else start();
+            else startGame();
           });
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
         });
-        document
-          .getElementById("restartBtn")
-          .addEventListener("click", restartGame);
+        document.getElementById("restartBtn").addEventListener("click", () => {
+          if (state.paused) togglePause();
+          resetGameState();
+          startGame();
+        });
+        // 再来一局：直接开始，不显示弹窗
         document.getElementById("retryBtn").addEventListener("click", () => {
-          reset();
-          if (state.camReady) start();
-          else
-            document.getElementById("cameraModal").classList.remove("hidden");
+          resetGameState();
+          startGame();
         });
         document.getElementById("rankBtn").addEventListener("click", () => {
           alert(
@@ -1747,24 +1622,13 @@
             } else if (s === "sfx") sfx = v === "on";
           });
         });
-        document.body.addEventListener("dblclick", () => {
-          if (state.playing && state.faceDetected) {
-            state.zeroAngle = state.headAngle;
-            state.calibrated = true;
-            console.log("🔄 手动重新校准");
-            updateUI();
-          }
-        });
-        document.addEventListener("click", () => initAudio(), { once: true });
-
         loadImgs(() => {
-          reset();
+          resetGameState();
           document.getElementById("cameraModal").classList.remove("hidden");
           document.getElementById("startOverlay").classList.add("hidden");
           requestAnimationFrame(loop);
         });
-        // 暴露 reset 给调试
-        window.restartGame = restartGame;
+        document.addEventListener("click", () => initAudio(), { once: true });
       })();
     </script>
   </body>
