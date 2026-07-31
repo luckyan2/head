@@ -110,7 +110,6 @@
         image-rendering: pixelated;
         touch-action: none;
       }
-      /* 摄像头预览（极小，仅用于驱动） */
       #camera-preview {
         position: absolute;
         bottom: 8px;
@@ -138,6 +137,7 @@
         background: rgba(255, 248, 240, 0.88);
         backdrop-filter: blur(4px);
         display: flex;
+        flex-direction: column;
         justify-content: center;
         align-items: center;
         z-index: 100;
@@ -146,10 +146,6 @@
       }
       .modal-overlay.hidden {
         display: none;
-      }
-      /* 头像更换模态框更高层级 */
-      #avatarModal {
-        z-index: 200;
       }
       @keyframes fadeIn {
         from {
@@ -160,6 +156,16 @@
           opacity: 1;
           transform: scale(1);
         }
+      }
+
+      /* 开始界面：标题在弹窗外部上方 */
+      .start-title {
+        font-size: 28px;
+        color: #e67e22;
+        text-shadow: 3px 3px 0 #f1c40f;
+        margin-bottom: 12px;
+        text-align: center;
+        letter-spacing: 2px;
       }
       .modal-card {
         background: #fff;
@@ -174,7 +180,6 @@
           0 8px 0 #b0a898,
           0 12px 30px rgba(0, 0, 0, 0.08);
         font-family: "Press Start 2P", monospace;
-        margin-top: -80px;
         position: relative;
       }
       .modal-card .close-btn {
@@ -191,23 +196,20 @@
       .modal-card .close-btn:hover {
         color: #e74c3c;
       }
-      .modal-card h2 {
-        font-size: 22px;
-        margin-bottom: 6px;
-        color: #e67e22;
-        text-shadow: 2px 2px 0 #f1c40f;
-      }
       .modal-card .subtitle-big {
-        font-size: 18px;
+        font-size: 26px;
+        /* 放大 */
         color: #e67e22;
         font-weight: bold;
-        margin: 4px 0 2px;
-        letter-spacing: 1px;
+        margin: 0 0 10px 0;
+        letter-spacing: 2px;
       }
       .modal-card .subtitle-small {
         font-size: 10px;
         color: #7a7268;
-        margin-bottom: 14px;
+        margin-bottom: 20px;
+        /* 加大间距 */
+        line-height: 1.8;
       }
       .modal-card p {
         font-size: 13px;
@@ -232,24 +234,43 @@
           transform 0.08s,
           box-shadow 0.08s;
         width: 100%;
-        max-width: 240px;
+        max-width: 260px;
       }
       .modal-card .btn:active {
         transform: translateY(4px);
         box-shadow: 0 0px 0 #b9770e;
       }
       .modal-card .btn-small {
-        padding: 8px 16px;
+        padding: 10px 18px;
         font-size: 10px;
         border-width: 3px;
         box-shadow: 0 4px 0 #95a5a6;
-        max-width: 160px;
+        max-width: 200px;
       }
+      /* 灰色按钮（触屏玩法、更换形象） */
       .modal-card .btn-secondary {
-        background: #ecf0f1;
-        border-color: #bdc3c7;
-        box-shadow: 0 4px 0 #95a5a6;
-        color: #2c3e50;
+        background: #dcdcdc;
+        border-color: #b0b0b0;
+        box-shadow: 0 4px 0 #8e8e8e;
+        color: #3d3a36;
+      }
+      .modal-card .btn-secondary:active {
+        transform: translateY(4px);
+        box-shadow: 0 0px 0 #8e8e8e;
+      }
+      /* 允许并开始 特殊样式：更大字体和更长按钮 */
+      .btn-start-camera {
+        font-size: 18px !important;
+        padding: 18px 28px !important;
+        max-width: 280px !important;
+        background: #2ecc71;
+        border-color: #27ae60;
+        box-shadow: 0 4px 0 #1e8449;
+        color: #fff;
+      }
+      .btn-start-camera:active {
+        transform: translateY(4px);
+        box-shadow: 0 0px 0 #1e8449;
       }
       .modal-card .btn-head {
         background: #2ecc71;
@@ -327,7 +348,7 @@
       .start-avatar-btn {
         background: #dcdcdc;
         border-color: #b0b0b0;
-        color: #555;
+        color: #3d3a36;
         margin-top: 4px;
       }
       #avatarInput {
@@ -441,15 +462,24 @@
       @media (max-width: 480px) {
         .modal-card {
           padding: 20px 16px 24px;
-          margin-top: -40px;
+          margin-top: 0;
         }
-        .modal-card h2 {
-          font-size: 18px;
+        .start-title {
+          font-size: 22px;
+          margin-bottom: 8px;
+        }
+        .modal-card .subtitle-big {
+          font-size: 20px;
         }
         .modal-card .btn {
           padding: 12px 16px;
           font-size: 11px;
           max-width: 200px;
+        }
+        .btn-start-camera {
+          font-size: 16px !important;
+          padding: 14px 20px !important;
+          max-width: 220px !important;
         }
         .top-box {
           font-size: 9px;
@@ -471,9 +501,6 @@
           font-size: 8px;
           max-width: 50px;
         }
-        .modal-card .subtitle-big {
-          font-size: 15px;
-        }
         .avatar-preview-container {
           width: 160px;
           height: 160px;
@@ -486,9 +513,8 @@
     </style>
   </head>
   <body>
-    <!-- ===== 顶部状态栏（头控检测移到最左边） ===== -->
+    <!-- ===== 顶部状态栏 ===== -->
     <div class="outer-top-bar">
-      <!-- 头控检测 → 最左边 -->
       <div class="top-box" id="top-head-status">
         <span class="head-indicator" id="headIndicator"></span>
         <span class="status-text" id="headStatusText">头控关</span>
@@ -504,29 +530,34 @@
     <div id="game-wrapper">
       <canvas id="gameCanvas"></canvas>
 
-      <!-- 摄像头预览（极小） -->
+      <!-- 摄像头预览 -->
       <video id="camera-preview" playsinline muted></video>
 
-      <!-- ===== 开始游戏弹窗 ===== -->
+      <!-- ===== 开始游戏弹窗（标题移到外部上方） ===== -->
       <div
         id="startOverlay"
         class="modal-overlay"
         style="background: rgba(255, 248, 240, 0.75)"
       >
-        <div class="modal-card" style="background: #fffefc">
-          <h2>👨‍🍳 像素厨房</h2>
+        <!-- 标题在弹窗外部 -->
+        <div class="start-title">👨‍🍳 像素厨房</div>
+        <div class="modal-card" style="background: #fffefc; margin-top: 0">
           <div class="subtitle-big">📷 开启摄像头</div>
           <div class="subtitle-small">触屏滑动 · 头控可选</div>
 
           <div class="btn-row">
-            <button class="btn" id="startWithCameraBtn">📷 允许并开始</button>
+            <button class="btn btn-start-camera" id="startWithCameraBtn">
+              📷 允许并开始
+            </button>
             <button class="btn btn-secondary" id="startTouchBtn">
               👆 触屏玩法
             </button>
           </div>
 
-          <!-- 更换厨师形象按钮（原上传头像） -->
-          <button class="btn btn-small start-avatar-btn" id="openAvatarBtn">
+          <button
+            class="btn btn-secondary btn-small start-avatar-btn"
+            id="openAvatarBtn"
+          >
             🔄 更换厨师形象
           </button>
           <input
@@ -535,7 +566,7 @@
             accept="image/*"
             style="display: none"
           />
-          <div style="font-size: 8px; color: #aaa; margin-top: 10px">
+          <div style="font-size: 8px; color: #aaa; margin-top: 12px">
             允许摄像头后可用头控制厨师左右移动
           </div>
         </div>
@@ -560,7 +591,7 @@
         </div>
       </div>
 
-      <!-- ===== 暂停弹窗（已移除头控开关行） ===== -->
+      <!-- ===== 暂停弹窗 ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-card">
           <h2>⏸ 暂停</h2>
@@ -593,7 +624,6 @@
                 </button>
               </div>
             </div>
-            <!-- 头控开关行已移除 -->
           </div>
           <div class="btn-group">
             <button class="btn" id="resumeBtn">▶ 继续</button
@@ -646,7 +676,6 @@
         const headIndicator = document.getElementById("headIndicator");
         const headStatusText = document.getElementById("headStatusText");
 
-        // 头像更换相关 DOM
         const avatarModal = document.getElementById("avatarModal");
         const avatarCloseBtn = document.getElementById("avatarCloseBtn");
         const avatarChefBg = document.getElementById("avatarChefBg");
@@ -792,13 +821,12 @@
           eatTimers: [],
           autoServe: false,
           rightDemandTimer: null,
-          avatarImg: null, // 最终使用的头像
-          tempAvatarImg: null, // 临时预览头像
+          avatarImg: null,
+          tempAvatarImg: null,
           hurtTimer: 0,
           touchActive: false,
           touchStartX: 0,
           _touchBaseX: 0.5,
-          // 头控相关
           headControlEnabled: false,
           headControlActive: false,
           headTilt: 0,
@@ -1088,6 +1116,9 @@
           return TYPES[randi(0, TYPES.length - 1)];
         }
 
+        // ============================================================
+        // 7. 更新逻辑（头控灵敏度提升 + 食材平滑）
+        // ============================================================
         function addIngredient() {
           if (!state.playing || state.paused || state.over) return;
           const cellH = canvas.height / ROWS;
@@ -1116,9 +1147,6 @@
           });
         }
 
-        // ============================================================
-        // 7. 更新逻辑（含头控）
-        // ============================================================
         function updateIngs() {
           const cellH = canvas.height / ROWS;
           for (let i = state.ings.length - 1; i >= 0; i--) {
@@ -1127,6 +1155,8 @@
               state.ings.splice(i, 1);
               continue;
             }
+            // 平滑移动，避免卡顿：使用固定增量，但依赖dt，这里dt由外部传入，我们直接累加
+            // 在update中调用时已乘dt，这里不再乘，直接加sp
             ing.y += ing.sp;
             ing.x = ing.sx + Math.sin(ing.y * 0.02 + Date.now() * 0.0005) * 2;
             if (ing.y > cellH * 6.8) {
@@ -1233,29 +1263,31 @@
           updateFly(dt);
           updateFloatingTexts(dt);
 
-          // 头控融合
+          // ---- 头控融合（灵敏度大幅提升） ----
           if (
             state.headControlEnabled &&
             state.headDetecting &&
             state.headMeshReady
           ) {
             const tilt = state.headSmoothTilt;
-            const mappedX = 0.5 + tilt * 0.52;
-            state.targetX = clamp(mappedX, 0.05, 0.95);
+            // 映射范围扩大到 0.6，且死区极小
+            const mappedX = 0.5 + tilt * 0.6;
+            state.targetX = clamp(mappedX, 0.03, 0.97);
             updateHeadIndicator(
               true,
-              `头控 ${Math.abs(tilt) > 0.05 ? (tilt < 0 ? "←左倾" : "右倾→") : "居中"}`,
+              `头控 ${Math.abs(tilt) > 0.02 ? (tilt < 0 ? "←左倾" : "右倾→") : "居中"}`,
             );
           } else if (state.headControlEnabled && !state.headDetecting) {
             updateHeadIndicator(false, "寻找面部...");
           }
 
-          state.smoothTargetX = lerp(state.smoothTargetX, state.targetX, 0.38);
+          // 平滑系数进一步提高，响应更快 (0.38 -> 0.52)
+          state.smoothTargetX = lerp(state.smoothTargetX, state.targetX, 0.52);
           if (state.hurtTimer > 0) {
             state.hurtTimer -= dt;
           } else {
-            state.chefX = lerp(state.chefX, state.smoothTargetX, 0.12);
-            state.chefX = clamp(state.chefX, 0.05, 0.95);
+            state.chefX = lerp(state.chefX, state.smoothTargetX, 0.18);
+            state.chefX = clamp(state.chefX, 0.03, 0.97);
           }
 
           if (state.menuDone && !state.autoServe) {
@@ -1431,7 +1463,6 @@
             ctx.restore();
           }
 
-          // 绘制头像（如果已保存）
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -1667,7 +1698,6 @@
           });
         }
 
-        // roundRect polyfill
         if (!CanvasRenderingContext2D.prototype.roundRect) {
           CanvasRenderingContext2D.prototype.roundRect = function (
             x,
@@ -1852,7 +1882,7 @@
         }
 
         // ============================================================
-        // 12. 头控核心
+        // 12. 头控核心（进一步优化响应）
         // ============================================================
         let faceMesh = null;
         let camera = null;
@@ -1901,13 +1931,15 @@
                   const rightEye = landmarks[263];
                   if (leftEye && rightEye) {
                     const diff = leftEye.y - rightEye.y;
-                    let rawTilt = clamp(diff * 4.0, -1, 1);
-                    if (Math.abs(rawTilt) < 0.03) rawTilt = 0;
+                    // 增大增益，死区更小
+                    let rawTilt = clamp(diff * 5.0, -1, 1);
+                    if (Math.abs(rawTilt) < 0.02) rawTilt = 0;
                     state.headTilt = rawTilt;
+                    // 平滑系数提高，减少延迟
                     state.headSmoothTilt = lerp(
                       state.headSmoothTilt,
                       state.headTilt,
-                      0.3,
+                      0.4,
                     );
                     state.headDetecting = true;
                     state.headError = null;
@@ -2054,20 +2086,15 @@
         // ============================================================
         // 13. 头像更换逻辑
         // ============================================================
-        // 保存临时头像（预览用）
-        let tempAvatarImage = null; // 用于预览的 Image 对象
+        let tempAvatarImage = null;
 
         function openAvatarModal() {
-          // 显示模态框
           avatarModal.classList.remove("hidden");
-          // 设置厨师背景图（使用已加载的 chef 图片）
           if (imgs.chef && imgs.chef.complete && imgs.chef.naturalWidth > 0) {
             avatarChefBg.src = imgs.chef.src;
           } else {
-            // 如果图片未加载，尝试重新设置
             avatarChefBg.src = imgs.chef ? imgs.chef.src : "";
           }
-          // 如果已有头像，显示在预览中
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -2076,7 +2103,6 @@
             avatarPreview.src = state.avatarImg.src;
             avatarPreview.style.display = "block";
             avatarPlaceholder.style.display = "none";
-            // 复制一份给 tempAvatarImage
             const img = new Image();
             img.onload = () => {
               tempAvatarImage = img;
@@ -2087,7 +2113,6 @@
             avatarPlaceholder.style.display = "block";
             tempAvatarImage = null;
           }
-          // 重置文件输入
           avatarFileInput.value = "";
         }
 
@@ -2098,17 +2123,11 @@
             tempAvatarImage.complete &&
             tempAvatarImage.naturalWidth > 0
           ) {
-            // 保存头像
             state.avatarImg = tempAvatarImage;
-          } else if (!save) {
-            // 不保存，放弃更改
-            // 如果之前有头像，保留原样
           }
           avatarModal.classList.add("hidden");
-          // 清理临时预览（但保留 tempAvatarImage 以备下次打开）
         }
 
-        // 上传头像处理
         function handleAvatarFileChange(e) {
           const file = e.target.files[0];
           if (!file) return;
@@ -2116,11 +2135,9 @@
           reader.onload = (ev) => {
             const img = new Image();
             img.onload = () => {
-              // 更新预览
               avatarPreview.src = img.src;
               avatarPreview.style.display = "block";
               avatarPlaceholder.style.display = "none";
-              // 保存到临时变量
               tempAvatarImage = img;
             };
             img.src = ev.target.result;
@@ -2162,7 +2179,7 @@
             return;
           const t = e.touches[0];
           const dx = t.clientX - state.touchStartX;
-          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.05, 0.95);
+          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.03, 0.97);
         });
         canvas.addEventListener("touchend", (e) => {
           e.preventDefault();
@@ -2195,7 +2212,7 @@
           )
             return;
           const dx = e.clientX - state.touchStartX;
-          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.05, 0.95);
+          state.targetX = clamp(state._touchBaseX + dx * 0.004, 0.03, 0.97);
         });
         canvas.addEventListener("mouseup", () => {
           state.touchActive = false;
@@ -2216,7 +2233,6 @@
         // 15. 事件绑定
         // ============================================================
 
-        // ---- 开始界面 ----
         document
           .getElementById("startWithCameraBtn")
           .addEventListener("click", () => {
@@ -2243,10 +2259,8 @@
             updateHeadIndicator(false, "触屏模式");
           });
 
-        // ---- 头像更换 ----
         openAvatarBtn.addEventListener("click", openAvatarModal);
         avatarCloseBtn.addEventListener("click", () => closeAvatarModal(false));
-        // 点击模态框外部关闭（背景）
         avatarModal.addEventListener("click", (e) => {
           if (e.target === avatarModal) closeAvatarModal(false);
         });
@@ -2254,15 +2268,12 @@
           closeAvatarModal(true),
         );
         avatarFileInput.addEventListener("change", handleAvatarFileChange);
-        // 点击圆形区域也可触发上传（但 file input 已覆盖）
 
-        // ---- 暂停/继续 ----
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
         });
 
-        // ---- 重新开始 ----
         document.getElementById("restartBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
           const headWasOn = state.headControlEnabled;
@@ -2288,7 +2299,6 @@
           );
         });
 
-        // ---- 音效开关 ----
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
@@ -2306,7 +2316,7 @@
         });
 
         // ============================================================
-        // 16. 启动游戏
+        // 16. 启动
         // ============================================================
         loadImgs(() => {
           resetGameState();
@@ -2332,10 +2342,7 @@
           }
         });
 
-        console.log(
-          "🍳 像素厨房已启动！点击“允许并开始”使用头控，或“触屏玩法”直接开玩。",
-        );
-        console.log("🔄 点击“更换厨师形象”可预览并设置头像。");
+        console.log("🍳 像素厨房已启动！头控灵敏度已优化，食材移动更平滑。");
       })();
     </script>
   </body>
