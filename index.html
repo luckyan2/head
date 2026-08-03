@@ -23,6 +23,7 @@
     ></script>
 
     <style>
+      /* ===== 全局重置 & 基础 ===== */
       * {
         margin: 0;
         padding: 0;
@@ -99,7 +100,7 @@
         text-overflow: ellipsis;
         white-space: nowrap;
       }
-      /* 倒计时闪烁 */
+      /* ===== 倒计时闪烁 ===== */
       #top-time.blink-red {
         color: #e74c3c !important;
         animation: blink 0.5s step-end infinite;
@@ -158,7 +159,7 @@
         opacity: 0.9;
       }
 
-      /* 弹窗整体布局 - 进一步下移 */
+      /* ===== 弹窗通用 ===== */
       .modal-overlay {
         position: absolute;
         top: 0;
@@ -173,7 +174,6 @@
         align-items: center;
         z-index: 100;
         padding: 36px 16px 20px;
-        /* 增加顶部padding，整体下移 */
         animation: fadeIn 0.3s ease;
       }
       .modal-overlay.hidden {
@@ -190,13 +190,11 @@
         }
       }
 
-      /* 标题在弹窗外部上方，与卡片留间距 */
       .modal-title {
         font-size: 34px;
         color: #e67e22;
         text-shadow: 3px 3px 0 #f1c40f;
         margin-bottom: 20px;
-        /* 增加与卡片的间距 */
         text-align: center;
         letter-spacing: 2px;
         line-height: 1.3;
@@ -245,12 +243,6 @@
         color: #7a7268;
         margin-bottom: 22px;
         line-height: 2;
-      }
-      .modal-card p {
-        font-size: 14px;
-        color: #5a5248;
-        line-height: 2;
-        margin: 10px 0 16px;
       }
       .modal-card .btn {
         display: inline-block;
@@ -305,21 +297,6 @@
         transform: translateY(4px);
         box-shadow: 0 0px 0 #1e8449;
       }
-      .modal-card .btn-head {
-        background: #2ecc71;
-        border-color: #27ae60;
-        box-shadow: 0 4px 0 #1e8449;
-        color: #fff;
-      }
-      .modal-card .btn-head.active {
-        background: #e74c3c;
-        border-color: #c0392b;
-        box-shadow: 0 4px 0 #922b21;
-      }
-      .modal-card .btn-head:active {
-        transform: translateY(4px);
-        box-shadow: 0 0px 0 #1e8449;
-      }
       .modal-card .btn-group {
         display: flex;
         flex-direction: column;
@@ -334,6 +311,8 @@
         gap: 10px;
         width: 100%;
       }
+
+      /* ===== 设置行（音乐、音效、速度滑杆） ===== */
       .settings-row {
         display: flex;
         justify-content: space-between;
@@ -342,7 +321,6 @@
         border-bottom: 2px dotted #d0c8b8;
         font-size: 13px;
         flex-wrap: nowrap;
-        /* 防止换行 */
         gap: 6px;
       }
       .settings-row:last-child {
@@ -351,7 +329,6 @@
       .settings-row .toggle-wrap {
         display: flex;
         flex-wrap: nowrap;
-        /* 强制一行 */
         gap: 4px;
         justify-content: flex-end;
         align-items: center;
@@ -363,7 +340,6 @@
         background: #f5efe6;
         color: #3d3a36;
         font-size: 14px;
-        /* 增大字体 */
         cursor: pointer;
         font-family: "Press Start 2P", monospace;
         white-space: nowrap;
@@ -377,12 +353,109 @@
         border-color: #d4ac0d;
         color: #2c2a26;
       }
-      /* 速度按钮中的小方块（0.75x和1.25x） */
-      .toggle-btn.speed-square {
-        width: 32px;
-        padding: 0;
-        font-size: 12px;
+
+      /* ===== 速度滑杆 ===== */
+      .speed-control {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        flex: 1;
+        min-width: 0;
+        max-width: 200px;
       }
+      .speed-control .slider-row {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 8px;
+      }
+      .speed-control input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        flex: 1;
+        height: 6px;
+        border-radius: 3px;
+        background: #d0c8b8;
+        outline: none;
+        min-width: 60px;
+      }
+      .speed-control input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #e67e22;
+        border: 3px solid #d0c8b8;
+        cursor: pointer;
+        box-shadow: 0 2px 0 #b0a898;
+      }
+      .speed-control input[type="range"]::-moz-range-thumb {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #e67e22;
+        border: 3px solid #d0c8b8;
+        cursor: pointer;
+        box-shadow: 0 2px 0 #b0a898;
+      }
+      .speed-control .speed-value {
+        font-size: 14px;
+        color: #e67e22;
+        min-width: 44px;
+        text-align: center;
+        font-weight: bold;
+      }
+      .speed-control .speed-labels {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+        padding: 2px 2px 0 2px;
+        font-size: 9px;
+        color: #7a7268;
+      }
+      .speed-control .speed-labels span {
+        cursor: default;
+      }
+
+      /* ===== 游戏说明文字 ===== */
+      .info-link {
+        color: #999;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: underline;
+        display: inline-block;
+        margin-top: 8px;
+        transition: color 0.2s;
+      }
+      .info-link:hover {
+        color: #e67e22;
+      }
+
+      /* ===== 游戏说明弹窗 ===== */
+      #infoModal .modal-card {
+        text-align: left;
+        max-height: 70vh;
+        overflow-y: auto;
+      }
+      #infoModal .modal-card h3 {
+        font-size: 16px;
+        color: #e67e22;
+        margin: 12px 0 6px 0;
+      }
+      #infoModal .modal-card p {
+        font-size: 12px;
+        line-height: 2;
+        color: #3d3a36;
+        margin: 4px 0;
+      }
+      #infoModal .modal-card .section {
+        margin-bottom: 10px;
+      }
+      #infoModal .modal-card .section:last-child {
+        margin-bottom: 0;
+      }
+
       .score-number {
         font-size: 52px;
         font-weight: bold;
@@ -446,7 +519,7 @@
         }
       }
 
-      /* 头像更换专用样式 */
+      /* ===== 头像更换 ===== */
       .avatar-preview-container {
         position: relative;
         width: 200px;
@@ -510,11 +583,11 @@
         margin-top: 16px;
       }
 
-      /* 头像弹窗单独下移更多 */
       #avatarModal {
         padding-top: 56px;
       }
 
+      /* ===== 响应式 ===== */
       @media (max-width: 480px) {
         .modal-overlay {
           padding: 28px 12px 16px;
@@ -585,12 +658,23 @@
           padding: 2px 8px;
           height: 28px;
         }
-        .toggle-btn.speed-square {
-          width: 28px;
-          font-size: 10px;
+        .speed-control .speed-labels {
+          font-size: 8px;
         }
-        .settings-row .toggle-wrap {
-          gap: 2px;
+        .speed-control .speed-value {
+          font-size: 12px;
+          min-width: 34px;
+        }
+        .speed-control input[type="range"] {
+          height: 4px;
+        }
+        .speed-control input[type="range"]::-webkit-slider-thumb {
+          width: 14px;
+          height: 14px;
+        }
+        .speed-control input[type="range"]::-moz-range-thumb {
+          width: 14px;
+          height: 14px;
         }
       }
     </style>
@@ -642,15 +726,59 @@
           >
             🔄 更换厨师形象
           </button>
+
+          <!-- 游戏说明（灰色可点击文字） -->
+          <div class="info-link" id="openInfoBtn">📖 游戏说明</div>
+
           <input
             type="file"
             id="avatarInput"
             accept="image/*"
             style="display: none"
           />
-          <div style="font-size: 10px; color: #aaa; margin-top: 14px">
+          <div style="font-size: 10px; color: #aaa; margin-top: 12px">
             允许摄像头后可用头控制厨师左右移动
           </div>
+        </div>
+      </div>
+
+      <!-- ===== 游戏说明弹窗 ===== -->
+      <div id="infoModal" class="modal-overlay hidden">
+        <div class="modal-title" style="font-size: 28px">📖 游戏说明</div>
+        <div class="modal-card" style="max-width: 360px; padding: 20px">
+          <button class="close-btn" id="infoCloseBtn">&times;</button>
+          <div class="section">
+            <h3>🎮 游戏玩法</h3>
+            <p>
+              控制厨师接住传送带上的食材，凑齐菜谱所需材料后自动出餐，赚取金币！
+            </p>
+            <p>• 触屏滑动 或 头部左右倾斜 控制厨师移动</p>
+            <p>• 接住正确的食材 → 放入锅中</p>
+            <p>• 集齐菜谱所需食材 → 自动出餐 → 获得金币</p>
+            <p>• 接错食材会扣减金币并损失生命值</p>
+            <p>• 连击数越高，得分加成越多！</p>
+          </div>
+          <div class="section">
+            <h3>⚠️ 免责声明</h3>
+            <p>
+              本游戏为个人开发作品，仅供娱乐参考。游戏过程中请勿过度依赖头控操作，注意休息。
+            </p>
+            <p>摄像头数据仅用于头部追踪，不会上传至任何服务器。</p>
+          </div>
+          <div class="section">
+            <h3>© 版权声明</h3>
+            <p>
+              本游戏所有代码、美术资源及设计均为原创或已获授权。未经许可，禁止商用或二次分发。
+            </p>
+            <p>部分食材图标来源于开源Emoji，感谢社区贡献。</p>
+          </div>
+          <button
+            class="btn btn-secondary"
+            id="infoConfirmBtn"
+            style="font-size: 14px; margin-top: 12px"
+          >
+            我知道了
+          </button>
         </div>
       </div>
 
@@ -673,7 +801,7 @@
         </div>
       </div>
 
-      <!-- ===== 暂停弹窗 ===== -->
+      <!-- ===== 暂停弹窗（速度滑杆） ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-title" style="font-size: 30px">⏸ 暂停</div>
         <div class="modal-card">
@@ -706,37 +834,26 @@
                 </button>
               </div>
             </div>
-            <!-- 传送带速度调节：5个选项，0.75和1.25为小方块 -->
+            <!-- 速度滑杆 -->
             <div class="settings-row">
               <span>📦 传送带速度</span>
-              <div class="toggle-wrap">
-                <button class="toggle-btn" data-setting="speed" data-val="0.5">
-                  0.5x
-                </button>
-                <button
-                  class="toggle-btn speed-square"
-                  data-setting="speed"
-                  data-val="0.75"
-                >
-                  ¾
-                </button>
-                <button
-                  class="toggle-btn active"
-                  data-setting="speed"
-                  data-val="1"
-                >
-                  1x
-                </button>
-                <button
-                  class="toggle-btn speed-square"
-                  data-setting="speed"
-                  data-val="1.25"
-                >
-                  ⁵⁄₄
-                </button>
-                <button class="toggle-btn" data-setting="speed" data-val="1.5">
-                  1.5x
-                </button>
+              <div class="speed-control">
+                <div class="slider-row">
+                  <input
+                    type="range"
+                    id="speedSlider"
+                    min="0.5"
+                    max="1.5"
+                    step="0.25"
+                    value="1"
+                  />
+                  <span class="speed-value" id="speedDisplay">1.0x</span>
+                </div>
+                <div class="speed-labels">
+                  <span>0.5x</span>
+                  <span>1x</span>
+                  <span>1.5x</span>
+                </div>
               </div>
             </div>
           </div>
@@ -755,7 +872,7 @@
         </div>
       </div>
 
-      <!-- ===== 结算弹窗（时间到放在外部） ===== -->
+      <!-- ===== 结算弹窗 ===== -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-title">🍳 时间到！</div>
         <div class="modal-card">
@@ -793,9 +910,9 @@
 
     <script>
       (() => {
-        // ============================================================
+        // ================================================================
         // 1. DOM 引用
-        // ============================================================
+        // ================================================================
         const canvas = document.getElementById("gameCanvas");
         const ctx = canvas.getContext("2d");
         const topTimeEl = document.getElementById("top-time");
@@ -817,9 +934,19 @@
         const avatarConfirmBtn = document.getElementById("avatarConfirmBtn");
         const openAvatarBtn = document.getElementById("openAvatarBtn");
 
-        // ============================================================
+        // 游戏说明
+        const infoModal = document.getElementById("infoModal");
+        const infoCloseBtn = document.getElementById("infoCloseBtn");
+        const infoConfirmBtn = document.getElementById("infoConfirmBtn");
+        const openInfoBtn = document.getElementById("openInfoBtn");
+
+        // 速度滑杆
+        const speedSlider = document.getElementById("speedSlider");
+        const speedDisplay = document.getElementById("speedDisplay");
+
+        // ================================================================
         // 2. Canvas 尺寸
-        // ============================================================
+        // ================================================================
         function resizeCanvas() {
           const r = canvas.parentElement.getBoundingClientRect();
           canvas.width = r.width;
@@ -828,9 +955,9 @@
         resizeCanvas();
         window.addEventListener("resize", resizeCanvas);
 
-        // ============================================================
+        // ================================================================
         // 3. 音效 & 音频
-        // ============================================================
+        // ================================================================
         let audioCtx;
 
         function initAudio() {
@@ -912,9 +1039,9 @@
           }
         }
 
-        // ============================================================
+        // ================================================================
         // 4. 游戏核心状态
-        // ============================================================
+        // ================================================================
         const ROWS = 10,
           COLS = 4,
           GAME_DURATION = 90,
@@ -973,9 +1100,9 @@
           speedMultiplier: 1,
         };
 
-        // ============================================================
+        // ================================================================
         // 5. 游戏数据：食材 & 菜谱
-        // ============================================================
+        // ================================================================
         const TYPES = [
           {
             id: "tomato",
@@ -1107,9 +1234,9 @@
           return a + (b - a) * t;
         }
 
-        // ============================================================
+        // ================================================================
         // 6. 菜谱 & 订单逻辑
-        // ============================================================
+        // ================================================================
         function genMenu() {
           const demands = [];
           if (
@@ -1251,9 +1378,9 @@
           return TYPES[randi(0, TYPES.length - 1)];
         }
 
-        // ============================================================
-        // 7. 更新逻辑（含速度倍率、倒计时控制）
-        // ============================================================
+        // ================================================================
+        // 7. 更新逻辑
+        // ================================================================
         function addIngredient() {
           if (!state.playing || state.paused || state.over) return;
           if (
@@ -1457,9 +1584,17 @@
           updateUI();
         }
 
-        // ============================================================
-        // 8. 渲染（游戏绘制）
-        // ============================================================
+        // ================================================================
+        // 8. 渲染（游戏绘制） — 所有图片资源在此集中加载和绘制
+        // ================================================================
+
+        /**
+         * =============================================================
+         *  【图片资源替换说明】
+         *  以下所有图片链接均可替换为您自己的图片素材。
+         *  请替换对应的 src 链接即可。
+         * =============================================================
+         */
         const imgs = {};
 
         function loadImgs(cb) {
@@ -1470,6 +1605,9 @@
             n++;
             if (n === t) cb();
           }
+
+          // ---------- 1. 传送带背景图 ----------
+          // 替换此链接即可更换传送带背景
           imgs.belt = new Image();
           imgs.belt.crossOrigin = "anonymous";
           imgs.belt.onload = on;
@@ -1478,7 +1616,10 @@
             on();
           };
           imgs.belt.src =
-            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换传送带图片
+
+          // ---------- 2. 厨师图片 ----------
+          // 替换此链接即可更换厨师角色
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -1487,7 +1628,10 @@
             on();
           };
           imgs.chef.src =
-            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
+            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"; // ← 替换厨师图片
+
+          // ---------- 3. 锅/灶台图片 ----------
+          // 替换此链接即可更换锅的样式
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -1496,7 +1640,10 @@
             on();
           };
           imgs.pot.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换锅图片
+
+          // ---------- 4. 左侧客人图片 ----------
+          // 替换此链接即可更换左侧客人形象
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -1505,7 +1652,10 @@
             on();
           };
           imgs.guestL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换左侧客人图片
+
+          // ---------- 5. 右侧客人图片 ----------
+          // 替换此链接即可更换右侧客人形象
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -1514,7 +1664,10 @@
             on();
           };
           imgs.guestR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧客人图片
+
+          // ---------- 6. 左侧用餐图片 ----------
+          // 替换此链接即可更换左侧客人用餐时的形象
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -1523,7 +1676,10 @@
             on();
           };
           imgs.eatL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换左侧用餐图片
+
+          // ---------- 7. 右侧用餐图片 ----------
+          // 替换此链接即可更换右侧客人用餐时的形象
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -1532,20 +1688,35 @@
             on();
           };
           imgs.eatR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧用餐图片
         }
 
+        /**
+         * draw() 函数中需要替换图片的位置：
+         * 1. 传送带背景：使用 imgs.belt
+         * 2. 厨师角色：使用 imgs.chef
+         * 3. 锅/灶台：使用 imgs.pot
+         * 4. 左侧客人：使用 imgs.guestL / imgs.eatL
+         * 5. 右侧客人：使用 imgs.guestR / imgs.eatR
+         * 6. 灰色方盒子装饰：见下方 "灰色方盒子装饰" 标注，目前用 Canvas 绘制，
+         *    如需替换为图片，可取消注释并替换图片链接。
+         * 7. 食材：使用 emoji + 颜色绘制，如需替换为图片，可在 addIngredient 中修改。
+         * 8. 成品菜：使用 emoji 显示，如需替换为图片，可修改菜单渲染部分。
+         */
         function draw() {
           const W = canvas.width,
             H = canvas.height;
           const cW = W / COLS,
             cH = H / ROWS;
           ctx.clearRect(0, 0, W, H);
+
+          // ---- 传送带背景 ----
           if (imgs.belt) ctx.drawImage(imgs.belt, 0, 0, W, H);
           else {
             ctx.fillStyle = "#e0d6c8";
             ctx.fillRect(0, 0, W, H);
           }
+
           const beltT = cH * 1.2,
             beltB = cH * 6.4;
           const lTx = cW * 0.3,
@@ -1553,6 +1724,8 @@
             tw = cW * 0.8;
           const leftCenter = lTx + tw / 2,
             rightCenter = rTx + tw / 2;
+
+          // ---- 传送带装饰条纹 ----
           for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
             ctx.fillStyle = "rgba(160,150,135,0.15)";
             ctx.fillRect(lTx, y, tw, 4);
@@ -1565,6 +1738,8 @@
             ctx.fillStyle = "rgba(180,170,155,0.1)";
             ctx.fillRect(rTx, y + 15, tw, 4);
           }
+
+          // ---- 食材绘制（使用 emoji，可替换为图片） ----
           state.ings.forEach((ing) => {
             if (!ing || !ing.alive) return;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
@@ -1586,6 +1761,7 @@
             ctx.shadowBlur = 0;
           });
 
+          // ---- 厨师 ----
           const chefSz = cH * 1.3,
             chefX = state.chefX * W,
             chefY = cH * 5.3;
@@ -1595,6 +1771,9 @@
           const potX = chefX,
             potY = cH * 6.0;
 
+          // ---------- 灰色方盒子装饰 ----------
+          // 【替换说明】以下两个灰色方盒子是装饰元素，如需替换为图片，可在此处使用 ctx.drawImage()
+          // 取消注释下面的代码，并替换图片链接即可。
           const decoPotW = tw * 1.6,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
@@ -1606,7 +1785,12 @@
             decoPotW,
             decoHPot,
           );
+          // 如需替换为图片，请使用以下代码（替换 imgSrc 为您的图片链接）：
+          // const decoImg = new Image(); decoImg.src = "您的灰色方盒子图片链接";
+          // ctx.drawImage(decoImg, leftCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
+          // ctx.drawImage(decoImg, rightCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
 
+          // ---- 绘制厨师 ----
           if (imgs.chef) {
             ctx.save();
             ctx.translate(chefX, chefY + chefSz * 0.4);
@@ -1620,6 +1804,7 @@
             ctx.restore();
           }
 
+          // ---- 头像（如果已上传） ----
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -1642,6 +1827,7 @@
             ctx.restore();
           }
 
+          // ---- 锅 ----
           if (imgs.pot)
             ctx.drawImage(
               imgs.pot,
@@ -1650,6 +1836,8 @@
               potW,
               potH,
             );
+
+          // ---- 锅中的食材（用 emoji 表示，可替换为图片） ----
           const potItems = Object.keys(state.pot).filter(
             (k) => state.pot[k] > 0,
           );
@@ -1689,6 +1877,7 @@
             );
           ctx.restore();
 
+          // ---- 受伤闪红 ----
           if (state.hurtTimer > 0) {
             ctx.save();
             ctx.globalAlpha = 0.35;
@@ -1701,6 +1890,7 @@
             ctx.restore();
           }
 
+          // ---- 客人区域 ----
           const restTop = cH * 6.25,
             restH = cH * 2.8;
           ctx.fillStyle = "#f0ebdc";
@@ -1710,6 +1900,8 @@
           ctx.strokeStyle = "#d0c8b8";
           ctx.lineWidth = 2;
           ctx.stroke();
+
+          // 左侧客人
           const ltX = cW * 0.2,
             ltW = cW * 1.6,
             ltY = restTop + 20,
@@ -1717,6 +1909,8 @@
           if (state.leftEating && imgs.eatL)
             ctx.drawImage(imgs.eatL, ltX, ltY, ltW, ltH);
           else if (imgs.guestL) ctx.drawImage(imgs.guestL, ltX, ltY, ltW, ltH);
+
+          // 左侧客人点单气泡
           if (state.leftD) {
             const bx = ltX + 5,
               by = ltY - 30;
@@ -1749,11 +1943,14 @@
             }
           }
 
+          // 右侧客人
           const rtX = cW * 2.2,
             rtW = cW * 1.6;
           if (state.rightEating && imgs.eatR)
             ctx.drawImage(imgs.eatR, rtX, ltY, rtW, ltH);
           else if (imgs.guestR) ctx.drawImage(imgs.guestR, rtX, ltY, rtW, ltH);
+
+          // 右侧客人点单气泡
           if (state.rightD) {
             const bx = rtX + rtW - 80,
               by = ltY - 30;
@@ -1786,6 +1983,7 @@
             }
           }
 
+          // ---- 菜单面板（显示当前菜谱和进度） ----
           const menuW = cW * 1.1,
             baseH = 90,
             rowH = 30;
@@ -1844,6 +2042,8 @@
               yOff += rowH;
             });
           }
+
+          // ---- 浮动文字 ----
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
@@ -1855,6 +2055,7 @@
           });
         }
 
+        // roundRect polyfill
         if (!CanvasRenderingContext2D.prototype.roundRect) {
           CanvasRenderingContext2D.prototype.roundRect = function (
             x,
@@ -1878,9 +2079,9 @@
           };
         }
 
-        // ============================================================
-        // 9. UI 更新（含闪烁）
-        // ============================================================
+        // ================================================================
+        // 9. UI 更新
+        // ================================================================
         function updateUI() {
           const m = Math.floor(state.time / 60),
             s = Math.floor(state.time % 60);
@@ -1922,9 +2123,9 @@
           }
         }
 
-        // ============================================================
+        // ================================================================
         // 10. 游戏循环
-        // ============================================================
+        // ================================================================
         let last = 0;
 
         function loop(ts) {
@@ -1935,9 +2136,9 @@
           requestAnimationFrame(loop);
         }
 
-        // ============================================================
-        // 11. 游戏结束 & 重置
-        // ============================================================
+        // ================================================================
+        // 11. 游戏结束 & 重置（改用刷新页面）
+        // ================================================================
         function getRank(g) {
           if (g >= 200) return "👑 巅峰厨神";
           if (g >= 150) return "🌟 荣耀厨王";
@@ -1967,7 +2168,6 @@
 
         // 重置所有头控状态（彻底清理）
         function resetHeadControlState() {
-          // 先停止摄像头和模型
           if (camera) {
             try {
               camera.stop();
@@ -2026,9 +2226,7 @@
           state.autoServe = false;
           state.beltOff = 0;
           state.qTimer = 0;
-          // 重置头控状态（但不重置 touchOnlyMode 和 speedMultiplier）
           resetHeadControlState();
-          // 保留 touchOnlyMode 和 speedMultiplier，在外部设置
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
           state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
           state.rightD = { dish: "...", emoji: "..." };
@@ -2081,9 +2279,9 @@
           }
         }
 
-        // ============================================================
-        // 12. 头控核心（彻底重新初始化）
-        // ============================================================
+        // ================================================================
+        // 12. 头控核心
+        // ================================================================
         let faceMesh = null;
         let camera = null;
         let headControlInitialized = false;
@@ -2099,7 +2297,6 @@
                 reject(new Error("MediaPipe 库未加载，请检查网络连接。"));
                 return;
               }
-              // 确保旧实例完全销毁
               if (faceMesh) {
                 try {
                   faceMesh.close();
@@ -2290,9 +2487,9 @@
           }
         }
 
-        // ============================================================
+        // ================================================================
         // 13. 头像更换逻辑
-        // ============================================================
+        // ================================================================
         let tempAvatarImage = null;
 
         function openAvatarModal() {
@@ -2352,9 +2549,9 @@
           reader.readAsDataURL(file);
         }
 
-        // ============================================================
+        // ================================================================
         // 14. 触屏控制
-        // ============================================================
+        // ================================================================
         canvas.addEventListener("touchstart", (e) => {
           e.preventDefault();
           if (!state.playing || state.paused || state.over) return;
@@ -2436,11 +2633,11 @@
           }
         });
 
-        // ============================================================
+        // ================================================================
         // 15. 事件绑定
-        // ============================================================
+        // ================================================================
 
-        // “允许并开始”：头控模式
+        // ---- 开始游戏 ----
         document
           .getElementById("startWithCameraBtn")
           .addEventListener("click", () => {
@@ -2462,7 +2659,6 @@
             });
           });
 
-        // “触屏玩法”
         document
           .getElementById("startTouchBtn")
           .addEventListener("click", () => {
@@ -2479,7 +2675,7 @@
             updateHeadIndicator(false, "触屏模式");
           });
 
-        // 头像更换
+        // ---- 头像 ----
         openAvatarBtn.addEventListener("click", openAvatarModal);
         avatarCloseBtn.addEventListener("click", () => closeAvatarModal(false));
         avatarModal.addEventListener("click", (e) => {
@@ -2490,64 +2686,36 @@
         );
         avatarFileInput.addEventListener("change", handleAvatarFileChange);
 
-        // 暂停/继续
+        // ---- 游戏说明 ----
+        function openInfo() {
+          infoModal.classList.remove("hidden");
+        }
+
+        function closeInfo() {
+          infoModal.classList.add("hidden");
+        }
+        openInfoBtn.addEventListener("click", openInfo);
+        infoCloseBtn.addEventListener("click", closeInfo);
+        infoConfirmBtn.addEventListener("click", closeInfo);
+        infoModal.addEventListener("click", (e) => {
+          if (e.target === infoModal) closeInfo();
+        });
+
+        // ---- 暂停/继续 ----
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
         });
 
-        // 重新开始（暂停界面）- 彻底修复头控
+        // ---- 重新开始（刷新页面） ----
         document.getElementById("restartBtn").addEventListener("click", () => {
-          if (state.paused) togglePause();
-          const headWasOn = state.headControlEnabled;
-          const wasTouchOnly = state.touchOnlyMode;
-          // 彻底停止所有头控资源
-          stopHeadControl(); // 这个函数会清理 camera, faceMesh 并重置状态
-          // 重置游戏状态（重置大部分状态，但保留 speedMultiplier 和 touchOnlyMode 稍后重新设置）
-          resetGameState();
-          // 重新设置模式
-          state.touchOnlyMode = wasTouchOnly;
-          if (wasTouchOnly) {
-            state.headFaceDetected = true;
-            state.timerStarted = true;
-            state.headControlEnabled = false;
-          } else {
-            state.headFaceDetected = false;
-            state.timerStarted = false;
-            state.headControlEnabled = true;
-          }
-          // 启动游戏
-          startGame();
-          // 如果是头控模式，重新初始化头控（延迟确保资源释放）
-          if (headWasOn && !wasTouchOnly) {
-            setTimeout(() => {
-              startHeadControl().catch(() => {});
-            }, 400);
-          }
+          // 使用刷新页面来实现彻底重置
+          window.location.reload();
         });
 
-        // 再来一局（结算界面）
+        // ---- 再来一局（刷新页面） ----
         document.getElementById("retryBtn").addEventListener("click", () => {
-          const headWasOn = state.headControlEnabled;
-          const wasTouchOnly = state.touchOnlyMode;
-          stopHeadControl();
-          resetGameState();
-          state.touchOnlyMode = wasTouchOnly;
-          if (wasTouchOnly) {
-            state.headFaceDetected = true;
-            state.timerStarted = true;
-            state.headControlEnabled = false;
-          } else {
-            state.headFaceDetected = false;
-            state.timerStarted = false;
-            state.headControlEnabled = true;
-          }
-          startGame();
-          if (headWasOn && !wasTouchOnly) {
-            setTimeout(() => {
-              startHeadControl().catch(() => {});
-            }, 400);
-          }
+          window.location.reload();
         });
 
         document.getElementById("rankBtn").addEventListener("click", () => {
@@ -2556,19 +2724,11 @@
           );
         });
 
-        // 音效和速度开关
+        // ---- 音效和速度滑杆 ----
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
               v = this.dataset.val;
-            if (s === "speed") {
-              this.parentElement
-                .querySelectorAll(".toggle-btn")
-                .forEach((x) => x.classList.remove("active"));
-              this.classList.add("active");
-              state.speedMultiplier = parseFloat(v);
-              return;
-            }
             this.parentElement
               .querySelectorAll(".toggle-btn")
               .forEach((x) => x.classList.remove("active"));
@@ -2581,22 +2741,24 @@
           });
         });
 
-        // ============================================================
+        // ---- 速度滑杆事件 ----
+        speedSlider.addEventListener("input", function () {
+          const val = parseFloat(this.value);
+          state.speedMultiplier = val;
+          speedDisplay.textContent = val.toFixed(2) + "x";
+        });
+        // 初始化显示
+        speedDisplay.textContent = "1.00x";
+
+        // ================================================================
         // 16. 启动
-        // ============================================================
+        // ================================================================
         loadImgs(() => {
           resetGameState();
           document.getElementById("startOverlay").classList.remove("hidden");
           document.getElementById("resultModal").classList.add("hidden");
           document.getElementById("pauseModal").classList.add("hidden");
           updateHeadIndicator(false, "头控关");
-          // 默认速度1x高亮
-          document
-            .querySelectorAll('.settings-row .toggle-btn[data-setting="speed"]')
-            .forEach((b) => {
-              if (b.dataset.val === "1") b.classList.add("active");
-              else b.classList.remove("active");
-            });
           requestAnimationFrame(loop);
         });
 
@@ -2615,7 +2777,7 @@
           }
         });
 
-        console.log("🍳 像素厨房已启动！重新开始头控已修复，速度可调。");
+        console.log("🍳 像素厨房已启动！速度滑杆可调，重新开始刷新页面。");
       })();
     </script>
   </body>
