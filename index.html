@@ -354,7 +354,7 @@
         color: #2c2a26;
       }
 
-      /* ===== 速度滑杆 ===== */
+      /* ===== 速度滑杆（标签已移除） ===== */
       .speed-control {
         display: flex;
         flex-direction: column;
@@ -405,17 +405,6 @@
         min-width: 44px;
         text-align: center;
         font-weight: bold;
-      }
-      .speed-control .speed-labels {
-        display: flex;
-        justify-content: space-between;
-        width: 100%;
-        padding: 2px 2px 0 2px;
-        font-size: 9px;
-        color: #7a7268;
-      }
-      .speed-control .speed-labels span {
-        cursor: default;
       }
 
       /* ===== 游戏说明文字 ===== */
@@ -583,6 +572,40 @@
         margin-top: 16px;
       }
 
+      /* ===== 厨师背景替换选项（三个小方盒子） ===== */
+      .chef-bg-options {
+        display: flex;
+        justify-content: center;
+        gap: 12px;
+        margin-top: 16px;
+      }
+      .chef-bg-option {
+        width: 60px;
+        height: 60px;
+        border-radius: 8px;
+        border: 4px solid #d0c8b8;
+        overflow: hidden;
+        cursor: pointer;
+        transition:
+          border-color 0.2s,
+          transform 0.2s;
+        flex-shrink: 0;
+        background: #fff;
+      }
+      .chef-bg-option:hover {
+        transform: scale(1.05);
+      }
+      .chef-bg-option.active {
+        border-color: #e67e22;
+        box-shadow: 0 0 0 2px #f1c40f;
+      }
+      .chef-bg-option img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+
       #avatarModal {
         padding-top: 56px;
       }
@@ -643,6 +666,10 @@
           width: 64px;
           height: 64px;
         }
+        .chef-bg-option {
+          width: 48px;
+          height: 48px;
+        }
         .score-number {
           font-size: 40px;
         }
@@ -657,9 +684,6 @@
           font-size: 12px;
           padding: 2px 8px;
           height: 28px;
-        }
-        .speed-control .speed-labels {
-          font-size: 8px;
         }
         .speed-control .speed-value {
           font-size: 12px;
@@ -795,6 +819,38 @@
               <input type="file" id="avatarFileInput" accept="image/*" />
             </div>
           </div>
+
+          <!-- 三个小方盒子：厨师背景替换选项 -->
+          <div class="chef-bg-options">
+            <div
+              class="chef-bg-option active"
+              data-src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
+            >
+              <img
+                src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
+                alt="厨师 1"
+              />
+            </div>
+            <div
+              class="chef-bg-option"
+              data-src="https://img2.baidu.com/it/u=1815278116,2138452566&fm=253&fmt=auto&app=138&f=PNG?w=500&h=500"
+            >
+              <img
+                src="https://img2.baidu.com/it/u=1815278116,2138452566&fm=253&fmt=auto&app=138&f=PNG?w=500&h=500"
+                alt="厨师 2"
+              />
+            </div>
+            <div
+              class="chef-bg-option"
+              data-src="https://img0.baidu.com/it/u=2947248872,1467258250&fm=253&fmt=auto&app=138&f=PNG?w=500&h=500"
+            >
+              <img
+                src="https://img0.baidu.com/it/u=2947248872,1467258250&fm=253&fmt=auto&app=138&f=PNG?w=500&h=500"
+                alt="厨师 3"
+              />
+            </div>
+          </div>
+
           <button class="btn avatar-confirm-btn" id="avatarConfirmBtn">
             ✅ 确认
           </button>
@@ -834,7 +890,7 @@
                 </button>
               </div>
             </div>
-            <!-- 速度滑杆 -->
+            <!-- 速度滑杆（已移除下方标签） -->
             <div class="settings-row">
               <span>📦 传送带速度</span>
               <div class="speed-control">
@@ -848,11 +904,6 @@
                     value="1"
                   />
                   <span class="speed-value" id="speedDisplay">1.0x</span>
-                </div>
-                <div class="speed-labels">
-                  <span>0.5x</span>
-                  <span>1x</span>
-                  <span>1.5x</span>
                 </div>
               </div>
             </div>
@@ -943,6 +994,9 @@
         // 速度滑杆
         const speedSlider = document.getElementById("speedSlider");
         const speedDisplay = document.getElementById("speedDisplay");
+
+        // 厨师背景选项
+        const chefBgOptions = document.querySelectorAll(".chef-bg-option");
 
         // ================================================================
         // 2. Canvas 尺寸
@@ -1739,19 +1793,27 @@
             ctx.fillRect(rTx, y + 15, tw, 4);
           }
 
-          // ---- 食材绘制（使用 emoji，可替换为图片） ----
+          // ---- 食材绘制（使用 emoji，背景为方形） ----
           state.ings.forEach((ing) => {
             if (!ing || !ing.alive) return;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
             ctx.shadowBlur = 8;
-            ctx.beginPath();
-            ctx.arc(ing.x, ing.y, ing.sz, 0, Math.PI * 2);
             ctx.fillStyle = ing.color;
-            ctx.fill();
+            ctx.fillRect(
+              ing.x - ing.sz / 2,
+              ing.y - ing.sz / 2,
+              ing.sz,
+              ing.sz,
+            );
             ctx.shadowBlur = 0;
             ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.lineWidth = 2;
-            ctx.stroke();
+            ctx.strokeRect(
+              ing.x - ing.sz / 2,
+              ing.y - ing.sz / 2,
+              ing.sz,
+              ing.sz,
+            );
             ctx.font = `${ing.sz}px serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
@@ -1790,16 +1852,18 @@
           // ctx.drawImage(decoImg, leftCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
           // ctx.drawImage(decoImg, rightCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
 
-          // ---- 绘制厨师 ----
+          // ---- 绘制厨师（修复拉伸：保持宽度，调整高度为 chefSz * 0.8） ----
           if (imgs.chef) {
             ctx.save();
-            ctx.translate(chefX, chefY + chefSz * 0.4);
+            const chefDrawSize = chefSz * 0.8;
+            // 调整 Y 位置使其居中
+            ctx.translate(chefX, chefY + chefSz * 0.3);
             ctx.drawImage(
               imgs.chef,
-              -chefSz / 2,
-              -chefSz * 1.2,
-              chefSz,
-              chefSz * 1.2,
+              -chefDrawSize / 2,
+              -chefDrawSize / 2,
+              chefDrawSize,
+              chefDrawSize,
             );
             ctx.restore();
           }
@@ -1837,7 +1901,7 @@
               potH,
             );
 
-          // ---- 锅中的食材（用 emoji 表示，可替换为图片） ----
+          // ---- 锅中的食材 ----
           const potItems = Object.keys(state.pot).filter(
             (k) => state.pot[k] > 0,
           );
@@ -1983,7 +2047,7 @@
             }
           }
 
-          // ---- 菜单面板（显示当前菜谱和进度） ----
+          // ---- 菜单面板 ----
           const menuW = cW * 1.1,
             baseH = 90,
             rowH = 30;
@@ -2137,7 +2201,7 @@
         }
 
         // ================================================================
-        // 11. 游戏结束 & 重置（改用刷新页面）
+        // 11. 游戏结束 & 重置（刷新页面）
         // ================================================================
         function getRank(g) {
           if (g >= 200) return "👑 巅峰厨神";
@@ -2166,7 +2230,6 @@
           document.getElementById("resultModal").classList.remove("hidden");
         }
 
-        // 重置所有头控状态（彻底清理）
         function resetHeadControlState() {
           if (camera) {
             try {
@@ -2488,17 +2551,19 @@
         }
 
         // ================================================================
-        // 13. 头像更换逻辑
+        // 13. 头像更换 & 厨师背景替换
         // ================================================================
         let tempAvatarImage = null;
 
         function openAvatarModal() {
           avatarModal.classList.remove("hidden");
+          // 更新预览大图
           if (imgs.chef && imgs.chef.complete && imgs.chef.naturalWidth > 0) {
             avatarChefBg.src = imgs.chef.src;
           } else {
             avatarChefBg.src = imgs.chef ? imgs.chef.src : "";
           }
+          // 更新头像预览
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -2518,6 +2583,13 @@
             tempAvatarImage = null;
           }
           avatarFileInput.value = "";
+          // 同步激活状态
+          chefBgOptions.forEach((opt) => {
+            opt.classList.remove("active");
+            if (opt.dataset.src === imgs.chef.src) {
+              opt.classList.add("active");
+            }
+          });
         }
 
         function closeAvatarModal(save = false) {
@@ -2548,6 +2620,20 @@
           };
           reader.readAsDataURL(file);
         }
+
+        // ---- 厨师背景选项点击事件 ----
+        chefBgOptions.forEach((opt) => {
+          opt.addEventListener("click", function () {
+            const src = this.dataset.src;
+            // 更新大预览图
+            avatarChefBg.src = src;
+            // 更新游戏中的厨师图片
+            imgs.chef.src = src;
+            // 更新激活状态
+            chefBgOptions.forEach((o) => o.classList.remove("active"));
+            this.classList.add("active");
+          });
+        });
 
         // ================================================================
         // 14. 触屏控制
@@ -2707,13 +2793,10 @@
           if (state.paused) togglePause();
         });
 
-        // ---- 重新开始（刷新页面） ----
+        // ---- 重新开始 & 再来一局（刷新页面） ----
         document.getElementById("restartBtn").addEventListener("click", () => {
-          // 使用刷新页面来实现彻底重置
           window.location.reload();
         });
-
-        // ---- 再来一局（刷新页面） ----
         document.getElementById("retryBtn").addEventListener("click", () => {
           window.location.reload();
         });
@@ -2747,7 +2830,6 @@
           state.speedMultiplier = val;
           speedDisplay.textContent = val.toFixed(2) + "x";
         });
-        // 初始化显示
         speedDisplay.textContent = "1.00x";
 
         // ================================================================
@@ -2777,7 +2859,9 @@
           }
         });
 
-        console.log("🍳 像素厨房已启动！速度滑杆可调，重新开始刷新页面。");
+        console.log(
+          "🍳 像素厨房已启动！厨师比例已修复，食材为方形，支持厨师背景替换。",
+        );
       })();
     </script>
   </body>
