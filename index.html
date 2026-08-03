@@ -569,6 +569,10 @@
       }
       .avatar-confirm-btn {
         margin-top: 16px;
+        width: 200px !important;
+        max-width: 200px !important;
+        margin-left: auto;
+        margin-right: auto;
       }
 
       /* ===== 厨师背景替换选项（三个小方盒子） ===== */
@@ -715,6 +719,10 @@
         .info-link-bottom {
           font-size: 10px;
         }
+        .avatar-confirm-btn {
+          width: 160px !important;
+          max-width: 160px !important;
+        }
       }
     </style>
   </head>
@@ -745,17 +753,17 @@
         class="modal-overlay"
         style="background: rgba(255, 248, 240, 0.75)"
       >
-        <div class="modal-title">像素厨房</div>
+        <div class="modal-title">👨‍🍳 像素厨房</div>
         <div class="modal-card" style="background: #fffefc">
-          <div class="subtitle-big">开启摄像头</div>
+          <div class="subtitle-big">📷 开启摄像头</div>
           <div class="subtitle-small">触屏滑动 · 头控可选</div>
 
           <div class="btn-row">
             <button class="btn btn-start-camera" id="startWithCameraBtn">
-              允许并开始
+              📷 允许并开始
             </button>
             <button class="btn btn-secondary" id="startTouchBtn">
-              触屏玩法
+              👆 触屏玩法
             </button>
           </div>
 
@@ -763,7 +771,7 @@
             class="btn btn-secondary btn-small start-avatar-btn"
             id="openAvatarBtn"
           >
-            更换厨师形象
+            🔄 更换厨师形象
           </button>
 
           <!-- 游戏说明（放在底部，居中） -->
@@ -1657,7 +1665,7 @@
         }
 
         // ================================================================
-        // 8. 渲染（游戏绘制） — 所有图片资源在此集中加载和绘制
+        // 8. 渲染（游戏绘制）
         // ================================================================
 
         /**
@@ -1763,18 +1771,6 @@
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧用餐图片
         }
 
-        /**
-         * draw() 函数中需要替换图片的位置：
-         * 1. 传送带背景：使用 imgs.belt
-         * 2. 厨师角色：使用 imgs.chef
-         * 3. 锅/灶台：使用 imgs.pot
-         * 4. 左侧客人：使用 imgs.guestL / imgs.eatL
-         * 5. 右侧客人：使用 imgs.guestR / imgs.eatR
-         * 6. 灰色方盒子装饰：见下方 "灰色方盒子装饰" 标注，目前用 Canvas 绘制，
-         *    如需替换为图片，可取消注释并替换图片链接。
-         * 7. 食材：使用 emoji + 颜色绘制，如需替换为图片，可在 addIngredient 中修改。
-         * 8. 成品菜：使用 emoji 显示，如需替换为图片，可修改菜单渲染部分。
-         */
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -1832,7 +1828,7 @@
             ctx.shadowBlur = 0;
           });
 
-          // ---- 厨师 ----
+          // ---- 厨师相关参数 ----
           const chefSz = cH * 1.3,
             chefX = state.chefX * W,
             chefY = cH * 5.3;
@@ -1842,9 +1838,7 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          // ---------- 灰色方盒子装饰 ----------
-          // 【替换说明】以下两个灰色方盒子是装饰元素，如需替换为图片，可在此处使用 ctx.drawImage()
-          // 取消注释下面的代码，并替换图片链接即可。
+          // ---- 灰色方盒子装饰 ----
           const decoPotW = tw * 1.6,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
@@ -1856,22 +1850,18 @@
             decoPotW,
             decoHPot,
           );
-          // 如需替换为图片，请使用以下代码（替换 imgSrc 为您的图片链接）：
-          // const decoImg = new Image(); decoImg.src = "您的灰色方盒子图片链接";
-          // ctx.drawImage(decoImg, leftCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
-          // ctx.drawImage(decoImg, rightCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
 
-          // ---- 厨师与头像整体下移 ----
-          const shiftDown = 6; // 整体下移像素，使厨师底部紧贴锅顶部
-          const chefDrawSize = chefSz * 0.8;
-          const chefBottomOriginal = chefY + chefSz * 0.3 + chefDrawSize / 2;
-          const potTop = potY - potH / 2;
-          const chefOffset = chefBottomOriginal - potTop + 2 + shiftDown; // 2px 重叠 + shiftDown
+          // ---- 计算厨师绘制位置，使其底部紧贴锅顶部（下移） ----
+          const chefDrawSize = chefSz * 0.8; // 厨师图片绘制大小
+          const potTop = potY - potH / 2; // 锅顶部Y坐标
+          // 我们希望厨师底部与锅顶部重叠2像素，即 cookBottom = potTop + 2
+          const cookBottom = potTop + 2;
+          // 厨师绘制中心Y坐标 = cookBottom - chefDrawSize/2
+          const drawY = cookBottom - chefDrawSize / 2;
 
-          // 绘制厨师
+          // ---- 绘制厨师 ----
           if (imgs.chef) {
             ctx.save();
-            const drawY = chefY + chefSz * 0.3 - chefOffset;
             ctx.translate(chefX, drawY);
             ctx.drawImage(
               imgs.chef,
@@ -1883,23 +1873,21 @@
             ctx.restore();
           }
 
-          // ---- 圆形头像（位置随厨师整体下移） ----
+          // ---- 圆形头像（位置与厨师图片中心重合，即与弹窗一致） ----
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
             state.avatarImg.naturalWidth > 0
           ) {
             ctx.save();
-            const avatarX = chefX;
-            const avatarY = chefY + chefSz * 0.4 - chefSz * 0.65 + shiftDown;
             const avatarRadius = chefSz * 0.22;
             ctx.beginPath();
-            ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
+            ctx.arc(chefX, drawY, avatarRadius, 0, Math.PI * 2);
             ctx.clip();
             ctx.drawImage(
               state.avatarImg,
-              avatarX - avatarRadius,
-              avatarY - avatarRadius,
+              chefX - avatarRadius,
+              drawY - avatarRadius,
               avatarRadius * 2,
               avatarRadius * 2,
             );
@@ -1962,9 +1950,9 @@
             ctx.globalAlpha = 0.35;
             ctx.fillStyle = "#ff0000";
             const coverX = chefX - chefSz * 0.8;
-            const coverY = chefY - chefSz * 0.5;
+            const coverY = drawY - chefDrawSize / 2 - 10;
             const coverW = chefSz * 1.6;
-            const coverH = chefSz * 2.0;
+            const coverH = chefDrawSize + 20;
             ctx.fillRect(coverX, coverY, coverW, coverH);
             ctx.restore();
           }
@@ -2875,7 +2863,7 @@
         });
 
         console.log(
-          "🍳 像素厨房已启动！厨师位置已优化，食材方框更大，开始界面布局已调整。",
+          "🍳 像素厨房已启动！厨师与锅紧密贴合，头像位置与弹窗一致。",
         );
       })();
     </script>
