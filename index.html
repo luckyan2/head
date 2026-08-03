@@ -407,17 +407,17 @@
         font-weight: bold;
       }
 
-      /* ===== 游戏说明文字 ===== */
-      .info-link {
+      /* ===== 游戏说明文字（放在底部） ===== */
+      .info-link-bottom {
         color: #999;
         font-size: 12px;
         cursor: pointer;
         text-decoration: underline;
         display: inline-block;
-        margin-top: 8px;
+        margin-top: 12px;
         transition: color 0.2s;
       }
-      .info-link:hover {
+      .info-link-bottom:hover {
         color: #e67e22;
       }
 
@@ -610,6 +610,15 @@
         padding-top: 56px;
       }
 
+      /* ===== 时间到页面底部邮箱 ===== */
+      .footer-email {
+        font-size: 10px;
+        color: #aaa;
+        margin-top: 16px;
+        text-align: center;
+        letter-spacing: 0.5px;
+      }
+
       /* ===== 响应式 ===== */
       @media (max-width: 480px) {
         .modal-overlay {
@@ -700,6 +709,13 @@
           width: 14px;
           height: 14px;
         }
+        .footer-email {
+          font-size: 9px;
+          margin-top: 12px;
+        }
+        .info-link-bottom {
+          font-size: 10px;
+        }
       }
     </style>
   </head>
@@ -751,8 +767,8 @@
             🔄 更换厨师形象
           </button>
 
-          <!-- 游戏说明（灰色可点击文字） -->
-          <div class="info-link" id="openInfoBtn">📖 游戏说明</div>
+          <!-- 游戏说明（放在底部，替换原来的提示文字） -->
+          <div class="info-link-bottom" id="openInfoBtn">📖 游戏说明</div>
 
           <input
             type="file"
@@ -760,9 +776,6 @@
             accept="image/*"
             style="display: none"
           />
-          <div style="font-size: 10px; color: #aaa; margin-top: 12px">
-            允许摄像头后可用头控制厨师左右移动
-          </div>
         </div>
       </div>
 
@@ -890,7 +903,7 @@
                 </button>
               </div>
             </div>
-            <!-- 速度滑杆（已移除下方标签） -->
+            <!-- 速度滑杆 -->
             <div class="settings-row">
               <span>📦 传送带速度</span>
               <div class="speed-control">
@@ -923,7 +936,7 @@
         </div>
       </div>
 
-      <!-- ===== 结算弹窗 ===== -->
+      <!-- ===== 结算弹窗（时间到） ===== -->
       <div id="resultModal" class="modal-overlay hidden">
         <div class="modal-title">🍳 时间到！</div>
         <div class="modal-card">
@@ -955,6 +968,8 @@
           >
             📊 我的评级
           </button>
+          <!-- 底部邮箱 -->
+          <div class="footer-email">📧 我的邮箱：xxx@example.com</div>
         </div>
       </div>
     </div>
@@ -1459,6 +1474,8 @@
               ? cellW * 0.5 + rand(0, cellW * 0.3)
               : cellW * 3.1 + rand(0, cellW * 0.2);
           const baseSp = 1.8 + rand(0, 0.5);
+          // 【食材方框变大】sz 从 32-40 改为 38-48
+          const sz = 38 + rand(0, 10);
           state.ings.push({
             ...type,
             lane,
@@ -1466,7 +1483,7 @@
             y: cellH * 0.2,
             sx,
             sp: baseSp * state.speedMultiplier,
-            sz: 32 + rand(0, 8),
+            sz: sz,
             alive: true,
           });
         }
@@ -1793,28 +1810,19 @@
             ctx.fillRect(rTx, y + 15, tw, 4);
           }
 
-          // ---- 食材绘制（使用 emoji，背景为方形） ----
+          // ---- 食材绘制（方形背景） ----
           state.ings.forEach((ing) => {
             if (!ing || !ing.alive) return;
+            const size = ing.sz;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
             ctx.shadowBlur = 8;
             ctx.fillStyle = ing.color;
-            ctx.fillRect(
-              ing.x - ing.sz / 2,
-              ing.y - ing.sz / 2,
-              ing.sz,
-              ing.sz,
-            );
+            ctx.fillRect(ing.x - size / 2, ing.y - size / 2, size, size);
             ctx.shadowBlur = 0;
             ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.lineWidth = 2;
-            ctx.strokeRect(
-              ing.x - ing.sz / 2,
-              ing.y - ing.sz / 2,
-              ing.sz,
-              ing.sz,
-            );
-            ctx.font = `${ing.sz}px serif`;
+            ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
+            ctx.font = `${size}px serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
             ctx.fillStyle = "#fff";
@@ -1852,12 +1860,17 @@
           // ctx.drawImage(decoImg, leftCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
           // ctx.drawImage(decoImg, rightCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
 
-          // ---- 绘制厨师（修复拉伸：保持宽度，调整高度为 chefSz * 0.8） ----
+          // ---- 绘制厨师（上移使底部贴近锅顶部，头像位置不变） ----
+          const chefDrawSize = chefSz * 0.8;
+          // 计算偏移量：使厨师底部紧贴锅顶部，锅盖住厨师底部一点点
+          const chefBottomOriginal = chefY + chefSz * 0.3 + chefDrawSize / 2;
+          const potTop = potY - potH / 2;
+          // 偏移量 = 厨师底部 - 锅顶部 + 2像素重叠
+          const chefOffset = chefBottomOriginal - potTop + 2;
           if (imgs.chef) {
             ctx.save();
-            const chefDrawSize = chefSz * 0.8;
-            // 调整 Y 位置使其居中
-            ctx.translate(chefX, chefY + chefSz * 0.3);
+            const drawY = chefY + chefSz * 0.3 - chefOffset;
+            ctx.translate(chefX, drawY);
             ctx.drawImage(
               imgs.chef,
               -chefDrawSize / 2,
@@ -1868,7 +1881,7 @@
             ctx.restore();
           }
 
-          // ---- 头像（如果已上传） ----
+          // ---- 圆形头像（位置不变，在厨师身体区域） ----
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -2860,7 +2873,7 @@
         });
 
         console.log(
-          "🍳 像素厨房已启动！厨师比例已修复，食材为方形，支持厨师背景替换。",
+          "🍳 像素厨房已启动！厨师位置已上移，食材方框变大，开始界面已精简。",
         );
       })();
     </script>
