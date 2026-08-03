@@ -414,7 +414,6 @@
         cursor: pointer;
         text-decoration: underline;
         display: inline-block;
-        margin-top: 12px;
         transition: color 0.2s;
       }
       .info-link-bottom:hover {
@@ -746,17 +745,17 @@
         class="modal-overlay"
         style="background: rgba(255, 248, 240, 0.75)"
       >
-        <div class="modal-title">👨‍🍳 像素厨房</div>
+        <div class="modal-title">像素厨房</div>
         <div class="modal-card" style="background: #fffefc">
-          <div class="subtitle-big">📷 开启摄像头</div>
+          <div class="subtitle-big">开启摄像头</div>
           <div class="subtitle-small">触屏滑动 · 头控可选</div>
 
           <div class="btn-row">
             <button class="btn btn-start-camera" id="startWithCameraBtn">
-              📷 允许并开始
+              允许并开始
             </button>
             <button class="btn btn-secondary" id="startTouchBtn">
-              👆 触屏玩法
+              触屏玩法
             </button>
           </div>
 
@@ -764,11 +763,13 @@
             class="btn btn-secondary btn-small start-avatar-btn"
             id="openAvatarBtn"
           >
-            🔄 更换厨师形象
+            更换厨师形象
           </button>
 
-          <!-- 游戏说明（放在底部，替换原来的提示文字） -->
-          <div class="info-link-bottom" id="openInfoBtn">📖 游戏说明</div>
+          <!-- 游戏说明（放在底部，居中） -->
+          <div style="margin-top: 20px; text-align: center">
+            <span class="info-link-bottom" id="openInfoBtn">📖 游戏说明</span>
+          </div>
 
           <input
             type="file"
@@ -1474,8 +1475,8 @@
               ? cellW * 0.5 + rand(0, cellW * 0.3)
               : cellW * 3.1 + rand(0, cellW * 0.2);
           const baseSp = 1.8 + rand(0, 0.5);
-          // 【食材方框变大】sz 从 32-40 改为 38-48
-          const sz = 38 + rand(0, 10);
+          // 【食材方框更大】sz 42-52
+          const sz = 42 + rand(0, 10);
           state.ings.push({
             ...type,
             lane,
@@ -1860,13 +1861,14 @@
           // ctx.drawImage(decoImg, leftCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
           // ctx.drawImage(decoImg, rightCenter - decoPotW/2, decoPotY, decoPotW, decoHPot);
 
-          // ---- 绘制厨师（上移使底部贴近锅顶部，头像位置不变） ----
+          // ---- 厨师与头像整体下移 ----
+          const shiftDown = 6; // 整体下移像素，使厨师底部紧贴锅顶部
           const chefDrawSize = chefSz * 0.8;
-          // 计算偏移量：使厨师底部紧贴锅顶部，锅盖住厨师底部一点点
           const chefBottomOriginal = chefY + chefSz * 0.3 + chefDrawSize / 2;
           const potTop = potY - potH / 2;
-          // 偏移量 = 厨师底部 - 锅顶部 + 2像素重叠
-          const chefOffset = chefBottomOriginal - potTop + 2;
+          const chefOffset = chefBottomOriginal - potTop + 2 + shiftDown; // 2px 重叠 + shiftDown
+
+          // 绘制厨师
           if (imgs.chef) {
             ctx.save();
             const drawY = chefY + chefSz * 0.3 - chefOffset;
@@ -1881,7 +1883,7 @@
             ctx.restore();
           }
 
-          // ---- 圆形头像（位置不变，在厨师身体区域） ----
+          // ---- 圆形头像（位置随厨师整体下移） ----
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -1889,7 +1891,7 @@
           ) {
             ctx.save();
             const avatarX = chefX;
-            const avatarY = chefY + chefSz * 0.4 - chefSz * 0.65;
+            const avatarY = chefY + chefSz * 0.4 - chefSz * 0.65 + shiftDown;
             const avatarRadius = chefSz * 0.22;
             ctx.beginPath();
             ctx.arc(avatarX, avatarY, avatarRadius, 0, Math.PI * 2);
@@ -2873,7 +2875,7 @@
         });
 
         console.log(
-          "🍳 像素厨房已启动！厨师位置已上移，食材方框变大，开始界面已精简。",
+          "🍳 像素厨房已启动！厨师位置已优化，食材方框更大，开始界面布局已调整。",
         );
       })();
     </script>
