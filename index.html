@@ -6,11 +6,11 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>肥喵厨房 · 复古手绘</title>
+    <title>肥喵厨房 · 中世纪复古</title>
 
-    <!-- 免费商用字体：思源宋体 + 手写体 -->
+    <!-- ===== 免费商用字体 ===== -->
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Noto+Sans+SC:wght@300;400;700;900&family=MedievalSharp&display=swap"
       rel="stylesheet"
     />
 
@@ -26,12 +26,8 @@
 
     <style>
       /* ================================================================
-           全局重置 · 复古手绘风格（绣湖风）
-           - 全部直角，无圆角
-           - 细黑钢笔线边框
-           - 暗色调 + 旧纸色
-           - 黑体 / 免费商用字体
-           ================================================================ */
+         全局重置 & 基础 — 中世纪复古风格
+         ================================================================ */
       * {
         margin: 0;
         padding: 0;
@@ -41,20 +37,32 @@
       }
 
       body {
-        /* 深色复古背景 */
-        background: #1e1916;
+        background: #2c1f15;
+        /* 深色木质底 */
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         min-height: 100vh;
         font-family:
-          "Noto Serif SC", "SimHei", "Microsoft YaHei", "PingFang SC", serif;
+          "Noto Sans SC", "Microsoft YaHei", "PingFang SC", sans-serif;
         touch-action: none;
         padding: 8px 0;
+        background-image:
+          radial-gradient(
+            ellipse at 20% 50%,
+            rgba(60, 40, 30, 0.6) 0%,
+            transparent 70%
+          ),
+          radial-gradient(
+            ellipse at 80% 50%,
+            rgba(60, 40, 30, 0.6) 0%,
+            transparent 70%
+          ),
+          linear-gradient(180deg, #2c1f15 0%, #1e1410 100%);
       }
 
-      /* ===== 顶部状态栏 ===== */
+      /* ===== 顶部状态栏 — 羊皮纸卷轴 ===== */
       .outer-top-bar {
         width: 100%;
         max-width: 420px;
@@ -65,57 +73,86 @@
         flex-wrap: nowrap;
         justify-content: center;
       }
-
       .top-box {
         flex: 1;
         min-width: 0;
-        background: #d6c9b8;
-        /* 旧纸色 */
-        border: 2px solid #1a1410;
-        /* 细黑线 */
+        background: linear-gradient(145deg, #e8d5b0, #dcc29e);
+        border-radius: 4px 12px 4px 12px;
         padding: 8px 4px;
         text-align: center;
-        font-size: 14px;
-        color: #1e1612;
-        box-shadow: none;
+        font-size: 13px;
+        color: #3d2b1f;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 235, 200, 0.6),
+          0 4px 0 #5a3d2b,
+          0 6px 12px rgba(0, 0, 0, 0.5);
+        border: 2px solid #8b6f4c;
+        border-top-color: #b8956a;
+        border-left-color: #b8956a;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 4px;
         white-space: nowrap;
+        font-family: "Noto Sans SC", sans-serif;
         font-weight: 700;
         letter-spacing: 0.5px;
+        text-shadow: 0 1px 0 rgba(255, 235, 200, 0.3);
+        position: relative;
       }
-
       .top-box:not(:last-child) {
         flex: 0.8;
       }
       .top-box:last-child {
         flex: 1.3;
       }
+      /* 装饰铆钉 */
+      .top-box::before,
+      .top-box::after {
+        content: "⬡";
+        position: absolute;
+        font-size: 8px;
+        color: #8b6f4c;
+        opacity: 0.5;
+      }
+      .top-box::before {
+        top: 2px;
+        left: 4px;
+      }
+      .top-box::after {
+        bottom: 2px;
+        right: 4px;
+      }
 
       #top-pause {
         cursor: pointer;
-        font-size: 22px;
+        font-size: 20px;
+        color: #5a3d2b;
+        transition: transform 0.15s;
+        text-shadow: 0 1px 0 rgba(255, 235, 200, 0.4);
+      }
+      #top-pause:hover {
+        transform: scale(1.15);
+        color: #8b1a1a;
       }
       #top-gold {
-        color: #8b5a2b;
+        color: #b8860b;
         font-weight: 900;
+        text-shadow: 0 0 8px rgba(184, 134, 11, 0.3);
       }
       #top-dishes {
-        color: #3d2c1e;
+        color: #4a3728;
       }
       #top-head-status {
-        font-size: 14px;
+        font-size: 13px;
         min-width: 80px;
         cursor: default;
         flex: 0.9;
         gap: 2px;
       }
-
       .status-text {
-        font-size: 11px;
-        color: #3d2c1e;
+        font-size: 10px;
+        color: #5a3d2b;
         max-width: 60px;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -123,10 +160,11 @@
         font-weight: 400;
       }
 
-      /* 倒计时闪烁（保留功能，颜色适配） */
+      /* ===== 倒计时闪烁 — 暗红警示 ===== */
       #top-time.blink-red {
-        color: #a53a2a !important;
+        color: #8b1a1a !important;
         animation: blink 0.5s step-end infinite;
+        text-shadow: 0 0 12px rgba(139, 26, 26, 0.5) !important;
       }
       @keyframes blink {
         0%,
@@ -138,21 +176,47 @@
         }
       }
 
-      /* ===== 游戏容器 ===== */
+      /* ===== 游戏包装器 — 木质相框 ===== */
       #game-wrapper {
         position: relative;
         width: 100%;
         max-width: 420px;
         aspect-ratio: 9/16;
-        background: #3d322a;
-        /* 深色底 */
+        background: #3d2b1f;
         overflow: hidden;
-        border: 3px solid #1a1410;
         box-shadow:
-          0 8px 0 #0d0a08,
-          0 12px 40px rgba(0, 0, 0, 0.6);
+          inset 0 0 0 6px #2c1a10,
+          inset 0 0 0 10px #5a3d2b,
+          0 12px 0 #1a100a,
+          0 20px 60px rgba(0, 0, 0, 0.8);
         margin: 0 12px 12px;
-        border-radius: 0 !important;
+        border: 6px solid #7a5a3a;
+        border-top-color: #9a7a5a;
+        border-left-color: #9a7a5a;
+        border-radius: 6px 20px 6px 20px;
+      }
+      /* 相框装饰角 */
+      #game-wrapper::before {
+        content: "✧";
+        position: absolute;
+        top: -8px;
+        left: 12px;
+        font-size: 18px;
+        color: #b8956a;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        z-index: 20;
+        opacity: 0.6;
+      }
+      #game-wrapper::after {
+        content: "✧";
+        position: absolute;
+        bottom: -8px;
+        right: 12px;
+        font-size: 18px;
+        color: #b8956a;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        z-index: 20;
+        opacity: 0.6;
       }
 
       #gameCanvas {
@@ -173,34 +237,40 @@
         right: 8px;
         width: 64px;
         height: 48px;
-        border: 2px solid #1a1410;
+        border-radius: 4px;
+        border: 3px solid #8b6f4c;
         z-index: 10;
         object-fit: cover;
         background: #1a1410;
-        opacity: 0.6;
+        opacity: 0.5;
         pointer-events: none;
-        transition: opacity 0.3s;
-        border-radius: 0 !important;
+        transition: opacity 0.4s;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
       }
       #camera-preview.active {
-        opacity: 0.9;
+        opacity: 0.85;
+        border-color: #c9a84c;
+        box-shadow: 0 0 20px rgba(201, 168, 76, 0.2);
       }
 
-      /* ===== 弹窗通用 · 复古手绘 ===== */
+      /* ================================================================
+         弹窗通用 — 羊皮纸卷轴风格
+         ================================================================ */
       .modal-overlay {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(30, 25, 22, 0.88);
+        background: rgba(30, 20, 16, 0.82);
+        backdrop-filter: blur(6px);
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
         z-index: 100;
         padding: 36px 16px 20px;
-        animation: fadeIn 0.3s ease;
+        animation: fadeIn 0.35s ease;
       }
       .modal-overlay.hidden {
         display: none;
@@ -208,7 +278,7 @@
       @keyframes fadeIn {
         from {
           opacity: 0;
-          transform: scale(0.97);
+          transform: scale(0.94);
         }
         to {
           opacity: 1;
@@ -217,124 +287,202 @@
       }
 
       .modal-title {
-        font-size: 34px;
-        color: #d6c9b8;
-        text-shadow: 3px 3px 0 #1a1410;
-        margin-bottom: 20px;
+        font-family: "Cinzel", "Noto Sans SC", serif;
+        font-size: 32px;
+        font-weight: 900;
+        color: #c9a84c;
+        text-shadow:
+          0 4px 0 #5a3d2b,
+          0 6px 20px rgba(0, 0, 0, 0.6);
+        margin-bottom: 16px;
         text-align: center;
         letter-spacing: 4px;
         line-height: 1.3;
         flex-shrink: 0;
-        font-family: "Ma Shan Zheng", "ZCOOL KuaiLe", "Noto Serif SC", serif;
-        font-weight: 700;
       }
 
       .modal-card {
-        background: #d6c9b8;
-        /* 旧纸色 */
+        background: linear-gradient(170deg, #f2e6d0, #e4d4b8);
+        border-radius: 8px 24px 8px 24px;
         padding: 24px 24px 28px;
         max-width: 360px;
         width: 100%;
         text-align: center;
-        color: #1e1612;
-        border: 3px solid #1a1410;
-        box-shadow: 0 8px 0 #0d0a08;
-        font-family: "Noto Serif SC", "SimHei", "Microsoft YaHei", serif;
+        color: #3d2b1f;
+        border: 4px solid #8b6f4c;
+        border-top-color: #b8956a;
+        border-left-color: #b8956a;
+        box-shadow:
+          inset 0 0 0 2px rgba(255, 235, 200, 0.3),
+          0 8px 0 #4a3728,
+          0 16px 48px rgba(0, 0, 0, 0.6);
+        font-family: "Noto Sans SC", sans-serif;
         position: relative;
         margin-top: 0;
         flex-shrink: 0;
-        border-radius: 0 !important;
+      }
+      /* 卷轴装饰线 */
+      .modal-card::before {
+        content: "";
+        position: absolute;
+        top: 8px;
+        left: 16px;
+        right: 16px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #c9a84c, transparent);
+        opacity: 0.3;
+      }
+      .modal-card::after {
+        content: "";
+        position: absolute;
+        bottom: 8px;
+        left: 16px;
+        right: 16px;
+        height: 2px;
+        background: linear-gradient(90deg, transparent, #c9a84c, transparent);
+        opacity: 0.3;
       }
 
       .modal-card .close-btn {
         position: absolute;
         top: 6px;
-        right: 10px;
+        right: 12px;
         background: none;
         border: none;
         font-size: 28px;
         cursor: pointer;
-        color: #3d2c1e;
+        color: #5a3d2b;
         line-height: 1;
-        font-family: "Noto Serif SC", serif;
+        font-family: "Cinzel", serif;
+        transition:
+          color 0.2s,
+          transform 0.2s;
       }
       .modal-card .close-btn:hover {
-        color: #a53a2a;
+        color: #8b1a1a;
+        transform: rotate(90deg);
       }
 
       .modal-card .subtitle-big {
-        font-size: 28px;
-        color: #8b5a2b;
+        font-family: "Cinzel", "Noto Sans SC", serif;
+        font-size: 26px;
+        color: #b8860b;
         font-weight: 900;
-        margin: 0 0 12px 0;
+        margin: 0 0 10px 0;
         letter-spacing: 2px;
-        font-family: "Ma Shan Zheng", "ZCOOL KuaiLe", serif;
+        text-shadow: 0 2px 4px rgba(184, 134, 11, 0.2);
       }
       .modal-card .subtitle-small {
-        font-size: 13px;
-        color: #3d2c1e;
-        margin-bottom: 22px;
+        font-size: 12px;
+        color: #5a3d2b;
+        margin-bottom: 20px;
         line-height: 2;
-        font-weight: 400;
+        font-weight: 300;
+        letter-spacing: 1px;
       }
 
-      /* ===== 按钮 · 复古手绘 ===== */
+      /* ===== 按钮 — 复古金属/木质 ===== */
       .modal-card .btn {
         display: inline-block;
         padding: 14px 22px;
-        background: #8b5a2b;
-        border: 3px solid #1a1410;
-        font-size: 16px;
+        background: linear-gradient(145deg, #8b6f4c, #6b4f3a);
+        border: 3px solid #b8956a;
+        border-top-color: #d4b08a;
+        border-left-color: #d4b08a;
+        border-radius: 6px 16px 6px 16px;
+        font-size: 15px;
         font-weight: 700;
-        color: #d6c9b8;
+        color: #f5ebd0;
         cursor: pointer;
-        box-shadow: 0 5px 0 #0d0a08;
-        font-family: "Noto Serif SC", "SimHei", "Microsoft YaHei", serif;
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.2),
+          0 5px 0 #3d2b1f,
+          0 6px 16px rgba(0, 0, 0, 0.4);
+        font-family: "Noto Sans SC", "Microsoft YaHei", sans-serif;
         margin: 4px;
-        transition:
-          transform 0.08s,
-          box-shadow 0.08s;
+        transition: all 0.08s ease;
         width: 100%;
         max-width: 260px;
-        border-radius: 0 !important;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         letter-spacing: 1px;
+        position: relative;
       }
+      /* 按钮铆钉装饰 */
+      .modal-card .btn::before {
+        content: "⬡";
+        position: absolute;
+        top: 4px;
+        left: 8px;
+        font-size: 8px;
+        color: #c9a84c;
+        opacity: 0.4;
+      }
+      .modal-card .btn::after {
+        content: "⬡";
+        position: absolute;
+        bottom: 4px;
+        right: 8px;
+        font-size: 8px;
+        color: #c9a84c;
+        opacity: 0.4;
+      }
+
       .modal-card .btn:active {
         transform: translateY(5px);
-        box-shadow: 0 0px 0 #0d0a08;
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.1),
+          0 0px 0 #3d2b1f,
+          0 6px 16px rgba(0, 0, 0, 0.3);
       }
 
       .modal-card .btn-small {
-        padding: 12px 20px;
-        font-size: 14px;
+        padding: 10px 18px;
+        font-size: 13px;
         border-width: 3px;
-        box-shadow: 0 4px 0 #0d0a08;
-        max-width: 220px;
+        max-width: 200px;
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.15),
+          0 4px 0 #3d2b1f;
       }
 
       .modal-card .btn-secondary {
-        background: #b8a694;
-        border-color: #1a1410;
-        box-shadow: 0 4px 0 #0d0a08;
-        color: #1e1612;
+        background: linear-gradient(145deg, #6b5a4a, #4a3a2a);
+        border-color: #8b7a6a;
+        border-top-color: #aa9a8a;
+        border-left-color: #aa9a8a;
+        color: #f0e6d0;
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.1),
+          0 5px 0 #2c1a10;
       }
+
       .modal-card .btn-secondary:active {
-        transform: translateY(4px);
-        box-shadow: 0 0px 0 #0d0a08;
+        transform: translateY(5px);
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.05),
+          0 0px 0 #2c1a10;
       }
 
       .btn-start-camera {
-        font-size: 20px !important;
+        font-size: 18px !important;
         padding: 18px 28px !important;
         max-width: 280px !important;
-        background: #4a6a3d !important;
-        border-color: #1a1410 !important;
-        box-shadow: 0 5px 0 #0d0a08 !important;
-        color: #d6c9b8 !important;
+        background: linear-gradient(145deg, #7a5a3a, #5a3d2b) !important;
+        border-color: #c9a84c !important;
+        border-top-color: #e8c86a !important;
+        border-left-color: #e8c86a !important;
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.2),
+          0 5px 0 #3d2b1f,
+          0 0 30px rgba(201, 168, 76, 0.15) !important;
+        color: #faf6ed !important;
+        text-shadow: 0 0 20px rgba(201, 168, 76, 0.2) !important;
       }
       .btn-start-camera:active {
         transform: translateY(5px);
-        box-shadow: 0 0px 0 #0d0a08 !important;
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.1),
+          0 0px 0 #3d2b1f !important;
       }
 
       .modal-card .btn-group {
@@ -352,23 +500,24 @@
         width: 100%;
       }
 
-      /* ===== 设置行 ===== */
+      /* ================================================================
+         设置行 — 羊皮纸底色
+         ================================================================ */
       .settings-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 8px 0;
-        border-bottom: 2px dotted #8b7a68;
+        border-bottom: 2px solid rgba(139, 111, 76, 0.3);
         font-size: 13px;
         flex-wrap: nowrap;
         gap: 6px;
+        color: #3d2b1f;
         font-weight: 400;
-        color: #1e1612;
       }
       .settings-row:last-child {
         border-bottom: none;
       }
-
       .settings-row .toggle-wrap {
         display: flex;
         flex-wrap: nowrap;
@@ -379,28 +528,35 @@
 
       .toggle-btn {
         padding: 3px 10px;
-        border: 2px solid #1a1410;
-        background: #b8a694;
-        color: #1e1612;
-        font-size: 14px;
+        border-radius: 4px 10px 4px 10px;
+        border: 2px solid #8b6f4c;
+        background: #e4d4b8;
+        color: #3d2b1f;
+        font-size: 12px;
         cursor: pointer;
-        font-family: "Noto Serif SC", "SimHei", "Microsoft YaHei", serif;
+        font-family: "Noto Sans SC", sans-serif;
         white-space: nowrap;
-        height: 32px;
+        height: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 0 !important;
         font-weight: 400;
+        transition: all 0.15s;
+        box-shadow: inset 0 1px 0 rgba(255, 235, 200, 0.4);
       }
       .toggle-btn.active {
-        background: #8b5a2b;
-        border-color: #1a1410;
-        color: #d6c9b8;
+        background: linear-gradient(145deg, #c9a84c, #b8922a);
+        border-color: #8b6f4c;
+        color: #2c1a10;
         font-weight: 700;
+        box-shadow:
+          inset 0 1px 0 rgba(255, 235, 200, 0.4),
+          0 2px 8px rgba(201, 168, 76, 0.3);
       }
 
-      /* ===== 速度滑杆 ===== */
+      /* ================================================================
+         速度滑杆 — 复古样式
+         ================================================================ */
       .speed-control {
         display: flex;
         flex-direction: column;
@@ -419,73 +575,65 @@
         -webkit-appearance: none;
         appearance: none;
         flex: 1;
-        height: 4px;
-        background: #3d2c1e;
+        height: 6px;
+        border-radius: 3px;
+        background: #8b6f4c;
         outline: none;
         min-width: 60px;
-        border-radius: 0 !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
       }
       .speed-control input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px;
-        height: 16px;
-        background: #8b5a2b;
-        border: 2px solid #1a1410;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #c9a84c, #8b6f4c);
+        border: 3px solid #5a3d2b;
         cursor: pointer;
-        box-shadow: 0 2px 0 #0d0a08;
-        border-radius: 0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
       }
       .speed-control input[type="range"]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        background: #8b5a2b;
-        border: 2px solid #1a1410;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, #c9a84c, #8b6f4c);
+        border: 3px solid #5a3d2b;
         cursor: pointer;
-        box-shadow: 0 2px 0 #0d0a08;
-        border-radius: 0 !important;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
       }
       .speed-control .speed-value {
         font-size: 14px;
-        color: #8b5a2b;
+        color: #b8860b;
         min-width: 44px;
         text-align: center;
         font-weight: 700;
+        font-family: "Cinzel", serif;
+        text-shadow: 0 1px 4px rgba(184, 134, 11, 0.2);
       }
 
-      /* ===== 游戏说明链接 ===== */
-      .info-link-bottom {
-        color: #3d2c1e;
-        font-size: 12px;
-        cursor: pointer;
-        text-decoration: underline;
-        display: inline-block;
-        transition: color 0.2s;
-        font-weight: 400;
-        border-bottom: 1px dashed #3d2c1e;
-      }
-      .info-link-bottom:hover {
-        color: #8b5a2b;
-      }
-
-      /* ===== 游戏说明弹窗 ===== */
+      /* ================================================================
+         游戏说明弹窗
+         ================================================================ */
       #infoModal .modal-card {
         text-align: left;
         max-height: 70vh;
         overflow-y: auto;
       }
       #infoModal .modal-card h3 {
-        font-size: 16px;
-        color: #8b5a2b;
+        font-family: "Cinzel", "Noto Sans SC", serif;
+        font-size: 15px;
+        color: #b8860b;
         margin: 12px 0 6px 0;
+        letter-spacing: 1px;
         font-weight: 700;
       }
       #infoModal .modal-card p {
         font-size: 12px;
         line-height: 2;
-        color: #1e1612;
+        color: #3d2b1f;
         margin: 4px 0;
-        font-weight: 400;
+        font-weight: 300;
       }
       #infoModal .modal-card .section {
         margin-bottom: 10px;
@@ -494,13 +642,18 @@
         margin-bottom: 0;
       }
 
-      /* ===== 结算 ===== */
+      /* ================================================================
+         结算 & 评分
+         ================================================================ */
       .score-number {
+        font-family: "Cinzel", "Noto Sans SC", serif;
         font-size: 52px;
         font-weight: 900;
-        color: #8b5a2b;
-        text-shadow: 4px 4px 0 #1a1410;
-        font-family: "Ma Shan Zheng", "ZCOOL KuaiLe", serif;
+        color: #c9a84c;
+        text-shadow:
+          0 4px 0 #5a3d2b,
+          0 8px 24px rgba(0, 0, 0, 0.3);
+        letter-spacing: 2px;
       }
       .stat-row {
         display: flex;
@@ -509,58 +662,67 @@
         margin: 14px 0 18px;
       }
       .stat-item .num {
+        font-family: "Cinzel", "Noto Sans SC", serif;
         font-size: 24px;
-        font-weight: 900;
-        color: #1e1612;
+        font-weight: 700;
+        color: #3d2b1f;
       }
       .stat-item .label {
-        font-size: 13px;
-        color: #3d2c1e;
-        font-weight: 400;
+        font-size: 12px;
+        color: #5a3d2b;
+        font-weight: 300;
+        letter-spacing: 1px;
       }
 
+      /* ===== 头像相关 ===== */
       .start-avatar-btn {
-        background: #b8a694 !important;
-        border-color: #1a1410 !important;
-        color: #1e1612 !important;
-        box-shadow: 0 4px 0 #0d0a08 !important;
+        background: linear-gradient(145deg, #6b5a4a, #4a3a2a) !important;
+        border-color: #8b7a6a !important;
+        border-top-color: #aa9a8a !important;
+        border-left-color: #aa9a8a !important;
+        color: #f0e6d0 !important;
+        margin-top: 4px;
+        box-shadow:
+          inset 0 2px 0 rgba(255, 235, 200, 0.1),
+          0 4px 0 #2c1a10 !important;
+        font-size: 13px !important;
+        padding: 10px 16px !important;
       }
-      .start-avatar-btn:active {
-        transform: translateY(4px);
-        box-shadow: 0 0px 0 #0d0a08 !important;
-      }
-
       #avatarInput {
         display: none;
       }
 
-      /* ===== 头控指示器 ===== */
       .head-indicator {
         display: inline-block;
         width: 12px;
         height: 12px;
-        background: #3d2c1e;
+        border-radius: 50%;
+        background: #5a3d2b;
         margin-right: 4px;
         transition: background 0.3s;
         flex-shrink: 0;
-        border: 1px solid #1a1410;
-        border-radius: 0 !important;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
       }
       .head-indicator.on {
-        background: #4a6a3d;
-        box-shadow: 0 0 8px #4a6a3d;
+        background: #7a9a3a;
+        box-shadow:
+          0 0 16px rgba(122, 154, 58, 0.4),
+          inset 0 2px 4px rgba(0, 0, 0, 0.2);
       }
       .head-indicator.error {
-        background: #a53a2a;
-        box-shadow: 0 0 8px #a53a2a;
+        background: #8b1a1a;
+        box-shadow:
+          0 0 16px rgba(139, 26, 26, 0.4),
+          inset 0 2px 4px rgba(0, 0, 0, 0.2);
       }
       .head-indicator.loading {
-        background: #b8860b;
+        background: #b8922a;
         animation: pulse 0.8s infinite alternate;
+        box-shadow: 0 0 16px rgba(184, 146, 42, 0.3);
       }
       @keyframes pulse {
         0% {
-          opacity: 0.3;
+          opacity: 0.4;
           transform: scale(0.9);
         }
         100% {
@@ -569,16 +731,23 @@
         }
       }
 
-      /* ===== 头像更换 ===== */
+      /* ================================================================
+         头像更换 — 复古相框
+         ================================================================ */
       .avatar-preview-container {
         position: relative;
         width: 200px;
         height: 200px;
         margin: 0 auto;
-        border: 3px solid #1a1410;
-        background: #b8a694;
+        border: 6px solid #8b6f4c;
+        border-top-color: #b8956a;
+        border-left-color: #b8956a;
+        border-radius: 8px 20px 8px 20px;
+        background: #3d2b1f;
         overflow: hidden;
-        border-radius: 0 !important;
+        box-shadow:
+          inset 0 0 0 4px #2c1a10,
+          0 8px 24px rgba(0, 0, 0, 0.5);
       }
       .avatar-preview-container img.chef-bg {
         width: 100%;
@@ -586,7 +755,6 @@
         object-fit: contain;
         display: block;
       }
-
       .avatar-circle {
         position: absolute;
         top: 50%;
@@ -594,27 +762,33 @@
         transform: translate(-50%, -50%);
         width: 80px;
         height: 80px;
-        border: 3px solid #1a1410;
-        background: rgba(30, 25, 22, 0.4);
+        border-radius: 50%;
+        border: 4px solid rgba(201, 168, 76, 0.8);
+        background: rgba(30, 20, 16, 0.5);
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        transition: border-color 0.2s;
-        border-radius: 0 !important;
+        transition:
+          border-color 0.2s,
+          box-shadow 0.2s;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.4);
       }
       .avatar-circle:hover {
-        border-color: #8b5a2b;
+        border-color: #c9a84c;
+        box-shadow: 0 0 40px rgba(201, 168, 76, 0.2);
       }
       .avatar-circle .placeholder {
-        color: #d6c9b8;
-        font-size: 13px;
-        text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+        color: rgba(255, 235, 200, 0.7);
+        font-size: 12px;
+        text-shadow: 0 0 16px rgba(0, 0, 0, 0.9);
         text-align: center;
         line-height: 1.4;
         pointer-events: none;
-        font-weight: 400;
+        font-family: "Noto Sans SC", sans-serif;
+        font-weight: 300;
+        letter-spacing: 1px;
       }
       .avatar-circle .preview-img {
         display: none;
@@ -631,7 +805,6 @@
         top: 0;
         left: 0;
       }
-
       .avatar-confirm-btn {
         margin-top: 16px;
         width: 200px !important;
@@ -650,22 +823,26 @@
       .chef-bg-option {
         width: 60px;
         height: 60px;
-        border: 3px solid #1a1410;
+        border-radius: 6px 14px 6px 14px;
+        border: 4px solid #8b6f4c;
         overflow: hidden;
         cursor: pointer;
         transition:
           border-color 0.2s,
-          transform 0.2s;
+          transform 0.2s,
+          box-shadow 0.2s;
         flex-shrink: 0;
-        background: #b8a694;
-        border-radius: 0 !important;
+        background: #3d2b1f;
+        box-shadow: inset 0 0 0 2px #2c1a10;
       }
       .chef-bg-option:hover {
-        transform: scale(1.05);
+        transform: scale(1.06);
       }
       .chef-bg-option.active {
-        border-color: #8b5a2b;
-        box-shadow: 0 0 0 2px #b8860b;
+        border-color: #c9a84c;
+        box-shadow:
+          0 0 20px rgba(201, 168, 76, 0.3),
+          inset 0 0 0 2px #c9a84c;
       }
       .chef-bg-option img {
         width: 100%;
@@ -681,15 +858,38 @@
       /* ===== 底部邮箱 ===== */
       .footer-email {
         font-size: 10px;
-        color: #3d2c1e;
+        color: #8b7a6a;
         margin-top: 16px;
         text-align: center;
         letter-spacing: 0.5px;
-        font-weight: 400;
-        opacity: 0.7;
+        font-weight: 300;
+        font-family: "Noto Sans SC", sans-serif;
+        border-top: 1px solid rgba(139, 111, 76, 0.2);
+        padding-top: 12px;
       }
 
-      /* ===== 响应式 ===== */
+      /* ===== 游戏说明底部链接 ===== */
+      .info-link-bottom {
+        color: #8b6f4c;
+        font-size: 12px;
+        cursor: pointer;
+        text-decoration: none;
+        display: inline-block;
+        transition: color 0.2s;
+        font-weight: 300;
+        letter-spacing: 1px;
+        border-bottom: 1px dotted rgba(139, 111, 76, 0.3);
+        padding-bottom: 2px;
+        font-family: "Noto Sans SC", sans-serif;
+      }
+      .info-link-bottom:hover {
+        color: #c9a84c;
+        border-bottom-color: #c9a84c;
+      }
+
+      /* ================================================================
+         响应式
+         ================================================================ */
       @media (max-width: 480px) {
         .modal-overlay {
           padding: 28px 12px 16px;
@@ -698,37 +898,38 @@
           padding-top: 44px;
         }
         .modal-title {
-          font-size: 26px;
-          margin-bottom: 14px;
+          font-size: 24px;
+          margin-bottom: 12px;
+          letter-spacing: 2px;
         }
         .modal-card {
           padding: 16px 16px 20px;
         }
         .modal-card .subtitle-big {
-          font-size: 22px;
+          font-size: 20px;
         }
         .modal-card .btn {
           padding: 12px 16px;
-          font-size: 14px;
+          font-size: 13px;
           max-width: 200px;
         }
         .btn-start-camera {
-          font-size: 17px !important;
+          font-size: 16px !important;
           padding: 14px 20px !important;
           max-width: 220px !important;
         }
         .top-box {
-          font-size: 11px;
+          font-size: 10px;
           padding: 4px 2px;
           min-width: 0;
         }
         #top-head-status {
-          font-size: 11px;
+          font-size: 10px;
           min-width: 60px;
           flex: 0.9;
         }
         .status-text {
-          font-size: 9px;
+          font-size: 8px;
           max-width: 50px;
         }
         #camera-preview {
@@ -750,34 +951,34 @@
           height: 48px;
         }
         .score-number {
-          font-size: 40px;
+          font-size: 38px;
         }
         .stat-item .num {
-          font-size: 20px;
+          font-size: 18px;
         }
         .settings-row {
           font-size: 11px;
           padding: 6px 0;
         }
         .toggle-btn {
-          font-size: 12px;
+          font-size: 11px;
           padding: 2px 8px;
-          height: 28px;
+          height: 26px;
         }
         .speed-control .speed-value {
-          font-size: 12px;
+          font-size: 11px;
           min-width: 34px;
         }
         .speed-control input[type="range"] {
           height: 4px;
         }
         .speed-control input[type="range"]::-webkit-slider-thumb {
-          width: 14px;
-          height: 14px;
+          width: 16px;
+          height: 16px;
         }
         .speed-control input[type="range"]::-moz-range-thumb {
-          width: 14px;
-          height: 14px;
+          width: 16px;
+          height: 16px;
         }
         .footer-email {
           font-size: 9px;
@@ -790,10 +991,21 @@
           width: 160px !important;
           max-width: 160px !important;
         }
+        #game-wrapper::before,
+        #game-wrapper::after {
+          font-size: 14px;
+        }
+        .top-box::before,
+        .top-box::after {
+          font-size: 6px;
+        }
+        .modal-card .btn::before,
+        .modal-card .btn::after {
+          font-size: 6px;
+        }
       }
     </style>
   </head>
-
   <body>
     <!-- ===== 顶部状态栏 ===== -->
     <div class="outer-top-bar">
@@ -819,19 +1031,22 @@
       <div
         id="startOverlay"
         class="modal-overlay"
-        style="background: rgba(30, 25, 22, 0.85)"
+        style="background: rgba(30, 20, 16, 0.85)"
       >
-        <div class="modal-title">肥喵厨房</div>
-        <div class="modal-card" style="background: #d6c9b8">
-          <div class="subtitle-big">📷 开启摄像头</div>
+        <div class="modal-title">⚜ 肥喵厨房 ⚜</div>
+        <div
+          class="modal-card"
+          style="background: linear-gradient(170deg, #f2e6d0, #e4d4b8)"
+        >
+          <div class="subtitle-big">✦ 开启摄像头 ✦</div>
           <div class="subtitle-small">触屏滑动 · 头控可选</div>
 
           <div class="btn-row">
             <button class="btn btn-start-camera" id="startWithCameraBtn">
-              📷 允许并开始
+              ⚜ 允许并开始
             </button>
             <button class="btn btn-secondary" id="startTouchBtn">
-              👆 触屏玩法
+              ✦ 触屏玩法
             </button>
           </div>
 
@@ -839,11 +1054,12 @@
             class="btn btn-secondary btn-small start-avatar-btn"
             id="openAvatarBtn"
           >
-            🧑‍🍳 更换厨师形象
+            ⚜ 更换厨师形象
           </button>
 
+          <!-- 游戏说明 -->
           <div style="margin-top: 20px; text-align: center">
-            <span class="info-link-bottom" id="openInfoBtn">📖 游戏说明</span>
+            <span class="info-link-bottom" id="openInfoBtn">📜 游戏说明</span>
           </div>
 
           <input
@@ -857,14 +1073,11 @@
 
       <!-- ===== 游戏说明弹窗 ===== -->
       <div id="infoModal" class="modal-overlay hidden">
-        <div class="modal-title" style="font-size: 28px">📖 游戏说明</div>
-        <div
-          class="modal-card"
-          style="max-width: 360px; padding: 20px; background: #d6c9b8"
-        >
+        <div class="modal-title" style="font-size: 26px">📜 游戏说明</div>
+        <div class="modal-card" style="max-width: 360px; padding: 20px">
           <button class="close-btn" id="infoCloseBtn">&times;</button>
           <div class="section">
-            <h3>🎮 游戏玩法</h3>
+            <h3>⚔ 玩法</h3>
             <p>
               控制厨师接住传送带上的食材，凑齐菜谱所需材料后自动出餐，赚取金币！
             </p>
@@ -875,7 +1088,7 @@
             <p>• 连击数越高，得分加成越多！</p>
           </div>
           <div class="section">
-            <h3>⚠️ 免责声明</h3>
+            <h3>⚠ 免责声明</h3>
             <p>
               本游戏为个人开发作品，仅供娱乐参考。游戏过程中请勿过度依赖头控操作，注意休息。
             </p>
@@ -900,20 +1113,18 @@
 
       <!-- ===== 更换厨师形象模态框 ===== -->
       <div id="avatarModal" class="modal-overlay hidden">
-        <div
-          class="modal-card"
-          style="max-width: 360px; padding: 20px; background: #d6c9b8"
-        >
+        <div class="modal-card" style="max-width: 360px; padding: 20px">
           <button class="close-btn" id="avatarCloseBtn">&times;</button>
           <h2
             style="
+              font-family: &quot;Cinzel&quot;, serif;
               font-size: 20px;
               margin-bottom: 10px;
-              color: #1e1612;
-              font-weight: 700;
+              color: #3d2b1f;
+              letter-spacing: 2px;
             "
           >
-            🧑‍🍳 更换形象
+            ⚜ 更换形象
           </h2>
           <div class="avatar-preview-container">
             <img id="avatarChefBg" class="chef-bg" src="" alt="厨师" />
@@ -924,7 +1135,7 @@
             </div>
           </div>
 
-          <!-- 三个小方盒子：厨师背景替换 -->
+          <!-- 三个厨师背景选项 -->
           <div class="chef-bg-options">
             <div
               class="chef-bg-option active"
@@ -956,15 +1167,15 @@
           </div>
 
           <button class="btn avatar-confirm-btn" id="avatarConfirmBtn">
-            ✅ 确认
+            ⚜ 确认
           </button>
         </div>
       </div>
 
-      <!-- ===== 暂停弹窗（速度滑杆） ===== -->
+      <!-- ===== 暂停弹窗 ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
-        <div class="modal-title" style="font-size: 30px">⏸ 暂停</div>
-        <div class="modal-card" style="background: #d6c9b8">
+        <div class="modal-title" style="font-size: 28px">⏸ 暂停</div>
+        <div class="modal-card">
           <div style="margin: 8px 0">
             <div class="settings-row">
               <span>🎵 音乐</span>
@@ -998,7 +1209,7 @@
             </div>
             <!-- 速度滑杆 -->
             <div class="settings-row">
-              <span>⚡ 传送带速度</span>
+              <span>⚙ 传送带速度</span>
               <div class="speed-control">
                 <div class="slider-row">
                   <input
@@ -1029,17 +1240,18 @@
         </div>
       </div>
 
-      <!-- ===== 结算弹窗（时间到） ===== -->
+      <!-- ===== 结算弹窗 ===== -->
       <div id="resultModal" class="modal-overlay hidden">
-        <div class="modal-title">⏰ 时间到！</div>
-        <div class="modal-card" style="background: #d6c9b8">
+        <div class="modal-title">⏳ 时间到！</div>
+        <div class="modal-card">
           <div class="score-number" id="finalScore">0</div>
           <div
             style="
-              font-size: 14px;
-              color: #3d2c1e;
+              font-size: 13px;
+              color: #5a3d2b;
               margin: 6px 0;
-              font-weight: 400;
+              font-weight: 300;
+              letter-spacing: 1px;
             "
           >
             总金币
@@ -1047,10 +1259,12 @@
           <div
             id="finalRank"
             style="
+              font-family: &quot;Cinzel&quot;, serif;
               font-size: 22px;
               margin: 10px 0;
-              color: #8b5a2b;
+              color: #b8860b;
               font-weight: 700;
+              text-shadow: 0 2px 8px rgba(184, 134, 11, 0.15);
             "
           ></div>
           <div class="stat-row">
@@ -1064,20 +1278,23 @@
             </div>
           </div>
           <button class="btn" id="retryBtn" style="font-size: 18px">
-            🔄 再来一局
+            ⚜ 再来一局
           </button>
           <button
             class="btn btn-secondary"
             id="rankBtn"
             style="font-size: 18px"
           >
-            🏅 我的评级
+            📜 我的评级
           </button>
-          <div class="footer-email">📮 我的邮箱：xxx@example.com</div>
+          <div class="footer-email">📧 我的邮箱：xxx@example.com</div>
         </div>
       </div>
     </div>
 
+    <!-- ================================================================
+    JavaScript — 全部逻辑保持不变，仅视觉风格改造
+    ================================================================ -->
     <script>
       (() => {
         // ================================================================
@@ -1111,6 +1328,7 @@
 
         const speedSlider = document.getElementById("speedSlider");
         const speedDisplay = document.getElementById("speedDisplay");
+
         const chefBgOptions = document.querySelectorAll(".chef-bg-option");
 
         // ================================================================
@@ -1158,27 +1376,22 @@
         function sfxPickup() {
           tone(880, 0.08);
         }
-
         function sfxCook() {
           tone(660, 0.12, "square");
           setTimeout(() => tone(880, 0.12, "square"), 120);
         }
-
         function sfxServe() {
           tone(1100, 0.1);
           setTimeout(() => tone(1320, 0.1), 100);
         }
-
         function sfxMiss() {
           tone(300, 0.2, "sawtooth");
         }
-
         function sfxCombo() {
           tone(1000, 0.06);
           setTimeout(() => tone(1200, 0.06), 80);
           setTimeout(() => tone(1400, 0.06), 160);
         }
-
         function sfxGold() {
           tone(1500, 0.1);
           setTimeout(() => tone(1800, 0.1), 100);
@@ -1276,51 +1489,50 @@
           {
             id: "tomato",
             name: "番茄",
-            color: "#b53b2e",
+            color: "#c0392b",
             emoji: "🍅",
             cost: 1,
           },
-          { id: "egg", name: "鸡蛋", color: "#c9a832", emoji: "🥚", cost: 1 },
-          { id: "onion", name: "洋葱", color: "#7d4e8a", emoji: "🧅", cost: 1 },
+          { id: "egg", name: "鸡蛋", color: "#d4a017", emoji: "🥚", cost: 1 },
+          { id: "onion", name: "洋葱", color: "#8e44ad", emoji: "🧅", cost: 1 },
           {
             id: "garlic",
             name: "大蒜",
-            color: "#d4c9b8",
+            color: "#e8d5b0",
             emoji: "🧄",
             cost: 1,
           },
           {
             id: "carrot",
             name: "胡萝卜",
-            color: "#c47d2a",
+            color: "#d35400",
             emoji: "🥕",
             cost: 1,
           },
           {
             id: "potato",
             name: "土豆",
-            color: "#b89a7a",
+            color: "#c4a882",
             emoji: "🥔",
             cost: 1,
           },
           {
             id: "pepper",
             name: "青椒",
-            color: "#3d6a3d",
+            color: "#1e8449",
             emoji: "🫑",
             cost: 1,
           },
           {
             id: "mushroom",
             name: "蘑菇",
-            color: "#a89484",
+            color: "#a6a6a6",
             emoji: "🍄",
             cost: 1,
           },
-          { id: "salt", name: "盐", color: "#d4c9b8", emoji: "🧂", cost: 1 },
-          { id: "oil", name: "油", color: "#c99a3a", emoji: "🫒", cost: 1 },
+          { id: "salt", name: "盐", color: "#e8d5b0", emoji: "🧂", cost: 1 },
+          { id: "oil", name: "油", color: "#d4a017", emoji: "🫒", cost: 1 },
         ];
-
         const RECIPES = [
           {
             name: "番茄炒蛋",
@@ -1391,15 +1603,12 @@
         function rand(min, max) {
           return Math.random() * (max - min) + min;
         }
-
         function randi(min, max) {
           return Math.floor(rand(min, max + 1));
         }
-
         function clamp(v, min, max) {
           return Math.max(min, Math.min(max, v));
         }
-
         function lerp(a, b, t) {
           return a + (b - a) * t;
         }
@@ -1529,7 +1738,7 @@
             x: state.chefX * canvas.width,
             y: canvas.height * 0.55,
             life: 1.5,
-            color: "#b8860b",
+            color: "#d4a017",
           });
           if (!matched) state.combo = Math.floor(state.combo / 2);
           if (state.gold < 0) state.gold = 0;
@@ -1557,8 +1766,9 @@
             state.headControlEnabled &&
             !state.headFaceDetected &&
             !state.touchOnlyMode
-          )
+          ) {
             return;
+          }
           const cellH = canvas.height / ROWS;
           if (
             state.ings.length &&
@@ -1619,7 +1829,7 @@
                   x: ing.x,
                   y: ing.y,
                   life: 1.2,
-                  color: "#a53a2a",
+                  color: "#8b1a1a",
                 });
               } else {
                 if (state.gold < 5) continue;
@@ -1640,7 +1850,7 @@
                   x: ing.x,
                   y: ing.y,
                   life: 1.2,
-                  color: "#a53a2a",
+                  color: "#8b1a1a",
                 });
               }
               state.ings.splice(i, 1);
@@ -1685,6 +1895,7 @@
 
         function update(dt) {
           if (!state.playing || state.paused || state.over) return;
+
           if (state.timerStarted) {
             state.time -= dt;
             if (state.time <= 0) {
@@ -1693,6 +1904,7 @@
               return;
             }
           }
+
           state.beltOff = (state.beltOff + dt * 30) % 30;
           state.qTimer += dt;
           if (state.qTimer > 1.2 + rand(0, 0.5)) {
@@ -1728,6 +1940,7 @@
               state.headFaceDetected = false;
             }
           }
+
           if (state.touchOnlyMode && !state.timerStarted) {
             state.timerStarted = true;
           }
@@ -1739,6 +1952,7 @@
             state.chefX = lerp(state.chefX, state.smoothTargetX, 0.18);
             state.chefX = clamp(state.chefX, 0.03, 0.97);
           }
+
           if (state.menuDone && !state.autoServe) {
             state.autoServe = true;
             autoServe();
@@ -1750,8 +1964,9 @@
         }
 
         // ================================================================
-        // 8. 渲染（游戏绘制）· 复古手绘风格
+        // 8. 渲染 — 中世纪复古风格绘制
         // ================================================================
+
         const imgs = {};
 
         function loadImgs(cb) {
@@ -1763,6 +1978,7 @@
             if (n === t) cb();
           }
 
+          // 传送带背景 — 羊皮纸纹理
           imgs.belt = new Image();
           imgs.belt.crossOrigin = "anonymous";
           imgs.belt.onload = on;
@@ -1773,6 +1989,7 @@
           imgs.belt.src =
             "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
+          // 厨师
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -1783,6 +2000,7 @@
           imgs.chef.src =
             "https://i.imgs.ovh/2026/08/03/2471dfdf0bb813a6f18ee38718839342.jpg";
 
+          // 锅 — 复古铁锅
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -1793,6 +2011,7 @@
           imgs.pot.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
+          // 左侧客人
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -1803,6 +2022,7 @@
           imgs.guestL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
+          // 右侧客人
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -1813,6 +2033,7 @@
           imgs.guestR.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
+          // 左侧用餐
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -1823,6 +2044,7 @@
           imgs.eatL.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
+          // 右侧用餐
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -1834,7 +2056,6 @@
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
         }
 
-        // ---- 绘制主函数：全部颜色改为复古手绘调 ----
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -1842,13 +2063,24 @@
             cH = H / ROWS;
           ctx.clearRect(0, 0, W, H);
 
-          // ---- 传送带背景：深色复古 ----
-          if (imgs.belt) ctx.drawImage(imgs.belt, 0, 0, W, H);
-          else {
-            ctx.fillStyle = "#3d322a";
-            ctx.fillRect(0, 0, W, H);
-          }
+          // ---- 羊皮纸背景 ----
+          const grad = ctx.createLinearGradient(0, 0, W, H);
+          grad.addColorStop(0, "#f2e6d0");
+          grad.addColorStop(0.5, "#e8d5b0");
+          grad.addColorStop(1, "#dcc29e");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, W, H);
 
+          // 做旧纹理 — 细噪点
+          ctx.save();
+          ctx.globalAlpha = 0.06;
+          for (let i = 0; i < 120; i++) {
+            ctx.fillStyle = Math.random() > 0.5 ? "#3d2b1f" : "#f5ebd0";
+            ctx.fillRect(rand(0, W), rand(0, H), rand(1, 3), rand(1, 3));
+          }
+          ctx.restore();
+
+          // ---- 传送带区域 — 深色木质 ----
           const beltT = cH * 1.2,
             beltB = cH * 6.4;
           const lTx = cW * 0.3,
@@ -1857,45 +2089,88 @@
           const leftCenter = lTx + tw / 2,
             rightCenter = rTx + tw / 2;
 
-          // ---- 传送带装饰条纹：深色细线 ----
+          // 木质传送带底色
+          ctx.fillStyle = "#4a3728";
+          ctx.fillRect(lTx - 4, beltT - 4, tw + 8, beltB - beltT + 8);
+          ctx.fillRect(rTx - 4, beltT - 4, tw + 8, beltB - beltT + 8);
+
+          // 传送带表面 — 羊皮纸色
+          const beltGrad = ctx.createLinearGradient(0, beltT, 0, beltB);
+          beltGrad.addColorStop(0, "#b8956a");
+          beltGrad.addColorStop(0.5, "#c4a882");
+          beltGrad.addColorStop(1, "#b8956a");
+          ctx.fillStyle = beltGrad;
+          ctx.fillRect(lTx, beltT, tw, beltB - beltT);
+          ctx.fillRect(rTx, beltT, tw, beltB - beltT);
+
+          // 传送带边框装饰
+          ctx.strokeStyle = "#5a3d2b";
+          ctx.lineWidth = 2;
+          ctx.strokeRect(lTx, beltT, tw, beltB - beltT);
+          ctx.strokeRect(rTx, beltT, tw, beltB - beltT);
+
+          // ---- 传送带装饰条纹 ----
           for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
-            ctx.fillStyle = "rgba(60,50,40,0.25)";
-            ctx.fillRect(lTx, y, tw, 3);
-            ctx.fillStyle = "rgba(70,58,48,0.15)";
-            ctx.fillRect(lTx, y + 15, tw, 3);
-          }
-          for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
-            ctx.fillStyle = "rgba(60,50,40,0.25)";
-            ctx.fillRect(rTx, y, tw, 3);
-            ctx.fillStyle = "rgba(70,58,48,0.15)";
-            ctx.fillRect(rTx, y + 15, tw, 3);
+            ctx.fillStyle = "rgba(60,40,30,0.12)";
+            ctx.fillRect(lTx + 4, y, tw - 8, 3);
+            ctx.fillRect(rTx + 4, y, tw - 8, 3);
           }
 
-          // ---- 食材绘制（保留颜色可识别，加复古边框） ----
+          // ---- 食材绘制（复古方形背景） ----
           state.ings.forEach((ing) => {
             if (!ing || !ing.alive) return;
             const size = ing.sz;
-            ctx.shadowColor = "rgba(0,0,0,0.3)";
-            ctx.shadowBlur = 6;
-            // 食材底色略微调暗
-            let col = ing.color;
-            ctx.fillStyle = col;
+            // 阴影
+            ctx.shadowColor = "rgba(0,0,0,0.25)";
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetX = 3;
+            ctx.shadowOffsetY = 4;
+
+            // 背景 — 做旧木色
+            const bgGrad = ctx.createRadialGradient(
+              ing.x - size * 0.2,
+              ing.y - size * 0.2,
+              2,
+              ing.x,
+              ing.y,
+              size * 0.7,
+            );
+            bgGrad.addColorStop(0, "#f5ebd0");
+            bgGrad.addColorStop(1, ing.color);
+            ctx.fillStyle = bgGrad;
             ctx.fillRect(ing.x - size / 2, ing.y - size / 2, size, size);
+
             ctx.shadowBlur = 0;
-            // 细黑钢笔线边框
-            ctx.strokeStyle = "#1a1410";
-            ctx.lineWidth = 2;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+            // 边框 — 金色
+            ctx.strokeStyle = "#c9a84c";
+            ctx.lineWidth = 2.5;
             ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
-            ctx.font = `${size}px serif`;
+
+            // 内框装饰
+            ctx.strokeStyle = "rgba(139,111,76,0.3)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(
+              ing.x - size / 2 + 4,
+              ing.y - size / 2 + 4,
+              size - 8,
+              size - 8,
+            );
+
+            // Emoji
+            ctx.font = `${size * 0.7}px serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillStyle = "#f0ebe0";
+            ctx.fillStyle = "#1a1410";
             ctx.shadowBlur = 6;
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
             ctx.fillText(ing.emoji, ing.x, ing.y + 1);
             ctx.shadowBlur = 0;
           });
 
-          // ---- 厨师位置 ----
+          // ---- 厨师 ----
           const chefSz = cH * 1.3,
             chefX = state.chefX * W,
             chefY = cH * 5.3;
@@ -1905,11 +2180,11 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          // ---- 灰色方盒子装饰：深色复古 ----
+          // ---- 灰色方盒子装饰（锅台） ----
           const decoPotW = tw * 1.6,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
-          ctx.fillStyle = "#4a3d32";
+          ctx.fillStyle = "#5a4a3a";
           ctx.fillRect(leftCenter - decoPotW / 2, decoPotY, decoPotW, decoHPot);
           ctx.fillRect(
             rightCenter - decoPotW / 2,
@@ -1917,7 +2192,7 @@
             decoPotW,
             decoHPot,
           );
-          ctx.strokeStyle = "#1a1410";
+          ctx.strokeStyle = "#3d2b1f";
           ctx.lineWidth = 2;
           ctx.strokeRect(
             leftCenter - decoPotW / 2,
@@ -1932,7 +2207,7 @@
             decoHPot,
           );
 
-          // ---- 厨师绘制 ----
+          // ---- 绘制厨师 ----
           const chefDrawSize = chefSz * 0.8;
           const potTop = potY - potH / 2;
           const cookBottom = potTop + 2;
@@ -1941,6 +2216,11 @@
           if (imgs.chef) {
             ctx.save();
             ctx.translate(chefX, drawY);
+            // 阴影
+            ctx.shadowColor = "rgba(0,0,0,0.3)";
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 4;
+            ctx.shadowOffsetY = 6;
             ctx.drawImage(
               imgs.chef,
               -chefDrawSize / 2,
@@ -1959,6 +2239,14 @@
           ) {
             ctx.save();
             const avatarRadius = chefSz * 0.22;
+            // 金色边框
+            ctx.shadowColor = "rgba(201,168,76,0.3)";
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(chefX, drawY, avatarRadius + 4, 0, Math.PI * 2);
+            ctx.fillStyle = "#c9a84c";
+            ctx.fill();
+            ctx.shadowBlur = 0;
             ctx.beginPath();
             ctx.arc(chefX, drawY, avatarRadius, 0, Math.PI * 2);
             ctx.clip();
@@ -1973,7 +2261,12 @@
           }
 
           // ---- 锅 ----
-          if (imgs.pot)
+          if (imgs.pot) {
+            ctx.save();
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
+            ctx.shadowBlur = 16;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 4;
             ctx.drawImage(
               imgs.pot,
               potX - potW / 2,
@@ -1981,6 +2274,8 @@
               potW,
               potH,
             );
+            ctx.restore();
+          }
 
           // ---- 锅中的食材 ----
           const potItems = Object.keys(state.pot).filter(
@@ -2003,15 +2298,18 @@
                 ctx.font = "16px serif";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillStyle = "#f0ebe0";
-                ctx.shadowBlur = 4;
+                ctx.fillStyle = "#fff";
+                ctx.shadowBlur = 6;
+                ctx.shadowColor = "rgba(0,0,0,0.3)";
                 ctx.fillText(ing.emoji, cx + px, cy + py);
               }
             });
             ctx.restore();
           }
+
+          // ---- 锅盖半透明层 ----
           ctx.save();
-          ctx.globalAlpha = 0.7;
+          ctx.globalAlpha = 0.5;
           if (imgs.pot)
             ctx.drawImage(
               imgs.pot,
@@ -2026,7 +2324,7 @@
           if (state.hurtTimer > 0) {
             ctx.save();
             ctx.globalAlpha = 0.3;
-            ctx.fillStyle = "#7a2a1a";
+            ctx.fillStyle = "#8b1a1a";
             const coverX = chefX - chefSz * 0.8;
             const coverY = drawY - chefDrawSize / 2 - 10;
             const coverW = chefSz * 1.6;
@@ -2035,16 +2333,28 @@
             ctx.restore();
           }
 
-          // ---- 客人区域：复古旧纸色 ----
+          // ---- 客人区域 — 复古木质 ----
           const restTop = cH * 6.25,
             restH = cH * 2.8;
-          ctx.fillStyle = "#c4b5a0";
-          ctx.fillRect(0, restTop, W, restH);
-          ctx.strokeStyle = "#1a1410";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(0, restTop, W, restH);
+          ctx.fillStyle = "#5a4a3a";
+          ctx.beginPath();
+          ctx.roundRect(0, restTop, W, restH, 8);
+          ctx.fill();
 
-          // 左侧客人
+          // 羊皮纸内衬
+          ctx.fillStyle = "#f2e6d0";
+          ctx.beginPath();
+          ctx.roundRect(4, restTop + 4, W - 8, restH - 8, 6);
+          ctx.fill();
+
+          // 装饰边框
+          ctx.strokeStyle = "#8b6f4c";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(2, restTop + 2, W - 4, restH - 4, 7);
+          ctx.stroke();
+
+          // ---- 左侧客人 ----
           const ltX = cW * 0.2,
             ltW = cW * 1.6,
             ltY = restTop + 20,
@@ -2053,102 +2363,158 @@
             ctx.drawImage(imgs.eatL, ltX, ltY, ltW, ltH);
           else if (imgs.guestL) ctx.drawImage(imgs.guestL, ltX, ltY, ltW, ltH);
 
-          // 左侧点单气泡
+          // ---- 左侧点单气泡 ----
           if (state.leftD) {
             const bx = ltX + 5,
               by = ltY - 30;
-            ctx.fillStyle = "#d6c9b8";
-            ctx.fillRect(bx, by, 75, 50);
-            ctx.strokeStyle = "#1a1410";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(bx, by, 75, 50);
+            ctx.save();
+            ctx.shadowColor = "rgba(0,0,0,0.15)";
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 4;
+            ctx.fillStyle = "rgba(255,248,240,0.96)";
+            ctx.beginPath();
+            ctx.roundRect(bx, by, 75, 50, 10);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = "#c9a84c";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
             if (state.leftD.dish === "✅") {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#4a6a3d";
+              ctx.fillStyle = "#1e8449";
               ctx.fillText("✅", bx + 37, by + 25);
             } else if (state.leftD.dish === "...") {
               const dots = (Math.floor(Date.now() / 500) % 3) + 1;
               ctx.font = "24px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#3d2c1e";
+              ctx.fillStyle = "#8b7a6a";
               ctx.fillText(".".repeat(dots), bx + 37, by + 25);
             } else {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#1e1612";
-              ctx.fillText(state.leftD.emoji, bx + 37, by + 20);
-              ctx.font = '12px "Noto Serif SC", "SimHei", serif';
-              ctx.fillStyle = "#8b5a2b";
+              ctx.fillStyle = "#3d2b1f";
+              ctx.fillText(state.leftD.emoji, bx + 37, by + 18);
+              ctx.font = '10px "Noto Sans SC", sans-serif';
+              ctx.fillStyle = "#b8860b";
+              ctx.fontWeight = "700";
               ctx.fillText(state.leftD.dish, bx + 37, by + 40);
             }
+            ctx.restore();
           }
 
-          // 右侧客人
+          // ---- 右侧客人 ----
           const rtX = cW * 2.2,
             rtW = cW * 1.6;
           if (state.rightEating && imgs.eatR)
             ctx.drawImage(imgs.eatR, rtX, ltY, rtW, ltH);
           else if (imgs.guestR) ctx.drawImage(imgs.guestR, rtX, ltY, rtW, ltH);
 
-          // 右侧点单气泡
+          // ---- 右侧点单气泡 ----
           if (state.rightD) {
             const bx = rtX + rtW - 80,
               by = ltY - 30;
-            ctx.fillStyle = "#d6c9b8";
-            ctx.fillRect(bx, by, 75, 50);
-            ctx.strokeStyle = "#1a1410";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(bx, by, 75, 50);
+            ctx.save();
+            ctx.shadowColor = "rgba(0,0,0,0.15)";
+            ctx.shadowBlur = 12;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 4;
+            ctx.fillStyle = "rgba(255,248,240,0.96)";
+            ctx.beginPath();
+            ctx.roundRect(bx, by, 75, 50, 10);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.strokeStyle = "#c9a84c";
+            ctx.lineWidth = 2.5;
+            ctx.stroke();
             if (state.rightD.dish === "✅") {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#4a6a3d";
+              ctx.fillStyle = "#1e8449";
               ctx.fillText("✅", bx + 37, by + 25);
             } else if (state.rightD.dish === "...") {
               const dots = (Math.floor(Date.now() / 500) % 3) + 1;
               ctx.font = "24px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#3d2c1e";
+              ctx.fillStyle = "#8b7a6a";
               ctx.fillText(".".repeat(dots), bx + 37, by + 25);
             } else {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#1e1612";
-              ctx.fillText(state.rightD.emoji, bx + 37, by + 20);
-              ctx.font = '12px "Noto Serif SC", "SimHei", serif';
-              ctx.fillStyle = "#8b5a2b";
+              ctx.fillStyle = "#3d2b1f";
+              ctx.fillText(state.rightD.emoji, bx + 37, by + 18);
+              ctx.font = '10px "Noto Sans SC", sans-serif';
+              ctx.fillStyle = "#b8860b";
+              ctx.fontWeight = "700";
               ctx.fillText(state.rightD.dish, bx + 37, by + 40);
             }
+            ctx.restore();
           }
 
-          // ---- 菜单面板：复古手绘 ----
+          // ---- 菜单面板 — 羊皮纸卷轴 ----
           const menuW = cW * 1.1,
             baseH = 90,
             rowH = 30;
           const menuH = baseH + state.menu.length * rowH;
           const menuX = (W - menuW) / 2,
             menuY = 0;
-          ctx.fillStyle = "#3d322a";
-          ctx.fillRect(0, menuY, W, 60);
-          ctx.fillStyle = "#d6c9b8";
-          ctx.fillRect(menuX, menuY, menuW, menuH);
-          ctx.strokeStyle = "#1a1410";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(menuX, menuY, menuW, menuH);
 
-          ctx.font = "22px serif";
+          // 顶部装饰条
+          ctx.fillStyle = "#4a3728";
+          ctx.fillRect(0, menuY, W, 56);
+          ctx.fillStyle = "#5a4a3a";
+          ctx.fillRect(0, menuY + 54, W, 4);
+
+          // 菜单背景 — 羊皮纸
+          ctx.save();
+          ctx.shadowColor = "rgba(0,0,0,0.2)";
+          ctx.shadowBlur = 16;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 4;
+          const menuGrad = ctx.createLinearGradient(0, menuY, 0, menuY + menuH);
+          menuGrad.addColorStop(0, "#f5ebd0");
+          menuGrad.addColorStop(1, "#e4d4b8");
+          ctx.fillStyle = menuGrad;
+          ctx.beginPath();
+          ctx.roundRect(menuX, menuY, menuW, menuH, 6);
+          ctx.fill();
+          ctx.shadowBlur = 0;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 0;
+
+          // 边框 — 金色双线
+          ctx.strokeStyle = "#c9a84c";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.roundRect(menuX, menuY, menuW, menuH, 6);
+          ctx.stroke();
+          ctx.strokeStyle = "#8b6f4c";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.roundRect(menuX + 4, menuY + 4, menuW - 8, menuH - 8, 4);
+          ctx.stroke();
+
+          // 标题
+          ctx.font = '22px "Cinzel", serif';
           ctx.textAlign = "center";
-          ctx.fillStyle = "#8b5a2b";
-          ctx.fillText("📋", menuX + menuW / 2, menuY + 22);
-          ctx.font = 'bold 14px "Noto Serif SC", "SimHei", serif';
-          ctx.fillStyle = "#1e1612";
+          ctx.fillStyle = "#b8860b";
+          ctx.shadowBlur = 8;
+          ctx.shadowColor = "rgba(184,134,11,0.15)";
+          ctx.fillText("⚜", menuX + menuW / 2, menuY + 22);
+          ctx.shadowBlur = 0;
+
+          ctx.font = 'bold 13px "Noto Sans SC", sans-serif';
+          ctx.fillStyle = "#3d2b1f";
           ctx.fillText(state.dish, menuX + menuW / 2, menuY + 48);
 
           if (state.menuDone) {
             ctx.font = "32px serif";
-            ctx.fillStyle = "#4a6a3d";
+            ctx.fillStyle = "#1e8449";
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = "rgba(30,132,73,0.2)";
             ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2);
+            ctx.shadowBlur = 0;
           } else {
             let yOff = 68;
             state.menu.forEach((item) => {
@@ -2156,23 +2522,43 @@
               const have = state.pot[item.id] || 0;
               ctx.font = "20px serif";
               ctx.textAlign = "left";
-              ctx.fillStyle = "#1e1612";
+              ctx.fillStyle = "#3d2b1f";
               ctx.fillText(ing ? ing.emoji : "🍽", menuX + 8, menuY + yOff);
+
               const barX = menuX + 36,
                 barW = menuW - 72,
-                barH = 5;
-              ctx.fillStyle = "#b8a694";
+                barH = 6;
+              // 进度条背景
+              ctx.fillStyle = "#dcc29e";
+              ctx.shadowBlur = 4;
+              ctx.shadowColor = "rgba(0,0,0,0.05)";
               ctx.fillRect(barX, menuY + yOff - 2, barW, barH);
-              ctx.fillStyle = have >= item.n ? "#4a6a3d" : "#b8860b";
-              ctx.fillRect(
+              ctx.shadowBlur = 0;
+
+              // 进度条填充 — 金色/绿色
+              const ratio = Math.min((have / item.n) * barW, barW);
+              const fillGrad = ctx.createLinearGradient(
                 barX,
-                menuY + yOff - 2,
-                Math.min((have / item.n) * barW, barW),
-                barH,
+                0,
+                barX + barW,
+                0,
               );
-              ctx.font = '10px "Noto Serif SC", "SimHei", serif';
+              if (have >= item.n) {
+                fillGrad.addColorStop(0, "#7a9a3a");
+                fillGrad.addColorStop(1, "#5a8a2a");
+              } else {
+                fillGrad.addColorStop(0, "#c9a84c");
+                fillGrad.addColorStop(1, "#b8922a");
+              }
+              ctx.fillStyle = fillGrad;
+              ctx.shadowBlur = 6;
+              ctx.shadowColor = "rgba(0,0,0,0.1)";
+              ctx.fillRect(barX, menuY + yOff - 2, ratio, barH);
+              ctx.shadowBlur = 0;
+
+              ctx.font = '9px "Noto Sans SC", sans-serif';
               ctx.textAlign = "right";
-              ctx.fillStyle = "#1e1612";
+              ctx.fillStyle = "#3d2b1f";
               ctx.fillText(
                 `${have}/${item.n}`,
                 menuX + menuW - 8,
@@ -2181,20 +2567,22 @@
               yOff += rowH;
             });
           }
+          ctx.restore();
 
-          // ---- 浮动文字：复古色 ----
+          // ---- 浮动文字 ----
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
-            ctx.font = 'bold 14px "Noto Serif SC", "SimHei", serif';
-            ctx.fillStyle = ft.color || "#b8860b";
+            ctx.font = 'bold 14px "Cinzel", "Noto Sans SC", serif';
+            ctx.fillStyle = ft.color || "#d4a017";
             ctx.textAlign = "center";
+            ctx.shadowBlur = 16;
+            ctx.shadowColor = "rgba(0,0,0,0.2)";
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
         }
 
-        // ---- roundRect 保留（但实际全部用直角） ----
         if (!CanvasRenderingContext2D.prototype.roundRect) {
           CanvasRenderingContext2D.prototype.roundRect = function (
             x,
@@ -2203,11 +2591,17 @@
             h,
             r,
           ) {
+            if (typeof r === "number") r = { tl: r, tr: r, br: r, bl: r };
             this.beginPath();
-            this.moveTo(x, y);
-            this.lineTo(x + w, y);
-            this.lineTo(x + w, y + h);
-            this.lineTo(x, y + h);
+            this.moveTo(x + r.tl, y);
+            this.lineTo(x + w - r.tr, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+            this.lineTo(x + w, y + h - r.br);
+            this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+            this.lineTo(x + r.bl, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+            this.lineTo(x, y + r.tl);
+            this.quadraticCurveTo(x, y, x + r.tl, y);
             this.closePath();
           };
         }
@@ -2273,13 +2667,13 @@
         // 11. 游戏结束 & 重置
         // ================================================================
         function getRank(g) {
-          if (g >= 170) return "👑 巅峰厨神";
-          if (g >= 120) return "🏆 荣耀厨王";
-          if (g >= 100) return "🌟 特级厨师";
-          if (g >= 90) return "🔥 高级厨师";
+          if (g >= 170) return "⚜ 巅峰厨神";
+          if (g >= 120) return "✦ 荣耀厨王";
+          if (g >= 100) return "⚔ 特级厨师";
+          if (g >= 90) return "🏅 高级厨师";
           if (g >= 60) return "🍳 中级厨师";
-          if (g >= 30) return "📖 初级厨师";
-          return "🧑‍🍳 学徒";
+          if (g >= 30) return "🥄 初级厨师";
+          return "📜 学徒";
         }
 
         function endGame() {
@@ -2620,7 +3014,7 @@
         }
 
         // ================================================================
-        // 13. 头像更换 & 厨师背景替换
+        // 13. 头像更换 & 厨师背景
         // ================================================================
         let tempAvatarImage = null;
 
@@ -2784,6 +3178,7 @@
         // ================================================================
         // 15. 事件绑定
         // ================================================================
+
         document
           .getElementById("startWithCameraBtn")
           .addEventListener("click", () => {
@@ -2913,7 +3308,7 @@
           }
         });
 
-        console.log("🎨 复古手绘风格已加载 — 绣湖风 · 细黑线 · 无圆角");
+        console.log("🧙 中世纪复古风格已加载 — 灵感源自《炼金模拟器》");
       })();
     </script>
   </body>
