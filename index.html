@@ -6,11 +6,9 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>肥喵厨房 · 复古手绘</title>
-
-    <!-- 免费商用字体：思源宋体 + 手写体 -->
+    <title>像素厨房 · 头控出餐</title>
     <link
-      href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700;900&family=ZCOOL+KuaiLe&family=Ma+Shan+Zheng&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
     />
 
@@ -25,13 +23,7 @@
     ></script>
 
     <style>
-      /* ================================================================
-           全局重置 · 复古手绘风格（绣湖风）
-           - 全部直角，无圆角
-           - 细黑钢笔线边框
-           - 暗色调 + 旧纸色
-           - 黑体 / 免费商用字体
-           ================================================================ */
+      /* ===== 全局重置 & 基础 ===== */
       * {
         margin: 0;
         padding: 0;
@@ -39,22 +31,17 @@
         user-select: none;
         -webkit-tap-highlight-color: transparent;
       }
-
       body {
-        /* 深色复古背景 */
-        background: #1e1916;
+        background: #f5efe6;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         min-height: 100vh;
-        font-family:
-          "Noto Serif SC", "SimHei", "Microsoft YaHei", "PingFang SC", serif;
+        font-family: "Press Start 2P", monospace;
         touch-action: none;
         padding: 8px 0;
       }
-
-      /* ===== 顶部状态栏 ===== */
       .outer-top-bar {
         width: 100%;
         max-width: 420px;
@@ -65,45 +52,38 @@
         flex-wrap: nowrap;
         justify-content: center;
       }
-
       .top-box {
         flex: 1;
         min-width: 0;
-        background: #d6c9b8;
-        /* 旧纸色 */
-        border: 2px solid #1a1410;
-        /* 细黑线 */
+        background: rgba(255, 248, 240, 0.85);
+        border-radius: 8px;
         padding: 8px 4px;
         text-align: center;
         font-size: 14px;
-        color: #1e1612;
-        box-shadow: none;
+        color: #2c3e50;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 4px;
         white-space: nowrap;
-        font-weight: 700;
-        letter-spacing: 0.5px;
       }
-
       .top-box:not(:last-child) {
         flex: 0.8;
       }
       .top-box:last-child {
         flex: 1.3;
       }
-
       #top-pause {
         cursor: pointer;
         font-size: 22px;
       }
       #top-gold {
-        color: #8b5a2b;
-        font-weight: 900;
+        color: #e67e22;
+        font-weight: bold;
       }
       #top-dishes {
-        color: #3d2c1e;
+        color: #2c3e50;
       }
       #top-head-status {
         font-size: 14px;
@@ -112,20 +92,17 @@
         flex: 0.9;
         gap: 2px;
       }
-
       .status-text {
         font-size: 11px;
-        color: #3d2c1e;
+        color: #7a7268;
         max-width: 60px;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
-        font-weight: 400;
       }
-
-      /* 倒计时闪烁（保留功能，颜色适配） */
+      /* ===== 倒计时闪烁 ===== */
       #top-time.blink-red {
-        color: #a53a2a !important;
+        color: #e74c3c !important;
         animation: blink 0.5s step-end infinite;
       }
       @keyframes blink {
@@ -134,27 +111,24 @@
           opacity: 1;
         }
         50% {
-          opacity: 0.15;
+          opacity: 0.2;
         }
       }
 
-      /* ===== 游戏容器 ===== */
       #game-wrapper {
         position: relative;
         width: 100%;
         max-width: 420px;
         aspect-ratio: 9/16;
-        background: #3d322a;
-        /* 深色底 */
+        background: #fdf8f0;
         overflow: hidden;
-        border: 3px solid #1a1410;
         box-shadow:
-          0 8px 0 #0d0a08,
-          0 12px 40px rgba(0, 0, 0, 0.6);
+          0 8px 0 #d0c8b8,
+          0 12px 40px rgba(0, 0, 0, 0.1);
         margin: 0 12px 12px;
-        border-radius: 0 !important;
+        border: 4px solid #d0c8b8;
+        border-radius: 0;
       }
-
       #gameCanvas {
         position: absolute;
         top: 0;
@@ -166,34 +140,34 @@
         image-rendering: pixelated;
         touch-action: none;
       }
-
       #camera-preview {
         position: absolute;
         bottom: 8px;
         right: 8px;
         width: 64px;
         height: 48px;
-        border: 2px solid #1a1410;
+        border-radius: 8px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
         z-index: 10;
         object-fit: cover;
-        background: #1a1410;
+        background: #222;
         opacity: 0.6;
         pointer-events: none;
         transition: opacity 0.3s;
-        border-radius: 0 !important;
       }
       #camera-preview.active {
         opacity: 0.9;
       }
 
-      /* ===== 弹窗通用 · 复古手绘 ===== */
+      /* ===== 弹窗通用 ===== */
       .modal-overlay {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(30, 25, 22, 0.88);
+        background: rgba(255, 248, 240, 0.88);
+        backdrop-filter: blur(4px);
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
@@ -208,7 +182,7 @@
       @keyframes fadeIn {
         from {
           opacity: 0;
-          transform: scale(0.97);
+          transform: scale(0.96);
         }
         to {
           opacity: 1;
@@ -218,125 +192,111 @@
 
       .modal-title {
         font-size: 34px;
-        color: #d6c9b8;
-        text-shadow: 3px 3px 0 #1a1410;
+        color: #e67e22;
+        text-shadow: 3px 3px 0 #f1c40f;
         margin-bottom: 20px;
         text-align: center;
-        letter-spacing: 4px;
+        letter-spacing: 2px;
         line-height: 1.3;
         flex-shrink: 0;
-        font-family: "Ma Shan Zheng", "ZCOOL KuaiLe", "Noto Serif SC", serif;
-        font-weight: 700;
       }
-
       .modal-card {
-        background: #d6c9b8;
-        /* 旧纸色 */
+        background: #fff;
+        border-radius: 16px;
         padding: 24px 24px 28px;
         max-width: 360px;
         width: 100%;
         text-align: center;
-        color: #1e1612;
-        border: 3px solid #1a1410;
-        box-shadow: 0 8px 0 #0d0a08;
-        font-family: "Noto Serif SC", "SimHei", "Microsoft YaHei", serif;
+        color: #3d3a36;
+        border: 4px solid #d0c8b8;
+        box-shadow:
+          0 8px 0 #b0a898,
+          0 12px 30px rgba(0, 0, 0, 0.08);
+        font-family: "Press Start 2P", monospace;
         position: relative;
         margin-top: 0;
         flex-shrink: 0;
-        border-radius: 0 !important;
       }
-
       .modal-card .close-btn {
         position: absolute;
-        top: 6px;
-        right: 10px;
+        top: 8px;
+        right: 12px;
         background: none;
         border: none;
         font-size: 28px;
         cursor: pointer;
-        color: #3d2c1e;
+        color: #7a7268;
         line-height: 1;
-        font-family: "Noto Serif SC", serif;
       }
       .modal-card .close-btn:hover {
-        color: #a53a2a;
+        color: #e74c3c;
       }
-
       .modal-card .subtitle-big {
         font-size: 28px;
-        color: #8b5a2b;
-        font-weight: 900;
+        color: #e67e22;
+        font-weight: bold;
         margin: 0 0 12px 0;
         letter-spacing: 2px;
-        font-family: "Ma Shan Zheng", "ZCOOL KuaiLe", serif;
       }
       .modal-card .subtitle-small {
         font-size: 13px;
-        color: #3d2c1e;
+        color: #7a7268;
         margin-bottom: 22px;
         line-height: 2;
-        font-weight: 400;
       }
-
-      /* ===== 按钮 · 复古手绘 ===== */
       .modal-card .btn {
         display: inline-block;
         padding: 14px 22px;
-        background: #8b5a2b;
-        border: 3px solid #1a1410;
+        background: #f39c12;
+        border: 4px solid #d68910;
+        border-radius: 8px;
         font-size: 16px;
-        font-weight: 700;
-        color: #d6c9b8;
+        font-weight: bold;
+        color: #2c2a26;
         cursor: pointer;
-        box-shadow: 0 5px 0 #0d0a08;
-        font-family: "Noto Serif SC", "SimHei", "Microsoft YaHei", serif;
+        box-shadow: 0 4px 0 #b9770e;
+        font-family: "Press Start 2P", monospace;
         margin: 4px;
         transition:
           transform 0.08s,
           box-shadow 0.08s;
         width: 100%;
         max-width: 260px;
-        border-radius: 0 !important;
-        letter-spacing: 1px;
       }
       .modal-card .btn:active {
-        transform: translateY(5px);
-        box-shadow: 0 0px 0 #0d0a08;
+        transform: translateY(4px);
+        box-shadow: 0 0px 0 #b9770e;
       }
-
       .modal-card .btn-small {
         padding: 12px 20px;
         font-size: 14px;
-        border-width: 3px;
-        box-shadow: 0 4px 0 #0d0a08;
+        border-width: 4px;
+        box-shadow: 0 4px 0 #8e8e8e;
         max-width: 220px;
       }
-
       .modal-card .btn-secondary {
-        background: #b8a694;
-        border-color: #1a1410;
-        box-shadow: 0 4px 0 #0d0a08;
-        color: #1e1612;
+        background: #dcdcdc;
+        border-color: #b0b0b0;
+        box-shadow: 0 4px 0 #8e8e8e;
+        color: #3d3a36;
       }
       .modal-card .btn-secondary:active {
         transform: translateY(4px);
-        box-shadow: 0 0px 0 #0d0a08;
+        box-shadow: 0 0px 0 #8e8e8e;
       }
-
       .btn-start-camera {
         font-size: 20px !important;
         padding: 18px 28px !important;
         max-width: 280px !important;
-        background: #4a6a3d !important;
-        border-color: #1a1410 !important;
-        box-shadow: 0 5px 0 #0d0a08 !important;
-        color: #d6c9b8 !important;
+        background: #2ecc71;
+        border-color: #27ae60;
+        box-shadow: 0 4px 0 #1e8449;
+        color: #fff;
       }
       .btn-start-camera:active {
-        transform: translateY(5px);
-        box-shadow: 0 0px 0 #0d0a08 !important;
+        transform: translateY(4px);
+        box-shadow: 0 0px 0 #1e8449;
       }
-
       .modal-card .btn-group {
         display: flex;
         flex-direction: column;
@@ -352,23 +312,20 @@
         width: 100%;
       }
 
-      /* ===== 设置行 ===== */
+      /* ===== 设置行（音乐、音效、速度滑杆） ===== */
       .settings-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 8px 0;
-        border-bottom: 2px dotted #8b7a68;
+        border-bottom: 2px dotted #d0c8b8;
         font-size: 13px;
         flex-wrap: nowrap;
         gap: 6px;
-        font-weight: 400;
-        color: #1e1612;
       }
       .settings-row:last-child {
         border-bottom: none;
       }
-
       .settings-row .toggle-wrap {
         display: flex;
         flex-wrap: nowrap;
@@ -376,31 +333,28 @@
         justify-content: flex-end;
         align-items: center;
       }
-
       .toggle-btn {
         padding: 3px 10px;
-        border: 2px solid #1a1410;
-        background: #b8a694;
-        color: #1e1612;
+        border-radius: 4px;
+        border: 2px solid #b0a898;
+        background: #f5efe6;
+        color: #3d3a36;
         font-size: 14px;
         cursor: pointer;
-        font-family: "Noto Serif SC", "SimHei", "Microsoft YaHei", serif;
+        font-family: "Press Start 2P", monospace;
         white-space: nowrap;
         height: 32px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 0 !important;
-        font-weight: 400;
       }
       .toggle-btn.active {
-        background: #8b5a2b;
-        border-color: #1a1410;
-        color: #d6c9b8;
-        font-weight: 700;
+        background: #f1c40f;
+        border-color: #d4ac0d;
+        color: #2c2a26;
       }
 
-      /* ===== 速度滑杆 ===== */
+      /* ===== 速度滑杆（标签已移除） ===== */
       .speed-control {
         display: flex;
         flex-direction: column;
@@ -419,53 +373,51 @@
         -webkit-appearance: none;
         appearance: none;
         flex: 1;
-        height: 4px;
-        background: #3d2c1e;
+        height: 6px;
+        border-radius: 3px;
+        background: #d0c8b8;
         outline: none;
         min-width: 60px;
-        border-radius: 0 !important;
       }
       .speed-control input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px;
-        height: 16px;
-        background: #8b5a2b;
-        border: 2px solid #1a1410;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #e67e22;
+        border: 3px solid #d0c8b8;
         cursor: pointer;
-        box-shadow: 0 2px 0 #0d0a08;
-        border-radius: 0 !important;
+        box-shadow: 0 2px 0 #b0a898;
       }
       .speed-control input[type="range"]::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        background: #8b5a2b;
-        border: 2px solid #1a1410;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #e67e22;
+        border: 3px solid #d0c8b8;
         cursor: pointer;
-        box-shadow: 0 2px 0 #0d0a08;
-        border-radius: 0 !important;
+        box-shadow: 0 2px 0 #b0a898;
       }
       .speed-control .speed-value {
         font-size: 14px;
-        color: #8b5a2b;
+        color: #e67e22;
         min-width: 44px;
         text-align: center;
-        font-weight: 700;
+        font-weight: bold;
       }
 
-      /* ===== 游戏说明链接 ===== */
+      /* ===== 游戏说明文字（放在底部） ===== */
       .info-link-bottom {
-        color: #3d2c1e;
+        color: #999;
         font-size: 12px;
         cursor: pointer;
         text-decoration: underline;
         display: inline-block;
         transition: color 0.2s;
-        font-weight: 400;
-        border-bottom: 1px dashed #3d2c1e;
       }
       .info-link-bottom:hover {
-        color: #8b5a2b;
+        color: #e67e22;
       }
 
       /* ===== 游戏说明弹窗 ===== */
@@ -476,16 +428,14 @@
       }
       #infoModal .modal-card h3 {
         font-size: 16px;
-        color: #8b5a2b;
+        color: #e67e22;
         margin: 12px 0 6px 0;
-        font-weight: 700;
       }
       #infoModal .modal-card p {
         font-size: 12px;
         line-height: 2;
-        color: #1e1612;
+        color: #3d3a36;
         margin: 4px 0;
-        font-weight: 400;
       }
       #infoModal .modal-card .section {
         margin-bottom: 10px;
@@ -494,13 +444,11 @@
         margin-bottom: 0;
       }
 
-      /* ===== 结算 ===== */
       .score-number {
         font-size: 52px;
-        font-weight: 900;
-        color: #8b5a2b;
-        text-shadow: 4px 4px 0 #1a1410;
-        font-family: "Ma Shan Zheng", "ZCOOL KuaiLe", serif;
+        font-weight: bold;
+        color: #e67e22;
+        text-shadow: 4px 4px 0 #f1c40f;
       }
       .stat-row {
         display: flex;
@@ -510,57 +458,47 @@
       }
       .stat-item .num {
         font-size: 24px;
-        font-weight: 900;
-        color: #1e1612;
+        font-weight: bold;
+        color: #2c3e50;
       }
       .stat-item .label {
         font-size: 13px;
-        color: #3d2c1e;
-        font-weight: 400;
+        color: #7a7268;
       }
-
       .start-avatar-btn {
-        background: #b8a694 !important;
-        border-color: #1a1410 !important;
-        color: #1e1612 !important;
-        box-shadow: 0 4px 0 #0d0a08 !important;
+        background: #dcdcdc;
+        border-color: #b0b0b0;
+        color: #3d3a36;
+        margin-top: 4px;
       }
-      .start-avatar-btn:active {
-        transform: translateY(4px);
-        box-shadow: 0 0px 0 #0d0a08 !important;
-      }
-
       #avatarInput {
         display: none;
       }
-
-      /* ===== 头控指示器 ===== */
       .head-indicator {
         display: inline-block;
         width: 12px;
         height: 12px;
-        background: #3d2c1e;
+        border-radius: 50%;
+        background: #95a5a6;
         margin-right: 4px;
         transition: background 0.3s;
         flex-shrink: 0;
-        border: 1px solid #1a1410;
-        border-radius: 0 !important;
       }
       .head-indicator.on {
-        background: #4a6a3d;
-        box-shadow: 0 0 8px #4a6a3d;
+        background: #2ecc71;
+        box-shadow: 0 0 8px #2ecc71;
       }
       .head-indicator.error {
-        background: #a53a2a;
-        box-shadow: 0 0 8px #a53a2a;
+        background: #e74c3c;
+        box-shadow: 0 0 8px #e74c3c;
       }
       .head-indicator.loading {
-        background: #b8860b;
+        background: #f1c40f;
         animation: pulse 0.8s infinite alternate;
       }
       @keyframes pulse {
         0% {
-          opacity: 0.3;
+          opacity: 0.4;
           transform: scale(0.9);
         }
         100% {
@@ -575,10 +513,10 @@
         width: 200px;
         height: 200px;
         margin: 0 auto;
-        border: 3px solid #1a1410;
-        background: #b8a694;
+        border: 4px solid #d0c8b8;
+        border-radius: 16px;
+        background: #f0ebdc;
         overflow: hidden;
-        border-radius: 0 !important;
       }
       .avatar-preview-container img.chef-bg {
         width: 100%;
@@ -586,7 +524,6 @@
         object-fit: contain;
         display: block;
       }
-
       .avatar-circle {
         position: absolute;
         top: 50%;
@@ -594,27 +531,26 @@
         transform: translate(-50%, -50%);
         width: 80px;
         height: 80px;
-        border: 3px solid #1a1410;
-        background: rgba(30, 25, 22, 0.4);
+        border-radius: 50%;
+        border: 4px solid rgba(255, 255, 255, 0.9);
+        background: rgba(0, 0, 0, 0.25);
         overflow: hidden;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
         transition: border-color 0.2s;
-        border-radius: 0 !important;
       }
       .avatar-circle:hover {
-        border-color: #8b5a2b;
+        border-color: #f1c40f;
       }
       .avatar-circle .placeholder {
-        color: #d6c9b8;
+        color: white;
         font-size: 13px;
         text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
         text-align: center;
         line-height: 1.4;
         pointer-events: none;
-        font-weight: 400;
       }
       .avatar-circle .preview-img {
         display: none;
@@ -631,7 +567,6 @@
         top: 0;
         left: 0;
       }
-
       .avatar-confirm-btn {
         margin-top: 16px;
         width: 200px !important;
@@ -640,7 +575,7 @@
         margin-right: auto;
       }
 
-      /* ===== 厨师背景选项 ===== */
+      /* ===== 厨师背景替换选项（三个小方盒子） ===== */
       .chef-bg-options {
         display: flex;
         justify-content: center;
@@ -650,22 +585,22 @@
       .chef-bg-option {
         width: 60px;
         height: 60px;
-        border: 3px solid #1a1410;
+        border-radius: 8px;
+        border: 4px solid #d0c8b8;
         overflow: hidden;
         cursor: pointer;
         transition:
           border-color 0.2s,
           transform 0.2s;
         flex-shrink: 0;
-        background: #b8a694;
-        border-radius: 0 !important;
+        background: #fff;
       }
       .chef-bg-option:hover {
         transform: scale(1.05);
       }
       .chef-bg-option.active {
-        border-color: #8b5a2b;
-        box-shadow: 0 0 0 2px #b8860b;
+        border-color: #e67e22;
+        box-shadow: 0 0 0 2px #f1c40f;
       }
       .chef-bg-option img {
         width: 100%;
@@ -678,15 +613,13 @@
         padding-top: 56px;
       }
 
-      /* ===== 底部邮箱 ===== */
+      /* ===== 时间到页面底部邮箱 ===== */
       .footer-email {
         font-size: 10px;
-        color: #3d2c1e;
+        color: #aaa;
         margin-top: 16px;
         text-align: center;
         letter-spacing: 0.5px;
-        font-weight: 400;
-        opacity: 0.7;
       }
 
       /* ===== 响应式 ===== */
@@ -793,7 +726,6 @@
       }
     </style>
   </head>
-
   <body>
     <!-- ===== 顶部状态栏 ===== -->
     <div class="outer-top-bar">
@@ -819,19 +751,19 @@
       <div
         id="startOverlay"
         class="modal-overlay"
-        style="background: rgba(30, 25, 22, 0.85)"
+        style="background: rgba(255, 248, 240, 0.75)"
       >
-        <div class="modal-title">肥喵厨房</div>
-        <div class="modal-card" style="background: #d6c9b8">
-          <div class="subtitle-big">📷 开启摄像头</div>
+        <div class="modal-title">像素厨房</div>
+        <div class="modal-card" style="background: #fffefc">
+          <div class="subtitle-big">开启摄像头</div>
           <div class="subtitle-small">触屏滑动 · 头控可选</div>
 
           <div class="btn-row">
             <button class="btn btn-start-camera" id="startWithCameraBtn">
-              📷 允许并开始
+              允许并开始
             </button>
             <button class="btn btn-secondary" id="startTouchBtn">
-              👆 触屏玩法
+              触屏玩法
             </button>
           </div>
 
@@ -839,9 +771,10 @@
             class="btn btn-secondary btn-small start-avatar-btn"
             id="openAvatarBtn"
           >
-            🧑‍🍳 更换厨师形象
+            🔄 更换厨师形象
           </button>
 
+          <!-- 游戏说明（放在底部，居中） -->
           <div style="margin-top: 20px; text-align: center">
             <span class="info-link-bottom" id="openInfoBtn">📖 游戏说明</span>
           </div>
@@ -858,10 +791,7 @@
       <!-- ===== 游戏说明弹窗 ===== -->
       <div id="infoModal" class="modal-overlay hidden">
         <div class="modal-title" style="font-size: 28px">📖 游戏说明</div>
-        <div
-          class="modal-card"
-          style="max-width: 360px; padding: 20px; background: #d6c9b8"
-        >
+        <div class="modal-card" style="max-width: 360px; padding: 20px">
           <button class="close-btn" id="infoCloseBtn">&times;</button>
           <div class="section">
             <h3>🎮 游戏玩法</h3>
@@ -900,21 +830,9 @@
 
       <!-- ===== 更换厨师形象模态框 ===== -->
       <div id="avatarModal" class="modal-overlay hidden">
-        <div
-          class="modal-card"
-          style="max-width: 360px; padding: 20px; background: #d6c9b8"
-        >
+        <div class="modal-card" style="max-width: 360px; padding: 20px">
           <button class="close-btn" id="avatarCloseBtn">&times;</button>
-          <h2
-            style="
-              font-size: 20px;
-              margin-bottom: 10px;
-              color: #1e1612;
-              font-weight: 700;
-            "
-          >
-            🧑‍🍳 更换形象
-          </h2>
+          <h2 style="font-size: 20px; margin-bottom: 10px">更换形象</h2>
           <div class="avatar-preview-container">
             <img id="avatarChefBg" class="chef-bg" src="" alt="厨师" />
             <div class="avatar-circle" id="avatarCircle">
@@ -924,14 +842,14 @@
             </div>
           </div>
 
-          <!-- 三个小方盒子：厨师背景替换 -->
+          <!-- 三个小方盒子：厨师背景替换选项 -->
           <div class="chef-bg-options">
             <div
               class="chef-bg-option active"
-              data-src="https://i.imgs.ovh/2026/08/03/2471dfdf0bb813a6f18ee38718839342.jpg"
+              data-src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
             >
               <img
-                src="https://i.imgs.ovh/2026/08/03/2471dfdf0bb813a6f18ee38718839342.jpg"
+                src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
                 alt="厨师 1"
               />
             </div>
@@ -964,7 +882,7 @@
       <!-- ===== 暂停弹窗（速度滑杆） ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
         <div class="modal-title" style="font-size: 30px">⏸ 暂停</div>
-        <div class="modal-card" style="background: #d6c9b8">
+        <div class="modal-card">
           <div style="margin: 8px 0">
             <div class="settings-row">
               <span>🎵 音乐</span>
@@ -974,9 +892,8 @@
                   data-setting="bgm"
                   data-val="on"
                 >
-                  开
-                </button>
-                <button class="toggle-btn" data-setting="bgm" data-val="off">
+                  开</button
+                ><button class="toggle-btn" data-setting="bgm" data-val="off">
                   关
                 </button>
               </div>
@@ -989,16 +906,15 @@
                   data-setting="sfx"
                   data-val="on"
                 >
-                  开
-                </button>
-                <button class="toggle-btn" data-setting="sfx" data-val="off">
+                  开</button
+                ><button class="toggle-btn" data-setting="sfx" data-val="off">
                   关
                 </button>
               </div>
             </div>
             <!-- 速度滑杆 -->
             <div class="settings-row">
-              <span>⚡ 传送带速度</span>
+              <span>📦 传送带速度</span>
               <div class="speed-control">
                 <div class="slider-row">
                   <input
@@ -1023,7 +939,7 @@
               id="restartBtn"
               style="font-size: 18px"
             >
-              ⟳ 重新开始
+              🔄 重新开始
             </button>
           </div>
         </div>
@@ -1031,27 +947,15 @@
 
       <!-- ===== 结算弹窗（时间到） ===== -->
       <div id="resultModal" class="modal-overlay hidden">
-        <div class="modal-title">⏰ 时间到！</div>
-        <div class="modal-card" style="background: #d6c9b8">
+        <div class="modal-title">🍳 时间到！</div>
+        <div class="modal-card">
           <div class="score-number" id="finalScore">0</div>
-          <div
-            style="
-              font-size: 14px;
-              color: #3d2c1e;
-              margin: 6px 0;
-              font-weight: 400;
-            "
-          >
+          <div style="font-size: 14px; color: #7a7268; margin: 6px 0">
             总金币
           </div>
           <div
             id="finalRank"
-            style="
-              font-size: 22px;
-              margin: 10px 0;
-              color: #8b5a2b;
-              font-weight: 700;
-            "
+            style="font-size: 22px; margin: 10px 0; color: #e67e22"
           ></div>
           <div class="stat-row">
             <div class="stat-item">
@@ -1071,9 +975,10 @@
             id="rankBtn"
             style="font-size: 18px"
           >
-            🏅 我的评级
+            📊 我的评级
           </button>
-          <div class="footer-email">📮 我的邮箱：xxx@example.com</div>
+          <!-- 底部邮箱 -->
+          <div class="footer-email">📧 我的邮箱：xxx@example.com</div>
         </div>
       </div>
     </div>
@@ -1104,13 +1009,17 @@
         const avatarConfirmBtn = document.getElementById("avatarConfirmBtn");
         const openAvatarBtn = document.getElementById("openAvatarBtn");
 
+        // 游戏说明
         const infoModal = document.getElementById("infoModal");
         const infoCloseBtn = document.getElementById("infoCloseBtn");
         const infoConfirmBtn = document.getElementById("infoConfirmBtn");
         const openInfoBtn = document.getElementById("openInfoBtn");
 
+        // 速度滑杆
         const speedSlider = document.getElementById("speedSlider");
         const speedDisplay = document.getElementById("speedDisplay");
+
+        // 厨师背景选项
         const chefBgOptions = document.querySelectorAll(".chef-bg-option");
 
         // ================================================================
@@ -1276,51 +1185,58 @@
           {
             id: "tomato",
             name: "番茄",
-            color: "#b53b2e",
-            emoji: "🍅",
+            color: "#e74c3c",
+            image:
+              "https://i.imgs.ovh/2026/08/11/e20c2be9182194e22bfd920351304584.png",
             cost: 1,
           },
-          { id: "egg", name: "鸡蛋", color: "#c9a832", emoji: "🥚", cost: 1 },
-          { id: "onion", name: "洋葱", color: "#7d4e8a", emoji: "🧅", cost: 1 },
+          { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", cost: 1 },
+          { id: "onion", name: "洋葱", color: "#9b59b6", emoji: "🧅", cost: 1 },
           {
             id: "garlic",
             name: "大蒜",
-            color: "#d4c9b8",
+            color: "#ecf0f1",
             emoji: "🧄",
             cost: 1,
           },
           {
             id: "carrot",
             name: "胡萝卜",
-            color: "#c47d2a",
+            color: "#e67e22",
             emoji: "🥕",
             cost: 1,
           },
           {
             id: "potato",
             name: "土豆",
-            color: "#b89a7a",
+            color: "#d4a574",
             emoji: "🥔",
             cost: 1,
           },
           {
             id: "pepper",
             name: "青椒",
-            color: "#3d6a3d",
+            color: "#27ae60",
             emoji: "🫑",
             cost: 1,
           },
           {
             id: "mushroom",
             name: "蘑菇",
-            color: "#a89484",
+            color: "#bdc3c7",
             emoji: "🍄",
             cost: 1,
           },
-          { id: "salt", name: "盐", color: "#d4c9b8", emoji: "🧂", cost: 1 },
-          { id: "oil", name: "油", color: "#c99a3a", emoji: "🫒", cost: 1 },
+          {
+            id: "salt",
+            name: "盐",
+            color: "#ecf0f1",
+            image:
+              "https://i.imgs.ovh/2026/08/11/17f86470cdc3d660ce12c1763bf87812.png",
+            cost: 1,
+          },
+          { id: "oil", name: "油", color: "#f39c12", emoji: "🫒", cost: 1 },
         ];
-
         const RECIPES = [
           {
             name: "番茄炒蛋",
@@ -1529,7 +1445,7 @@
             x: state.chefX * canvas.width,
             y: canvas.height * 0.55,
             life: 1.5,
-            color: "#b8860b",
+            color: "#f1c40f",
           });
           if (!matched) state.combo = Math.floor(state.combo / 2);
           if (state.gold < 0) state.gold = 0;
@@ -1557,8 +1473,9 @@
             state.headControlEnabled &&
             !state.headFaceDetected &&
             !state.touchOnlyMode
-          )
+          ) {
             return;
+          }
           const cellH = canvas.height / ROWS;
           if (
             state.ings.length &&
@@ -1574,6 +1491,7 @@
               ? cellW * 0.5 + rand(0, cellW * 0.3)
               : cellW * 3.1 + rand(0, cellW * 0.2);
           const baseSp = 1.8 + rand(0, 0.5);
+          // 【食材方框更大】sz 42-52
           const sz = 42 + rand(0, 10);
           state.ings.push({
             ...type,
@@ -1619,7 +1537,7 @@
                   x: ing.x,
                   y: ing.y,
                   life: 1.2,
-                  color: "#a53a2a",
+                  color: "#e74c3c",
                 });
               } else {
                 if (state.gold < 5) continue;
@@ -1640,7 +1558,7 @@
                   x: ing.x,
                   y: ing.y,
                   life: 1.2,
-                  color: "#a53a2a",
+                  color: "#e74c3c",
                 });
               }
               state.ings.splice(i, 1);
@@ -1685,6 +1603,7 @@
 
         function update(dt) {
           if (!state.playing || state.paused || state.over) return;
+
           if (state.timerStarted) {
             state.time -= dt;
             if (state.time <= 0) {
@@ -1693,6 +1612,7 @@
               return;
             }
           }
+
           state.beltOff = (state.beltOff + dt * 30) % 30;
           state.qTimer += dt;
           if (state.qTimer > 1.2 + rand(0, 0.5)) {
@@ -1703,6 +1623,7 @@
           updateFly(dt);
           updateFloatingTexts(dt);
 
+          // ---- 头控融合 ----
           if (
             state.headControlEnabled &&
             state.headDetecting &&
@@ -1728,6 +1649,7 @@
               state.headFaceDetected = false;
             }
           }
+
           if (state.touchOnlyMode && !state.timerStarted) {
             state.timerStarted = true;
           }
@@ -1739,6 +1661,7 @@
             state.chefX = lerp(state.chefX, state.smoothTargetX, 0.18);
             state.chefX = clamp(state.chefX, 0.03, 0.97);
           }
+
           if (state.menuDone && !state.autoServe) {
             state.autoServe = true;
             autoServe();
@@ -1750,8 +1673,16 @@
         }
 
         // ================================================================
-        // 8. 渲染（游戏绘制）· 复古手绘风格
+        // 8. 渲染（游戏绘制）
         // ================================================================
+
+        /**
+         * =============================================================
+         *  【图片资源替换说明】
+         *  以下所有图片链接均可替换为您自己的图片素材。
+         *  请替换对应的 src 链接即可。
+         * =============================================================
+         */
         const imgs = {};
 
         function loadImgs(cb) {
@@ -1763,6 +1694,8 @@
             if (n === t) cb();
           }
 
+          // ---------- 1. 传送带背景图 ----------
+          // 替换此链接即可更换传送带背景
           imgs.belt = new Image();
           imgs.belt.crossOrigin = "anonymous";
           imgs.belt.onload = on;
@@ -1771,8 +1704,10 @@
             on();
           };
           imgs.belt.src =
-            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换传送带图片
 
+          // ---------- 2. 厨师图片 ----------
+          // 替换此链接即可更换厨师角色
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -1781,8 +1716,10 @@
             on();
           };
           imgs.chef.src =
-            "https://i.imgs.ovh/2026/08/03/2471dfdf0bb813a6f18ee38718839342.jpg";
+            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"; // ← 替换厨师图片
 
+          // ---------- 3. 锅/灶台图片 ----------
+          // 替换此链接即可更换锅的样式
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -1791,8 +1728,10 @@
             on();
           };
           imgs.pot.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换锅图片
 
+          // ---------- 4. 左侧客人图片 ----------
+          // 替换此链接即可更换左侧客人形象
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -1801,8 +1740,10 @@
             on();
           };
           imgs.guestL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换左侧客人图片
 
+          // ---------- 5. 右侧客人图片 ----------
+          // 替换此链接即可更换右侧客人形象
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -1811,8 +1752,10 @@
             on();
           };
           imgs.guestR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧客人图片
 
+          // ---------- 6. 左侧用餐图片 ----------
+          // 替换此链接即可更换左侧客人用餐时的形象
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -1821,8 +1764,10 @@
             on();
           };
           imgs.eatL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换左侧用餐图片
 
+          // ---------- 7. 右侧用餐图片 ----------
+          // 替换此链接即可更换右侧客人用餐时的形象
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -1831,10 +1776,9 @@
             on();
           };
           imgs.eatR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧用餐图片
         }
 
-        // ---- 绘制主函数：全部颜色改为复古手绘调 ----
         function draw() {
           const W = canvas.width,
             H = canvas.height;
@@ -1842,10 +1786,10 @@
             cH = H / ROWS;
           ctx.clearRect(0, 0, W, H);
 
-          // ---- 传送带背景：深色复古 ----
+          // ---- 传送带背景 ----
           if (imgs.belt) ctx.drawImage(imgs.belt, 0, 0, W, H);
           else {
-            ctx.fillStyle = "#3d322a";
+            ctx.fillStyle = "#e0d6c8";
             ctx.fillRect(0, 0, W, H);
           }
 
@@ -1857,45 +1801,42 @@
           const leftCenter = lTx + tw / 2,
             rightCenter = rTx + tw / 2;
 
-          // ---- 传送带装饰条纹：深色细线 ----
+          // ---- 传送带装饰条纹 ----
           for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
-            ctx.fillStyle = "rgba(60,50,40,0.25)";
-            ctx.fillRect(lTx, y, tw, 3);
-            ctx.fillStyle = "rgba(70,58,48,0.15)";
-            ctx.fillRect(lTx, y + 15, tw, 3);
+            ctx.fillStyle = "rgba(160,150,135,0.15)";
+            ctx.fillRect(lTx, y, tw, 4);
+            ctx.fillStyle = "rgba(180,170,155,0.1)";
+            ctx.fillRect(lTx, y + 15, tw, 4);
           }
           for (let y = beltT - 30 + state.beltOff; y < beltB + 30; y += 30) {
-            ctx.fillStyle = "rgba(60,50,40,0.25)";
-            ctx.fillRect(rTx, y, tw, 3);
-            ctx.fillStyle = "rgba(70,58,48,0.15)";
-            ctx.fillRect(rTx, y + 15, tw, 3);
+            ctx.fillStyle = "rgba(160,150,135,0.15)";
+            ctx.fillRect(rTx, y, tw, 4);
+            ctx.fillStyle = "rgba(180,170,155,0.1)";
+            ctx.fillRect(rTx, y + 15, tw, 4);
           }
 
-          // ---- 食材绘制（保留颜色可识别，加复古边框） ----
+          // ---- 食材绘制（方形背景） ----
           state.ings.forEach((ing) => {
             if (!ing || !ing.alive) return;
             const size = ing.sz;
-            ctx.shadowColor = "rgba(0,0,0,0.3)";
-            ctx.shadowBlur = 6;
-            // 食材底色略微调暗
-            let col = ing.color;
-            ctx.fillStyle = col;
+            ctx.shadowColor = "rgba(0,0,0,0.1)";
+            ctx.shadowBlur = 8;
+            ctx.fillStyle = ing.color;
             ctx.fillRect(ing.x - size / 2, ing.y - size / 2, size, size);
             ctx.shadowBlur = 0;
-            // 细黑钢笔线边框
-            ctx.strokeStyle = "#1a1410";
+            ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.lineWidth = 2;
             ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
             ctx.font = `${size}px serif`;
             ctx.textAlign = "center";
             ctx.textBaseline = "middle";
-            ctx.fillStyle = "#f0ebe0";
+            ctx.fillStyle = "#fff";
             ctx.shadowBlur = 6;
             ctx.fillText(ing.emoji, ing.x, ing.y + 1);
             ctx.shadowBlur = 0;
           });
 
-          // ---- 厨师位置 ----
+          // ---- 厨师相关参数 ----
           const chefSz = cH * 1.3,
             chefX = state.chefX * W,
             chefY = cH * 5.3;
@@ -1905,11 +1846,11 @@
           const potX = chefX,
             potY = cH * 6.0;
 
-          // ---- 灰色方盒子装饰：深色复古 ----
+          // ---- 灰色方盒子装饰 ----
           const decoPotW = tw * 1.6,
             decoHPot = potH,
             decoPotY = potY - potH / 2;
-          ctx.fillStyle = "#4a3d32";
+          ctx.fillStyle = "#b0b0b0";
           ctx.fillRect(leftCenter - decoPotW / 2, decoPotY, decoPotW, decoHPot);
           ctx.fillRect(
             rightCenter - decoPotW / 2,
@@ -1917,27 +1858,16 @@
             decoPotW,
             decoHPot,
           );
-          ctx.strokeStyle = "#1a1410";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(
-            leftCenter - decoPotW / 2,
-            decoPotY,
-            decoPotW,
-            decoHPot,
-          );
-          ctx.strokeRect(
-            rightCenter - decoPotW / 2,
-            decoPotY,
-            decoPotW,
-            decoHPot,
-          );
 
-          // ---- 厨师绘制 ----
-          const chefDrawSize = chefSz * 0.8;
-          const potTop = potY - potH / 2;
+          // ---- 计算厨师绘制位置，使其底部紧贴锅顶部（下移） ----
+          const chefDrawSize = chefSz * 0.8; // 厨师图片绘制大小
+          const potTop = potY - potH / 2; // 锅顶部Y坐标
+          // 我们希望厨师底部与锅顶部重叠2像素，即 cookBottom = potTop + 2
           const cookBottom = potTop + 2;
+          // 厨师绘制中心Y坐标 = cookBottom - chefDrawSize/2
           const drawY = cookBottom - chefDrawSize / 2;
 
+          // ---- 绘制厨师 ----
           if (imgs.chef) {
             ctx.save();
             ctx.translate(chefX, drawY);
@@ -1951,7 +1881,7 @@
             ctx.restore();
           }
 
-          // ---- 圆形头像 ----
+          // ---- 圆形头像（位置与厨师图片中心重合，即与弹窗一致） ----
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -2003,7 +1933,7 @@
                 ctx.font = "16px serif";
                 ctx.textAlign = "center";
                 ctx.textBaseline = "middle";
-                ctx.fillStyle = "#f0ebe0";
+                ctx.fillStyle = "#fff";
                 ctx.shadowBlur = 4;
                 ctx.fillText(ing.emoji, cx + px, cy + py);
               }
@@ -2025,8 +1955,8 @@
           // ---- 受伤闪红 ----
           if (state.hurtTimer > 0) {
             ctx.save();
-            ctx.globalAlpha = 0.3;
-            ctx.fillStyle = "#7a2a1a";
+            ctx.globalAlpha = 0.35;
+            ctx.fillStyle = "#ff0000";
             const coverX = chefX - chefSz * 0.8;
             const coverY = drawY - chefDrawSize / 2 - 10;
             const coverW = chefSz * 1.6;
@@ -2035,14 +1965,16 @@
             ctx.restore();
           }
 
-          // ---- 客人区域：复古旧纸色 ----
+          // ---- 客人区域 ----
           const restTop = cH * 6.25,
             restH = cH * 2.8;
-          ctx.fillStyle = "#c4b5a0";
-          ctx.fillRect(0, restTop, W, restH);
-          ctx.strokeStyle = "#1a1410";
+          ctx.fillStyle = "#f0ebdc";
+          ctx.beginPath();
+          ctx.roundRect(0, restTop, W, restH, 8);
+          ctx.fill();
+          ctx.strokeStyle = "#d0c8b8";
           ctx.lineWidth = 2;
-          ctx.strokeRect(0, restTop, W, restH);
+          ctx.stroke();
 
           // 左侧客人
           const ltX = cW * 0.2,
@@ -2053,33 +1985,35 @@
             ctx.drawImage(imgs.eatL, ltX, ltY, ltW, ltH);
           else if (imgs.guestL) ctx.drawImage(imgs.guestL, ltX, ltY, ltW, ltH);
 
-          // 左侧点单气泡
+          // 左侧客人点单气泡
           if (state.leftD) {
             const bx = ltX + 5,
               by = ltY - 30;
-            ctx.fillStyle = "#d6c9b8";
-            ctx.fillRect(bx, by, 75, 50);
-            ctx.strokeStyle = "#1a1410";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(bx, by, 75, 50);
+            ctx.fillStyle = "rgba(255,255,240,0.95)";
+            ctx.beginPath();
+            ctx.roundRect(bx, by, 75, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = "#f1c40f";
+            ctx.lineWidth = 3;
+            ctx.stroke();
             if (state.leftD.dish === "✅") {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#4a6a3d";
+              ctx.fillStyle = "#2ecc71";
               ctx.fillText("✅", bx + 37, by + 25);
             } else if (state.leftD.dish === "...") {
               const dots = (Math.floor(Date.now() / 500) % 3) + 1;
               ctx.font = "24px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#3d2c1e";
+              ctx.fillStyle = "#888";
               ctx.fillText(".".repeat(dots), bx + 37, by + 25);
             } else {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#1e1612";
+              ctx.fillStyle = "#2c3e50";
               ctx.fillText(state.leftD.emoji, bx + 37, by + 20);
-              ctx.font = '12px "Noto Serif SC", "SimHei", serif';
-              ctx.fillStyle = "#8b5a2b";
+              ctx.font = '11px "Press Start 2P",monospace';
+              ctx.fillStyle = "#e67e22";
               ctx.fillText(state.leftD.dish, bx + 37, by + 40);
             }
           }
@@ -2091,63 +2025,65 @@
             ctx.drawImage(imgs.eatR, rtX, ltY, rtW, ltH);
           else if (imgs.guestR) ctx.drawImage(imgs.guestR, rtX, ltY, rtW, ltH);
 
-          // 右侧点单气泡
+          // 右侧客人点单气泡
           if (state.rightD) {
             const bx = rtX + rtW - 80,
               by = ltY - 30;
-            ctx.fillStyle = "#d6c9b8";
-            ctx.fillRect(bx, by, 75, 50);
-            ctx.strokeStyle = "#1a1410";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(bx, by, 75, 50);
+            ctx.fillStyle = "rgba(255,255,240,0.95)";
+            ctx.beginPath();
+            ctx.roundRect(bx, by, 75, 50, 12);
+            ctx.fill();
+            ctx.strokeStyle = "#f1c40f";
+            ctx.lineWidth = 3;
+            ctx.stroke();
             if (state.rightD.dish === "✅") {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#4a6a3d";
+              ctx.fillStyle = "#2ecc71";
               ctx.fillText("✅", bx + 37, by + 25);
             } else if (state.rightD.dish === "...") {
               const dots = (Math.floor(Date.now() / 500) % 3) + 1;
               ctx.font = "24px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#3d2c1e";
+              ctx.fillStyle = "#888";
               ctx.fillText(".".repeat(dots), bx + 37, by + 25);
             } else {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
-              ctx.fillStyle = "#1e1612";
+              ctx.fillStyle = "#2c3e50";
               ctx.fillText(state.rightD.emoji, bx + 37, by + 20);
-              ctx.font = '12px "Noto Serif SC", "SimHei", serif';
-              ctx.fillStyle = "#8b5a2b";
+              ctx.font = '11px "Press Start 2P",monospace';
+              ctx.fillStyle = "#e67e22";
               ctx.fillText(state.rightD.dish, bx + 37, by + 40);
             }
           }
 
-          // ---- 菜单面板：复古手绘 ----
+          // ---- 菜单面板 ----
           const menuW = cW * 1.1,
             baseH = 90,
             rowH = 30;
           const menuH = baseH + state.menu.length * rowH;
           const menuX = (W - menuW) / 2,
             menuY = 0;
-          ctx.fillStyle = "#3d322a";
+          ctx.fillStyle = "#b0b0b0";
           ctx.fillRect(0, menuY, W, 60);
-          ctx.fillStyle = "#d6c9b8";
-          ctx.fillRect(menuX, menuY, menuW, menuH);
-          ctx.strokeStyle = "#1a1410";
-          ctx.lineWidth = 2;
-          ctx.strokeRect(menuX, menuY, menuW, menuH);
-
+          ctx.fillStyle = "rgba(255,248,240,0.92)";
+          ctx.beginPath();
+          ctx.roundRect(menuX, menuY, menuW, menuH, 8);
+          ctx.fill();
+          ctx.strokeStyle = "#d0c8b8";
+          ctx.lineWidth = 3;
+          ctx.stroke();
           ctx.font = "22px serif";
           ctx.textAlign = "center";
-          ctx.fillStyle = "#8b5a2b";
+          ctx.fillStyle = "#e67e22";
           ctx.fillText("📋", menuX + menuW / 2, menuY + 22);
-          ctx.font = 'bold 14px "Noto Serif SC", "SimHei", serif';
-          ctx.fillStyle = "#1e1612";
+          ctx.font = 'bold 14px "Press Start 2P",monospace';
+          ctx.fillStyle = "#e67e22";
           ctx.fillText(state.dish, menuX + menuW / 2, menuY + 48);
-
           if (state.menuDone) {
             ctx.font = "32px serif";
-            ctx.fillStyle = "#4a6a3d";
+            ctx.fillStyle = "#2ecc71";
             ctx.fillText("✅", menuX + menuW / 2, menuY + menuH / 2);
           } else {
             let yOff = 68;
@@ -2156,23 +2092,23 @@
               const have = state.pot[item.id] || 0;
               ctx.font = "20px serif";
               ctx.textAlign = "left";
-              ctx.fillStyle = "#1e1612";
+              ctx.fillStyle = "#3d3a36";
               ctx.fillText(ing ? ing.emoji : "🍽", menuX + 8, menuY + yOff);
               const barX = menuX + 36,
                 barW = menuW - 72,
                 barH = 5;
-              ctx.fillStyle = "#b8a694";
+              ctx.fillStyle = "#ecf0f1";
               ctx.fillRect(barX, menuY + yOff - 2, barW, barH);
-              ctx.fillStyle = have >= item.n ? "#4a6a3d" : "#b8860b";
+              ctx.fillStyle = have >= item.n ? "#2ecc71" : "#f1c40f";
               ctx.fillRect(
                 barX,
                 menuY + yOff - 2,
                 Math.min((have / item.n) * barW, barW),
                 barH,
               );
-              ctx.font = '10px "Noto Serif SC", "SimHei", serif';
+              ctx.font = '9px "Press Start 2P",monospace';
               ctx.textAlign = "right";
-              ctx.fillStyle = "#1e1612";
+              ctx.fillStyle = "#3d3a36";
               ctx.fillText(
                 `${have}/${item.n}`,
                 menuX + menuW - 8,
@@ -2182,19 +2118,19 @@
             });
           }
 
-          // ---- 浮动文字：复古色 ----
+          // ---- 浮动文字 ----
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
-            ctx.font = 'bold 14px "Noto Serif SC", "SimHei", serif';
-            ctx.fillStyle = ft.color || "#b8860b";
+            ctx.font = 'bold 14px "Press Start 2P", monospace';
+            ctx.fillStyle = ft.color || "#f1c40f";
             ctx.textAlign = "center";
             ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
         }
 
-        // ---- roundRect 保留（但实际全部用直角） ----
+        // roundRect polyfill
         if (!CanvasRenderingContext2D.prototype.roundRect) {
           CanvasRenderingContext2D.prototype.roundRect = function (
             x,
@@ -2203,11 +2139,17 @@
             h,
             r,
           ) {
+            if (typeof r === "number") r = { tl: r, tr: r, br: r, bl: r };
             this.beginPath();
-            this.moveTo(x, y);
-            this.lineTo(x + w, y);
-            this.lineTo(x + w, y + h);
-            this.lineTo(x, y + h);
+            this.moveTo(x + r.tl, y);
+            this.lineTo(x + w - r.tr, y);
+            this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+            this.lineTo(x + w, y + h - r.br);
+            this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+            this.lineTo(x + r.bl, y + h);
+            this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+            this.lineTo(x, y + r.tl);
+            this.quadraticCurveTo(x, y, x + r.tl, y);
             this.closePath();
           };
         }
@@ -2270,16 +2212,16 @@
         }
 
         // ================================================================
-        // 11. 游戏结束 & 重置
+        // 11. 游戏结束 & 重置（刷新页面）
         // ================================================================
         function getRank(g) {
-          if (g >= 170) return "👑 巅峰厨神";
-          if (g >= 120) return "🏆 荣耀厨王";
-          if (g >= 100) return "🌟 特级厨师";
-          if (g >= 90) return "🔥 高级厨师";
-          if (g >= 60) return "🍳 中级厨师";
-          if (g >= 30) return "📖 初级厨师";
-          return "🧑‍🍳 学徒";
+          if (g >= 200) return "👑 巅峰厨神";
+          if (g >= 150) return "🌟 荣耀厨王";
+          if (g >= 120) return "🔥 特级厨师";
+          if (g >= 90) return "⭐ 高级厨师";
+          if (g >= 60) return "中级厨师";
+          if (g >= 30) return "初级厨师";
+          return "学徒";
         }
 
         function endGame() {
@@ -2626,11 +2568,13 @@
 
         function openAvatarModal() {
           avatarModal.classList.remove("hidden");
+          // 更新预览大图
           if (imgs.chef && imgs.chef.complete && imgs.chef.naturalWidth > 0) {
             avatarChefBg.src = imgs.chef.src;
           } else {
             avatarChefBg.src = imgs.chef ? imgs.chef.src : "";
           }
+          // 更新头像预览
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -2650,6 +2594,7 @@
             tempAvatarImage = null;
           }
           avatarFileInput.value = "";
+          // 同步激活状态
           chefBgOptions.forEach((opt) => {
             opt.classList.remove("active");
             if (opt.dataset.src === imgs.chef.src) {
@@ -2687,11 +2632,15 @@
           reader.readAsDataURL(file);
         }
 
+        // ---- 厨师背景选项点击事件 ----
         chefBgOptions.forEach((opt) => {
           opt.addEventListener("click", function () {
             const src = this.dataset.src;
+            // 更新大预览图
             avatarChefBg.src = src;
+            // 更新游戏中的厨师图片
             imgs.chef.src = src;
+            // 更新激活状态
             chefBgOptions.forEach((o) => o.classList.remove("active"));
             this.classList.add("active");
           });
@@ -2784,6 +2733,8 @@
         // ================================================================
         // 15. 事件绑定
         // ================================================================
+
+        // ---- 开始游戏 ----
         document
           .getElementById("startWithCameraBtn")
           .addEventListener("click", () => {
@@ -2821,6 +2772,7 @@
             updateHeadIndicator(false, "触屏模式");
           });
 
+        // ---- 头像 ----
         openAvatarBtn.addEventListener("click", openAvatarModal);
         avatarCloseBtn.addEventListener("click", () => closeAvatarModal(false));
         avatarModal.addEventListener("click", (e) => {
@@ -2831,6 +2783,7 @@
         );
         avatarFileInput.addEventListener("change", handleAvatarFileChange);
 
+        // ---- 游戏说明 ----
         function openInfo() {
           infoModal.classList.remove("hidden");
         }
@@ -2845,11 +2798,13 @@
           if (e.target === infoModal) closeInfo();
         });
 
+        // ---- 暂停/继续 ----
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
         });
 
+        // ---- 重新开始 & 再来一局（刷新页面） ----
         document.getElementById("restartBtn").addEventListener("click", () => {
           window.location.reload();
         });
@@ -2863,6 +2818,7 @@
           );
         });
 
+        // ---- 音效和速度滑杆 ----
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
@@ -2879,6 +2835,7 @@
           });
         });
 
+        // ---- 速度滑杆事件 ----
         speedSlider.addEventListener("input", function () {
           const val = parseFloat(this.value);
           state.speedMultiplier = val;
@@ -2913,7 +2870,9 @@
           }
         });
 
-        console.log("🎨 复古手绘风格已加载 — 绣湖风 · 细黑线 · 无圆角");
+        console.log(
+          "🍳 像素厨房已启动！厨师与锅紧密贴合，头像位置与弹窗一致。",
+        );
       })();
     </script>
   </body>
