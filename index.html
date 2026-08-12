@@ -1304,6 +1304,79 @@
           },
         ];
 
+        // ===== 新增：emoji / 图片绘制辅助 =====
+        const emojiImageCache = {};
+
+        function drawEmojiOrImage(ctx, item, x, y, size) {
+          // 优先取 image，如果没有则取 emoji
+          let src = null;
+          let isImage = false;
+
+          if (
+            item.image &&
+            typeof item.image === "string" &&
+            (item.image.startsWith("http://") ||
+              item.image.startsWith("https://"))
+          ) {
+            src = item.image;
+            isImage = true;
+          } else if (
+            item.emoji &&
+            typeof item.emoji === "string" &&
+            (item.emoji.startsWith("http://") ||
+              item.emoji.startsWith("https://"))
+          ) {
+            src = item.emoji;
+            isImage = true;
+          } else if (item.emoji && typeof item.emoji === "string") {
+            // 普通文本 emoji
+            ctx.font = `${size}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#fff";
+            ctx.shadowBlur = 6;
+            ctx.fillText(item.emoji, x, y + 1);
+            ctx.shadowBlur = 0;
+            return;
+          } else {
+            return; // 没有任何可显示内容
+          }
+
+          if (isImage && src) {
+            if (!emojiImageCache[src]) {
+              const img = new Image();
+              img.crossOrigin = "anonymous";
+              img.onload = () => {};
+              img.onerror = () => {
+                delete emojiImageCache[src];
+              };
+              img.src = src;
+              emojiImageCache[src] = img;
+            }
+            const img = emojiImageCache[src];
+            if (img && img.complete && img.naturalWidth > 0) {
+              ctx.drawImage(img, x - size / 2, y - size / 2, size, size);
+              return;
+            } else {
+              // 图片未加载完成，如果有 emoji 文本则显示文本
+              if (
+                item.emoji &&
+                typeof item.emoji === "string" &&
+                !item.emoji.startsWith("http")
+              ) {
+                ctx.font = `${size}px serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#fff";
+                ctx.shadowBlur = 6;
+                ctx.fillText(item.emoji, x, y + 1);
+                ctx.shadowBlur = 0;
+              }
+              return;
+            }
+          }
+        }
+
         function rand(min, max) {
           return Math.random() * (max - min) + min;
         }
@@ -1342,8 +1415,17 @@
             const pick = sides[randi(0, 1)];
             const recipe = RECIPES[randi(0, RECIPES.length - 1)];
             if (pick === "left")
-              state.leftD = { dish: recipe.name, emoji: recipe.emoji };
-            else state.rightD = { dish: recipe.name, emoji: recipe.emoji };
+              state.leftD = {
+                dish: recipe.name,
+                emoji: recipe.emoji,
+                image: recipe.image,
+              };
+            else
+              state.rightD = {
+                dish: recipe.name,
+                emoji: recipe.emoji,
+                image: recipe.image,
+              };
             genMenu();
             return;
           }
@@ -1387,7 +1469,11 @@
               !state.rightEating
             ) {
               const recipe = RECIPES[randi(0, RECIPES.length - 1)];
-              state.rightD = { dish: recipe.name, emoji: recipe.emoji };
+              state.rightD = {
+                dish: recipe.name,
+                emoji: recipe.emoji,
+                image: recipe.image,
+              };
             }
           }, 10000);
         }
@@ -1416,7 +1502,11 @@
             state.eatTimers.left = setTimeout(() => {
               state.leftEating = false;
               const recipe = RECIPES[randi(0, RECIPES.length - 1)];
-              state.leftD = { dish: recipe.name, emoji: recipe.emoji };
+              state.leftD = {
+                dish: recipe.name,
+                emoji: recipe.emoji,
+                image: recipe.image,
+              };
             }, 10000);
             sfxCombo();
           }
@@ -1434,7 +1524,11 @@
             state.eatTimers.right = setTimeout(() => {
               state.rightEating = false;
               const recipe = RECIPES[randi(0, RECIPES.length - 1)];
-              state.rightD = { dish: recipe.name, emoji: recipe.emoji };
+              state.rightD = {
+                dish: recipe.name,
+                emoji: recipe.emoji,
+                image: recipe.image,
+              };
             }, 10000);
             sfxCombo();
           }
@@ -1827,13 +1921,8 @@
             ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.lineWidth = 2;
             ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
-            ctx.font = `${size}px serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillStyle = "#fff";
-            ctx.shadowBlur = 6;
-            ctx.fillText(ing.emoji, ing.x, ing.y + 1);
-            ctx.shadowBlur = 0;
+            // 使用辅助函数绘制图片或emoji
+            drawEmojiOrImage(ctx, ing, ing.x, ing.y, size);
           });
 
           // ---- 厨师相关参数 ----
@@ -2008,10 +2097,7 @@
               ctx.fillStyle = "#888";
               ctx.fillText(".".repeat(dots), bx + 37, by + 25);
             } else {
-              ctx.font = "30px serif";
-              ctx.textAlign = "center";
-              ctx.fillStyle = "#2c3e50";
-              ctx.fillText(state.leftD.emoji, bx + 37, by + 20);
+              drawEmojiOrImage(ctx, state.leftD, bx + 37, by + 20, 30);
               ctx.font = '11px "Press Start 2P",monospace';
               ctx.fillStyle = "#e67e22";
               ctx.fillText(state.leftD.dish, bx + 37, by + 40);
@@ -2048,10 +2134,7 @@
               ctx.fillStyle = "#888";
               ctx.fillText(".".repeat(dots), bx + 37, by + 25);
             } else {
-              ctx.font = "30px serif";
-              ctx.textAlign = "center";
-              ctx.fillStyle = "#2c3e50";
-              ctx.fillText(state.rightD.emoji, bx + 37, by + 20);
+              drawEmojiOrImage(ctx, state.rightD, bx + 37, by + 20, 30);
               ctx.font = '11px "Press Start 2P",monospace';
               ctx.fillStyle = "#e67e22";
               ctx.fillText(state.rightD.dish, bx + 37, by + 40);
@@ -2302,7 +2385,11 @@
           state.qTimer = 0;
           resetHeadControlState();
           const leftRecipe = RECIPES[randi(0, RECIPES.length - 1)];
-          state.leftD = { dish: leftRecipe.name, emoji: leftRecipe.emoji };
+          state.leftD = {
+            dish: leftRecipe.name,
+            emoji: leftRecipe.emoji,
+            image: leftRecipe.image,
+          };
           state.rightD = { dish: "...", emoji: "..." };
           state.rightDemandTimer = setTimeout(() => {
             if (
@@ -2311,7 +2398,11 @@
               !state.rightEating
             ) {
               const recipe = RECIPES[randi(0, RECIPES.length - 1)];
-              state.rightD = { dish: recipe.name, emoji: recipe.emoji };
+              state.rightD = {
+                dish: recipe.name,
+                emoji: recipe.emoji,
+                image: recipe.image,
+              };
             }
           }, 10000);
           document.getElementById("resultModal").classList.add("hidden");
