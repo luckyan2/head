@@ -1535,6 +1535,7 @@
                 state.gold -= 5;
                 state.hurtTimer = 0.3;
                 const dir = ing.x - cx > 0 ? 1 : -1;
+                // 错误食材用图片或emoji（这里保留原逻辑，若是番茄则用图片，由draw控制）
                 state.floatingTexts.push({
                   text: ing.emoji,
                   x: ing.x,
@@ -1762,13 +1763,19 @@
           imgs.eatR.src =
             "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
 
-          // ---------- 8. 番茄图片（替换所有🍅） ----------
+          // ---------- 8. 番茄图片（主链接 + 备用） ----------
           imgs.tomato = new Image();
           imgs.tomato.crossOrigin = "anonymous";
           imgs.tomato.onload = on;
           imgs.tomato.onerror = () => {
-            imgs.tomato = null;
-            on();
+            console.warn("主番茄图片加载失败，尝试备用链接");
+            imgs.tomato.src = "https://img.icons8.com/emoji/96/tomato.png";
+            imgs.tomato.onerror = () => {
+              console.error("备用番茄图片也加载失败，将使用emoji");
+              imgs.tomato = null;
+              on();
+            };
+            imgs.tomato.onload = on;
           };
           imgs.tomato.src =
             "https://i.imgs.ovh/2026/08/11/e20c2be9182194e22bfd920351304584.png";
@@ -2911,7 +2918,7 @@
         });
 
         console.log(
-          "🍳 像素厨房已启动！番茄已替换为图片，所有出现🍅的位置均使用您提供的链接。",
+          "🍳 像素厨房已启动！所有番茄均替换为图片，并加载备用图，若主图失效自动切换。",
         );
       })();
     </script>
