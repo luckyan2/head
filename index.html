@@ -1186,6 +1186,8 @@
             id: "tomato",
             name: "番茄",
             color: "#e74c3c",
+            image:
+              "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1",
             emoji: "🍅",
             cost: 1,
           },
@@ -1483,6 +1485,7 @@
               ? cellW * 0.5 + rand(0, cellW * 0.3)
               : cellW * 3.1 + rand(0, cellW * 0.2);
           const baseSp = 1.8 + rand(0, 0.5);
+          // 【食材方框更大】sz 42-52
           const sz = 42 + rand(0, 10);
           state.ings.push({
             ...type,
@@ -1676,21 +1679,9 @@
          */
         const imgs = {};
 
-        // ---------- 生成一个内联 SVG 番茄图片 (data URI) ----------
-        // 这样完全不依赖外部网络，保证能显示为图片
-        const tomatoSVG = `data:image/svg+xml,${encodeURIComponent(`
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-                    <circle cx="50" cy="55" r="40" fill="#e74c3c" stroke="#c0392b" stroke-width="2"/>
-                    <ellipse cx="50" cy="25" rx="12" ry="16" fill="#27ae60" stroke="#1e8449" stroke-width="2"/>
-                    <path d="M50 8 L45 18 L55 18 Z" fill="#27ae60"/>
-                    <circle cx="35" cy="45" r="3" fill="#c0392b" opacity="0.3"/>
-                    <circle cx="65" cy="45" r="3" fill="#c0392b" opacity="0.3"/>
-                </svg>
-            `)}`;
-
         function loadImgs(cb) {
           let n = 0;
-          const t = 7; // 现在只有7张外部图片，番茄使用内联SVG，无需加载
+          const t = 7;
 
           function on() {
             n++;
@@ -1698,6 +1689,7 @@
           }
 
           // ---------- 1. 传送带背景图 ----------
+          // 替换此链接即可更换传送带背景
           imgs.belt = new Image();
           imgs.belt.crossOrigin = "anonymous";
           imgs.belt.onload = on;
@@ -1706,9 +1698,10 @@
             on();
           };
           imgs.belt.src =
-            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换传送带图片
 
           // ---------- 2. 厨师图片 ----------
+          // 替换此链接即可更换厨师角色
           imgs.chef = new Image();
           imgs.chef.crossOrigin = "anonymous";
           imgs.chef.onload = on;
@@ -1717,9 +1710,10 @@
             on();
           };
           imgs.chef.src =
-            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1";
+            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"; // ← 替换厨师图片
 
           // ---------- 3. 锅/灶台图片 ----------
+          // 替换此链接即可更换锅的样式
           imgs.pot = new Image();
           imgs.pot.crossOrigin = "anonymous";
           imgs.pot.onload = on;
@@ -1728,9 +1722,10 @@
             on();
           };
           imgs.pot.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换锅图片
 
           // ---------- 4. 左侧客人图片 ----------
+          // 替换此链接即可更换左侧客人形象
           imgs.guestL = new Image();
           imgs.guestL.crossOrigin = "anonymous";
           imgs.guestL.onload = on;
@@ -1739,9 +1734,10 @@
             on();
           };
           imgs.guestL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换左侧客人图片
 
           // ---------- 5. 右侧客人图片 ----------
+          // 替换此链接即可更换右侧客人形象
           imgs.guestR = new Image();
           imgs.guestR.crossOrigin = "anonymous";
           imgs.guestR.onload = on;
@@ -1750,9 +1746,10 @@
             on();
           };
           imgs.guestR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧客人图片
 
           // ---------- 6. 左侧用餐图片 ----------
+          // 替换此链接即可更换左侧客人用餐时的形象
           imgs.eatL = new Image();
           imgs.eatL.crossOrigin = "anonymous";
           imgs.eatL.onload = on;
@@ -1761,9 +1758,10 @@
             on();
           };
           imgs.eatL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换左侧用餐图片
 
           // ---------- 7. 右侧用餐图片 ----------
+          // 替换此链接即可更换右侧客人用餐时的形象
           imgs.eatR = new Image();
           imgs.eatR.crossOrigin = "anonymous";
           imgs.eatR.onload = on;
@@ -1772,23 +1770,7 @@
             on();
           };
           imgs.eatR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3";
-
-          // ---------- 番茄使用内联SVG，直接创建Image对象并立即完成 ----------
-          imgs.tomato = new Image();
-          imgs.tomato.onload = on;
-          imgs.tomato.onerror = on; // 其实不会失败
-          imgs.tomato.src = tomatoSVG;
-          // SVG 加载是同步的，所以直接触发 onload，但为了计数统一，我们手动调用 on 一次？
-          // 但因为我们设置了 onload，它会自动调用，不过可能由于缓存等原因，我们手动确保
-          // 更好的做法：稍后主动调用一次 on，但这里保持异步流程，让事件自己触发。
-          // 但为了保险，我们也可以设置一个定时器，但最好让事件触发。
-          // 由于 SVG 是 data URI，加载是同步的，onload 会立即触发。
-          // 但为了计数，我们确保它触发。如果没有触发，我们手动补一个。
-          // 我们在这里加一个兜底：如果 100ms 后仍没触发，手动 on()
-          setTimeout(() => {
-            if (imgs.tomato.complete) on();
-          }, 50);
+            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧用餐图片
         }
 
         function draw() {
@@ -1827,7 +1809,7 @@
             ctx.fillRect(rTx, y + 15, tw, 4);
           }
 
-          // ---- 食材绘制（方形背景 + 图标） ----
+          // ---- 食材绘制（方形背景） ----
           state.ings.forEach((ing) => {
             if (!ing || !ing.alive) return;
             const size = ing.sz;
@@ -1839,30 +1821,13 @@
             ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.lineWidth = 2;
             ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
-
-            // 番茄用图片（SVG），其余用emoji
-            if (
-              ing.id === "tomato" &&
-              imgs.tomato &&
-              imgs.tomato.complete &&
-              imgs.tomato.naturalWidth > 0
-            ) {
-              ctx.drawImage(
-                imgs.tomato,
-                ing.x - size / 2,
-                ing.y - size / 2,
-                size,
-                size,
-              );
-            } else {
-              ctx.font = `${size}px serif`;
-              ctx.textAlign = "center";
-              ctx.textBaseline = "middle";
-              ctx.fillStyle = "#fff";
-              ctx.shadowBlur = 6;
-              ctx.fillText(ing.emoji, ing.x, ing.y + 1);
-              ctx.shadowBlur = 0;
-            }
+            ctx.font = `${size}px serif`;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillStyle = "#fff";
+            ctx.shadowBlur = 6;
+            ctx.fillText(ing.emoji, ing.x, ing.y + 1);
+            ctx.shadowBlur = 0;
           });
 
           // ---- 厨师相关参数 ----
@@ -1888,10 +1853,12 @@
             decoHPot,
           );
 
-          // ---- 计算厨师绘制位置 ----
-          const chefDrawSize = chefSz * 0.8;
-          const potTop = potY - potH / 2;
+          // ---- 计算厨师绘制位置，使其底部紧贴锅顶部（下移） ----
+          const chefDrawSize = chefSz * 0.8; // 厨师图片绘制大小
+          const potTop = potY - potH / 2; // 锅顶部Y坐标
+          // 我们希望厨师底部与锅顶部重叠2像素，即 cookBottom = potTop + 2
           const cookBottom = potTop + 2;
+          // 厨师绘制中心Y坐标 = cookBottom - chefDrawSize/2
           const drawY = cookBottom - chefDrawSize / 2;
 
           // ---- 绘制厨师 ----
@@ -1908,7 +1875,7 @@
             ctx.restore();
           }
 
-          // ---- 圆形头像 ----
+          // ---- 圆形头像（位置与厨师图片中心重合，即与弹窗一致） ----
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -1957,28 +1924,12 @@
                 const px = rx * Math.cos(angle) + (j - count / 2) * 8;
                 const py =
                   ry * Math.sin(angle) + (idx - potItems.length / 2) * 6;
-                // 番茄用图片
-                if (
-                  key === "tomato" &&
-                  imgs.tomato &&
-                  imgs.tomato.complete &&
-                  imgs.tomato.naturalWidth > 0
-                ) {
-                  ctx.drawImage(
-                    imgs.tomato,
-                    cx + px - 12,
-                    cy + py - 12,
-                    24,
-                    24,
-                  );
-                } else {
-                  ctx.font = "16px serif";
-                  ctx.textAlign = "center";
-                  ctx.textBaseline = "middle";
-                  ctx.fillStyle = "#fff";
-                  ctx.shadowBlur = 4;
-                  ctx.fillText(ing ? ing.emoji : "🍽", cx + px, cy + py);
-                }
+                ctx.font = "16px serif";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#fff";
+                ctx.shadowBlur = 4;
+                ctx.fillText(ing.emoji, cx + px, cy + py);
               }
             });
             ctx.restore();
@@ -2133,28 +2084,10 @@
             state.menu.forEach((item) => {
               const ing = TYPES.find((t) => t.id === item.id);
               const have = state.pot[item.id] || 0;
-
-              // 显示食材图标（番茄用图片）
-              if (
-                item.id === "tomato" &&
-                imgs.tomato &&
-                imgs.tomato.complete &&
-                imgs.tomato.naturalWidth > 0
-              ) {
-                ctx.drawImage(
-                  imgs.tomato,
-                  menuX + 8,
-                  menuY + yOff - 12,
-                  24,
-                  24,
-                );
-              } else {
-                ctx.font = "20px serif";
-                ctx.textAlign = "left";
-                ctx.fillStyle = "#3d3a36";
-                ctx.fillText(ing ? ing.emoji : "🍽", menuX + 8, menuY + yOff);
-              }
-
+              ctx.font = "20px serif";
+              ctx.textAlign = "left";
+              ctx.fillStyle = "#3d3a36";
+              ctx.fillText(ing ? ing.emoji : "🍽", menuX + 8, menuY + yOff);
               const barX = menuX + 36,
                 barW = menuW - 72,
                 barH = 5;
@@ -2179,24 +2112,14 @@
             });
           }
 
-          // ---- 浮动文字（番茄用图片） ----
+          // ---- 浮动文字 ----
           state.floatingTexts.forEach((ft) => {
             ctx.save();
             ctx.globalAlpha = ft.life;
-            // 判断内容是否为番茄emoji（单独出现）
-            if (
-              ft.text === "🍅" &&
-              imgs.tomato &&
-              imgs.tomato.complete &&
-              imgs.tomato.naturalWidth > 0
-            ) {
-              ctx.drawImage(imgs.tomato, ft.x - 12, ft.y - 12, 24, 24);
-            } else {
-              ctx.font = 'bold 14px "Press Start 2P", monospace';
-              ctx.fillStyle = ft.color || "#f1c40f";
-              ctx.textAlign = "center";
-              ctx.fillText(ft.text, ft.x, ft.y);
-            }
+            ctx.font = 'bold 14px "Press Start 2P", monospace';
+            ctx.fillStyle = ft.color || "#f1c40f";
+            ctx.textAlign = "center";
+            ctx.fillText(ft.text, ft.x, ft.y);
             ctx.restore();
           });
         }
@@ -2639,11 +2562,13 @@
 
         function openAvatarModal() {
           avatarModal.classList.remove("hidden");
+          // 更新预览大图
           if (imgs.chef && imgs.chef.complete && imgs.chef.naturalWidth > 0) {
             avatarChefBg.src = imgs.chef.src;
           } else {
             avatarChefBg.src = imgs.chef ? imgs.chef.src : "";
           }
+          // 更新头像预览
           if (
             state.avatarImg &&
             state.avatarImg.complete &&
@@ -2663,6 +2588,7 @@
             tempAvatarImage = null;
           }
           avatarFileInput.value = "";
+          // 同步激活状态
           chefBgOptions.forEach((opt) => {
             opt.classList.remove("active");
             if (opt.dataset.src === imgs.chef.src) {
@@ -2700,11 +2626,15 @@
           reader.readAsDataURL(file);
         }
 
+        // ---- 厨师背景选项点击事件 ----
         chefBgOptions.forEach((opt) => {
           opt.addEventListener("click", function () {
             const src = this.dataset.src;
+            // 更新大预览图
             avatarChefBg.src = src;
+            // 更新游戏中的厨师图片
             imgs.chef.src = src;
+            // 更新激活状态
             chefBgOptions.forEach((o) => o.classList.remove("active"));
             this.classList.add("active");
           });
@@ -2798,6 +2728,7 @@
         // 15. 事件绑定
         // ================================================================
 
+        // ---- 开始游戏 ----
         document
           .getElementById("startWithCameraBtn")
           .addEventListener("click", () => {
@@ -2835,6 +2766,7 @@
             updateHeadIndicator(false, "触屏模式");
           });
 
+        // ---- 头像 ----
         openAvatarBtn.addEventListener("click", openAvatarModal);
         avatarCloseBtn.addEventListener("click", () => closeAvatarModal(false));
         avatarModal.addEventListener("click", (e) => {
@@ -2845,6 +2777,7 @@
         );
         avatarFileInput.addEventListener("change", handleAvatarFileChange);
 
+        // ---- 游戏说明 ----
         function openInfo() {
           infoModal.classList.remove("hidden");
         }
@@ -2859,11 +2792,13 @@
           if (e.target === infoModal) closeInfo();
         });
 
+        // ---- 暂停/继续 ----
         topPauseEl.addEventListener("click", togglePause);
         document.getElementById("resumeBtn").addEventListener("click", () => {
           if (state.paused) togglePause();
         });
 
+        // ---- 重新开始 & 再来一局（刷新页面） ----
         document.getElementById("restartBtn").addEventListener("click", () => {
           window.location.reload();
         });
@@ -2877,6 +2812,7 @@
           );
         });
 
+        // ---- 音效和速度滑杆 ----
         document.querySelectorAll(".toggle-btn").forEach((b) => {
           b.addEventListener("click", function () {
             const s = this.dataset.setting,
@@ -2893,6 +2829,7 @@
           });
         });
 
+        // ---- 速度滑杆事件 ----
         speedSlider.addEventListener("input", function () {
           const val = parseFloat(this.value);
           state.speedMultiplier = val;
@@ -2928,7 +2865,7 @@
         });
 
         console.log(
-          "🍳 像素厨房已启动！番茄使用内联SVG图片，无需外部网络，绝对显示为图片。",
+          "🍳 像素厨房已启动！厨师与锅紧密贴合，头像位置与弹窗一致。",
         );
       })();
     </script>
