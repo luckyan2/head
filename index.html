@@ -846,10 +846,10 @@
           <div class="chef-bg-options">
             <div
               class="chef-bg-option active"
-              data-src="https://i.imgs.ovh/2026/08/11/e20c2be9182194e22bfd920351304584.png"
+              data-src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
             >
               <img
-                src="https://i.imgs.ovh/2026/08/11/e20c2be9182194e22bfd920351304584.png"
+                src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
                 alt="厨师 1"
               />
             </div>
@@ -1186,9 +1186,9 @@
             id: "tomato",
             name: "番茄",
             color: "#e74c3c",
-            image:
-              "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1",
             emoji: "🍅",
+            imgSrc:
+              "https://i.imgs.ovh/2026/08/11/e20c2be9182194e22bfd920351304584.png",
             cost: 1,
           },
           { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", cost: 1 },
@@ -1821,13 +1821,44 @@
             ctx.strokeStyle = "rgba(255,255,255,0.5)";
             ctx.lineWidth = 2;
             ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
-            ctx.font = `${size}px serif`;
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-            ctx.fillStyle = "#fff";
-            ctx.shadowBlur = 6;
-            ctx.fillText(ing.emoji, ing.x, ing.y + 1);
-            ctx.shadowBlur = 0;
+            // ----- 替换开始：用图片代替 emoji -----
+            // 检查这个食材有没有设置图片地址
+            if (ing.imgSrc) {
+              // 如果还没加载图片，就创建一个图片对象并缓存起来
+              if (!ing._img) {
+                ing._img = new Image();
+                ing._img.src = ing.imgSrc;
+              }
+              // 如果图片已经加载好了，就画图片
+              if (ing._img.complete && ing._img.naturalWidth > 0) {
+                ctx.drawImage(
+                  ing._img,
+                  ing.x - size / 2,
+                  ing.y - size / 2,
+                  size,
+                  size,
+                );
+              } else {
+                // 图片还没加载好，先显示原来的 emoji 占位（防止空白）
+                ctx.font = `${size}px serif`;
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.fillStyle = "#fff";
+                ctx.shadowBlur = 6;
+                ctx.fillText(ing.emoji, ing.x, ing.y + 1);
+                ctx.shadowBlur = 0;
+              }
+            } else {
+              // 如果没有设置图片地址，就显示原来的 emoji
+              ctx.font = `${size}px serif`;
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillStyle = "#fff";
+              ctx.shadowBlur = 6;
+              ctx.fillText(ing.emoji, ing.x, ing.y + 1);
+              ctx.shadowBlur = 0;
+            }
+            // ----- 替换结束 -----
           });
 
           // ---- 厨师相关参数 ----
