@@ -1486,7 +1486,7 @@
               : cellW * 3.1 + rand(0, cellW * 0.2);
           const baseSp = 1.8 + rand(0, 0.5);
           // 【食材方框更大】sz 42-52
-          const sz = 42 + rand(0, 10);
+          const sz = 60;
           state.ings.push({
             ...type,
             lane,
@@ -2118,7 +2118,29 @@
               ctx.font = "20px serif";
               ctx.textAlign = "left";
               ctx.fillStyle = "#3d3a36";
-              ctx.fillText(ing ? ing.emoji : "🍽", menuX + 8, menuY + yOff);
+              // 替换原来的 ctx.fillText(ing ? ing.emoji : "🍽", ...);
+              if (ing && ing.imgSrc) {
+                // 有图片地址 → 画图片
+                if (!ing._img) {
+                  ing._img = new Image();
+                  ing._img.src = ing.imgSrc;
+                }
+                if (ing._img.complete && ing._img.naturalWidth > 0) {
+                  ctx.drawImage(ing._img, menuX + 4, menuY + yOff - 14, 24, 24);
+                } else {
+                  // 图片还没加载好，显示 emoji 占位
+                  ctx.font = "20px serif";
+                  ctx.textAlign = "left";
+                  ctx.fillStyle = "#3d3a36";
+                  ctx.fillText(ing.emoji || "🍽", menuX + 8, menuY + yOff);
+                }
+              } else {
+                // 没有图片地址，显示 emoji
+                ctx.font = "20px serif";
+                ctx.textAlign = "left";
+                ctx.fillStyle = "#3d3a36";
+                ctx.fillText(ing ? ing.emoji : "🍽", menuX + 8, menuY + yOff);
+              }
               const barX = menuX + 36,
                 barW = menuW - 72,
                 barH = 5;
