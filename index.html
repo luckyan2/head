@@ -844,14 +844,8 @@
 
           <!-- 三个小方盒子：厨师背景替换选项 -->
           <div class="chef-bg-options">
-            <div
-              class="chef-bg-option active"
-              data-src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
-            >
-              <img
-                src="https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"
-                alt="厨师 1"
-              />
+            <div class="chef-bg-option active" data-src="./images/chef.png">
+              <img src="./images/chef.png" alt="厨师 1" />
             </div>
             <div
               class="chef-bg-option"
@@ -1187,8 +1181,7 @@
             name: "番茄",
             color: "#e74c3c",
             emoji: "🍅",
-            imgSrc:
-              "https://i.imgs.ovh/2026/08/11/e20c2be9182194e22bfd920351304584.png",
+            imgSrc: "./images/tomato.png",
             cost: 1,
           },
           { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", cost: 1 },
@@ -1228,7 +1221,14 @@
             emoji: "🍄",
             cost: 1,
           },
-          { id: "salt", name: "盐", color: "#ecf0f1", emoji: "🧂", cost: 1 },
+          {
+            id: "spice",
+            name: "葱姜蒜",
+            color: "#ecf0f1",
+            emoji: "🫚",
+            imgSrc: "./images/spice.png",
+            cost: 1,
+          },
           { id: "oil", name: "油", color: "#f39c12", emoji: "🫒", cost: 1 },
         ];
         const RECIPES = [
@@ -1237,9 +1237,9 @@
             emoji: "🍳",
             reward: 25,
             ing: [
-              { id: "tomato", n: 3 },
+              { id: "tomato", n: 2 },
               { id: "egg", n: 2 },
-              { id: "salt", n: 1 },
+              { id: "spice", n: 1 },
             ],
           },
           {
@@ -1250,7 +1250,7 @@
               { id: "egg", n: 2 },
               { id: "onion", n: 1 },
               { id: "carrot", n: 1 },
-              { id: "salt", n: 1 },
+              { id: "spice", n: 1 },
             ],
           },
           {
@@ -1269,10 +1269,10 @@
             emoji: "🍲",
             reward: 22,
             ing: [
-              { id: "mushroom", n: 3 },
+              { id: "mushroom", n: 2 },
               { id: "potato", n: 1 },
               { id: "onion", n: 1 },
-              { id: "salt", n: 1 },
+              { id: "spice", n: 1 },
             ],
           },
           {
@@ -1280,8 +1280,8 @@
             emoji: "🥔",
             reward: 15,
             ing: [
-              { id: "potato", n: 3 },
-              { id: "garlic", n: 2 },
+              { id: "potato", n: 2 },
+              { id: "garlic", n: 1 },
               { id: "oil", n: 1 },
             ],
           },
@@ -1709,8 +1709,7 @@
             imgs.chef = null;
             on();
           };
-          imgs.chef.src =
-            "https://preview.qiantucdn.com/58pic/69/48/95/32a58PICg79uCtfUBc63Q_PIC2018.png!w1024_new_0_1"; // ← 替换厨师图片
+          imgs.chef.src = "./images/chef.png"; // ← 替换厨师图片
 
           // ---------- 3. 锅/灶台图片 ----------
           // 替换此链接即可更换锅的样式
@@ -1815,12 +1814,12 @@
             const size = ing.sz;
             ctx.shadowColor = "rgba(0,0,0,0.1)";
             ctx.shadowBlur = 8;
-            ctx.fillStyle = ing.color;
-            ctx.fillRect(ing.x - size / 2, ing.y - size / 2, size, size);
+            // ctx.fillStyle = ing.color;
+            // ctx.fillRect(ing.x - size / 2, ing.y - size / 2, size, size);
             ctx.shadowBlur = 0;
-            ctx.strokeStyle = "rgba(255,255,255,0.5)";
-            ctx.lineWidth = 2;
-            ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
+            //ctx.strokeStyle = "rgba(255,255,255,0.5)";
+            //ctx.lineWidth = 2;
+            //ctx.strokeRect(ing.x - size / 2, ing.y - size / 2, size, size);
             // ----- 替换开始：用图片代替 emoji -----
             // 检查这个食材有没有设置图片地址
             if (ing.imgSrc) {
@@ -1892,18 +1891,38 @@
           // 厨师绘制中心Y坐标 = cookBottom - chefDrawSize/2
           const drawY = cookBottom - chefDrawSize / 2;
 
-          // ---- 绘制厨师 ----
+          // 绘制厨师
           if (imgs.chef) {
-            ctx.save();
-            ctx.translate(chefX, drawY);
-            ctx.drawImage(
-              imgs.chef,
-              -chefDrawSize / 2,
-              -chefDrawSize / 2,
-              chefDrawSize,
-              chefDrawSize,
-            );
-            ctx.restore();
+            // 如果图片还没加载完成，尝试重新加载一次
+            if (!imgs.chef.complete || imgs.chef.naturalWidth === 0) {
+              // 重新设置 src 会触发重新加载
+              imgs.chef.src = imgs.chef.src; // 刷新
+            }
+            // 如果加载完成，绘制
+            if (imgs.chef.complete && imgs.chef.naturalWidth > 0) {
+              ctx.drawImage(
+                imgs.chef,
+                chefX - chefDrawSize / 2,
+                drawY - chefDrawSize / 2,
+                chefDrawSize,
+                chefDrawSize,
+              );
+            } else {
+              // 如果还没加载好，画一个灰色方块占位（或者什么都不画）
+              // 你可以选择画一个默认表情或文字
+              ctx.fillStyle = "#ccc";
+              ctx.fillRect(
+                chefX - chefDrawSize / 2,
+                drawY - chefDrawSize / 2,
+                chefDrawSize,
+                chefDrawSize,
+              );
+              ctx.fillStyle = "#333";
+              ctx.font = "20px sans-serif";
+              ctx.textAlign = "center";
+              ctx.textBaseline = "middle";
+              ctx.fillText("🍳", chefX, drawY);
+            }
           }
 
           // ---- 圆形头像（位置与厨师图片中心重合，即与弹窗一致） ----
@@ -2617,7 +2636,7 @@
           avatarModal.classList.remove("hidden");
           // 更新预览大图
           if (imgs.chef && imgs.chef.complete && imgs.chef.naturalWidth > 0) {
-            avatarChefBg.src = imgs.chef.src;
+            avatarChefBg.src = imgs.chef.src + "?t=" + Date.now(); // 加时间戳防止缓存
           } else {
             avatarChefBg.src = imgs.chef ? imgs.chef.src : "";
           }
