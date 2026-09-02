@@ -729,13 +729,56 @@
   <body>
     <!-- ===== 顶部状态栏 ===== -->
     <div class="outer-top-bar">
-      <div class="top-box" id="top-head-status">
+      <!-- 第一个：头控状态 -->
+      <div
+        class="top-box"
+        id="top-head-status"
+        style="
+          background-image: url(&quot;./images/left1.png&quot;);
+          background-size: cover;
+          background-position: center;
+          background-color: transparent;
+        "
+      >
         <span class="head-indicator" id="headIndicator"></span>
         <span class="status-text" id="headStatusText">头控关</span>
       </div>
-      <div class="top-box" id="top-dishes">🍽️ 0</div>
-      <div class="top-box" id="top-gold">💰 50</div>
-      <div class="top-box">
+      <!-- 第二个：出餐数 -->
+      <div
+        class="top-box"
+        id="top-dishes"
+        style="
+          background-image: url(&quot;./images/left2.png&quot;);
+          background-size: cover;
+          background-position: center;
+          background-color: transparent;
+        "
+      >
+        🍽️ 0
+      </div>
+      <!-- 第三个：金币 -->
+      <div
+        class="top-box"
+        id="top-gold"
+        style="
+          background-image: url(&quot;./images/left3.png&quot;);
+          background-size: cover;
+          background-position: center;
+          background-color: transparent;
+        "
+      >
+        💰 50
+      </div>
+      <!-- 第四个：时间+暂停 -->
+      <div
+        class="top-box"
+        style="
+          background-image: url(&quot;./images/left4.png&quot;);
+          background-size: cover;
+          background-position: center;
+          background-color: transparent;
+        "
+      >
         <span id="top-time">01:30</span>
         <span id="top-pause">⏸</span>
       </div>
@@ -1184,13 +1227,13 @@
             imgSrc: "./images/tomato.png",
             cost: 1,
           },
-          { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", cost: 1 },
-          { id: "onion", name: "洋葱", color: "#9b59b6", emoji: "🧅", cost: 1 },
+          { id: "egg", name: "鸡蛋", color: "#f1c40f", emoji: "🥚", imgSrc: "./images/egg.png",cost: 1 },
+          { id: "onion", name: "洋葱", color: "#9b59b6", emoji: "🧅",imgSrc: "./images/onion.png", cost: 1 },
           {
-            id: "garlic",
-            name: "大蒜",
+            id: "sausage",
+            name: "香肠",
             color: "#ecf0f1",
-            emoji: "🧄",
+            emoji: "🥩",
             cost: 1,
           },
           {
@@ -1198,6 +1241,7 @@
             name: "胡萝卜",
             color: "#e67e22",
             emoji: "🥕",
+            imgSrc: "./images/carrot.png",
             cost: 1,
           },
           {
@@ -1205,6 +1249,7 @@
             name: "土豆",
             color: "#d4a574",
             emoji: "🥔",
+            imgSrc: "./images/potato.png",
             cost: 1,
           },
           {
@@ -1212,6 +1257,7 @@
             name: "青椒",
             color: "#27ae60",
             emoji: "🫑",
+            imgSrc: "./images/pepper.png",
             cost: 1,
           },
           {
@@ -1219,6 +1265,7 @@
             name: "蘑菇",
             color: "#bdc3c7",
             emoji: "🍄",
+            imgSrc: "./images/mushroom.png",
             cost: 1,
           },
           {
@@ -1243,22 +1290,21 @@
             ],
           },
           {
-            name: "蛋炒饭",
-            emoji: "🍚",
-            reward: 20,
+            name: "炒土豆丝",
+            emoji: "🥔",
+            reward: 15,
             ing: [
-              { id: "egg", n: 2 },
+              { id: "potato", n: 1 },
+              { id: "pepper", n: 1 },
               { id: "onion", n: 1 },
-              { id: "carrot", n: 1 },
-              { id: "spice", n: 1 },
             ],
           },
           {
             name: "蔬菜沙拉",
             emoji: "🥗",
-            reward: 18,
+            reward: 20,
             ing: [
-              { id: "tomato", n: 2 },
+              { id: "tomato", n: 1 },
               { id: "carrot", n: 1 },
               { id: "pepper", n: 1 },
               { id: "onion", n: 1 },
@@ -1267,7 +1313,7 @@
           {
             name: "蘑菇汤",
             emoji: "🍲",
-            reward: 22,
+            reward: 25,
             ing: [
               { id: "mushroom", n: 2 },
               { id: "potato", n: 1 },
@@ -1276,24 +1322,25 @@
             ],
           },
           {
-            name: "烤土豆",
+            name: "土豆饼",
             emoji: "🥔",
-            reward: 15,
+            reward: 25,
             ing: [
               { id: "potato", n: 2 },
-              { id: "garlic", n: 1 },
-              { id: "oil", n: 1 },
+              { id: "egg", n: 1 },
+              { id: "sausage", n: 1 },
+              { id: "spice", n: 1 },
             ],
           },
           {
-            name: "番茄意面",
-            emoji: "🍝",
-            reward: 28,
+            name: "脆皮薯球",
+            emoji: "🥔",
+            reward: 20,
             ing: [
-              { id: "tomato", n: 3 },
+              { id: "potato", n: 1 },
               { id: "onion", n: 1 },
-              { id: "garlic", n: 2 },
-              { id: "oil", n: 1 },
+              { id: "mushroom", n: 1 },
+              { id: "sausage", n: 1 },
             ],
           },
         ];
@@ -1677,17 +1724,58 @@
          *  请替换对应的 src 链接即可。
          * =============================================================
          */
-        const imgs = {};
+          const imgs = {};
 
-        function loadImgs(cb) {
-          let n = 0;
-          const t = 7;
+          function loadImgs(cb) {
+              let n = 0;
+              const t = 14; // 原来是7，现在加1+2+4
 
-          function on() {
-            n++;
-            if (n === t) cb();
+              function on() { n++; if (n === t) cb(); }
+
+              // ... 其他图片加载 ...
+
+              // 新增菜单背景
+              imgs.menuBg = new Image();
+              imgs.menuBg.crossOrigin = "anonymous"; // 同域可省略
+              imgs.menuBg.onload = on;
+              imgs.menuBg.onerror = () => { imgs.menuBg = null; on(); };
+              imgs.menuBg.src = "./images/menu.png";
+                  // ---------- 顶部四个按钮背景图 ----------
+              imgs.top1 = new Image();
+              imgs.top1.onload = on;
+              imgs.top1.onerror = () => { imgs.top1 = null; on(); };
+              imgs.top1.src = "./images/left1.png";
+
+              imgs.top2 = new Image();
+              imgs.top2.onload = on;
+              imgs.top2.onerror = () => { imgs.top2 = null; on(); };
+              imgs.top2.src = "./images/left2.png";
+
+              imgs.top3 = new Image();
+              imgs.top3.onload = on;
+              imgs.top3.onerror = () => { imgs.top3 = null; on(); };
+              imgs.top3.src = "./images/left3.png";
+
+              imgs.top4 = new Image();
+              imgs.top4.onload = on;
+              imgs.top4.onerror = () => { imgs.top4 = null; on(); };
+              imgs.top4.src = "./images/left4.png";
+              // ========== 👇 在这里添加气泡图片的加载 ==========
+              // ---------- 9. 左侧对话框 ----------
+              imgs.bubbleL = new Image();
+              imgs.bubbleL.crossOrigin = "anonymous";
+              imgs.bubbleL.onload = on;
+              imgs.bubbleL.onerror = () => { imgs.bubbleL = null; on(); };
+              imgs.bubbleL.src = "./images/think.png";
+
+              // ---------- 10. 右侧对话框 ----------
+              imgs.bubbleR = new Image();
+              imgs.bubbleR.crossOrigin = "anonymous";
+              imgs.bubbleR.onload = on;
+              imgs.bubbleR.onerror = () => { imgs.bubbleR = null; on(); };
+              imgs.bubbleR.src = "./images/think.png";
+              // ========== 添加结束 ==========
           }
-
           // ---------- 1. 传送带背景图 ----------
           // 替换此链接即可更换传送带背景
           imgs.belt = new Image();
@@ -1698,7 +1786,7 @@
             on();
           };
           imgs.belt.src =
-            "https://ts4.tc.mm.bing.net/th/id/OIP-C.XVn3IrtbhTyHcJHrWyKqTgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换传送带图片
+            "./images/belt.jpg"; // ← 替换传送带图片
 
           // ---------- 2. 厨师图片 ----------
           // 替换此链接即可更换厨师角色
@@ -1721,7 +1809,7 @@
             on();
           };
           imgs.pot.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换锅图片
+            "./images/pot.png"; // ← 替换锅图片
 
           // ---------- 4. 左侧客人图片 ----------
           // 替换此链接即可更换左侧客人形象
@@ -1733,7 +1821,7 @@
             on();
           };
           imgs.guestL.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换左侧客人图片
+            "./images/guestL.png"; // ← 替换左侧客人图片
 
           // ---------- 5. 右侧客人图片 ----------
           // 替换此链接即可更换右侧客人形象
@@ -1745,7 +1833,7 @@
             on();
           };
           imgs.guestR.src =
-            "https://ts2.tc.mm.bing.net/th/id/OIP-C.9bVtoHTBQRCsKukxxEl-bgAAAA?r=0&rs=1&pid=ImgDetMain&o=7&rm=3"; // ← 替换右侧客人图片
+            "./images/guestR.png"; // ← 替换右侧客人图片
 
           // ---------- 6. 左侧用餐图片 ----------
           // 替换此链接即可更换左侧客人用餐时的形象
@@ -2029,17 +2117,21 @@
             ctx.drawImage(imgs.eatL, ltX, ltY, ltW, ltH);
           else if (imgs.guestL) ctx.drawImage(imgs.guestL, ltX, ltY, ltW, ltH);
 
-          // 左侧客人点单气泡
-          if (state.leftD) {
-            const bx = ltX + 5,
-              by = ltY - 30;
-            ctx.fillStyle = "rgba(255,255,240,0.95)";
-            ctx.beginPath();
-            ctx.roundRect(bx, by, 75, 50, 12);
-            ctx.fill();
-            ctx.strokeStyle = "#f1c40f";
-            ctx.lineWidth = 3;
-            ctx.stroke();
+          // 用图片替换背景
+          if (imgs.bubbleL && imgs.bubbleL.complete && imgs.bubbleL.naturalWidth > 0) {
+              const bw = 90,  // ← 你想要的宽度
+                    bh = 40;  // ← 你想要的⾼度
+              ctx.drawImage(imgs.bubbleL, bx, by, bw, bh);
+          } else {
+              // 备选纯色背景
+              ctx.fillStyle = "rgba(255,255,240,0.95)";
+              ctx.beginPath();
+              ctx.roundRect(bx, by, 75, 50, 12);
+              ctx.fill();
+              ctx.strokeStyle = "#f1c40f";
+              ctx.lineWidth = 3;
+              ctx.stroke();
+          }
             if (state.leftD.dish === "✅") {
               ctx.font = "30px serif";
               ctx.textAlign = "center";
@@ -2102,22 +2194,29 @@
             }
           }
 
-          // ---- 菜单面板 ----
-          const menuW = cW * 1.1,
+        // ---- 菜单面板（使用自定义图片，无边框无圆角） ----
+        const menuW = cW * 1.1,
             baseH = 90,
             rowH = 30;
-          const menuH = baseH + state.menu.length * rowH;
-          const menuX = (W - menuW) / 2,
+        const menuH = baseH + state.menu.length * rowH;
+        const menuX = (W - menuW) / 2,
             menuY = 0;
-          ctx.fillStyle = "#b0b0b0";
-          ctx.fillRect(0, menuY, W, 60);
-          ctx.fillStyle = "rgba(255,248,240,0.92)";
-          ctx.beginPath();
-          ctx.roundRect(menuX, menuY, menuW, menuH, 8);
-          ctx.fill();
-          ctx.strokeStyle = "#d0c8b8";
-          ctx.lineWidth = 3;
-          ctx.stroke();
+
+        // 顶部灰色条（如果你不需要可以删掉，但保留也行）
+        //ctx.fillStyle = "#b0b0b0";
+        //ctx.fillRect(0, menuY, W, 60);
+
+        // 绘制菜单背景图片（替代原来的半透明白色背景）
+        if (imgs.menuBg && imgs.menuBg.complete && imgs.menuBg.naturalWidth > 0) {
+            ctx.drawImage(imgs.menuBg, menuX, menuY, menuW, menuH);
+        } else {
+            // 如果图片还没加载好，用备用颜色（纯色填充，无圆角）
+            ctx.fillStyle = "rgba(255,248,240,0.92)";
+            ctx.fillRect(menuX, menuY, menuW, menuH); // 用 fillRect 代替 roundRect
+        }
+
+        // 不再绘制边框和圆角，去掉 stroke 相关代码
+        // 原来有 ctx.strokeStyle 和 ctx.stroke()，现在删掉
           ctx.font = "22px serif";
           ctx.textAlign = "center";
           ctx.fillStyle = "#e67e22";
