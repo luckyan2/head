@@ -6,7 +6,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
-    <title>像素厨房 · 头控出餐</title>
+    <title>热血厨子</title>
     <link
       href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap"
       rel="stylesheet"
@@ -190,11 +190,11 @@
           transform: scale(1);
         }
       }
-
+      /* ===== 修改大标题字体 ===== */
       .modal-title {
-        font-size: 34px;
-        color: #e67e22;
-        text-shadow: 3px 3px 0 #f1c40f;
+        font-size: 40px;
+        color: #000000;
+        /* ===== text-shadow: 3px 3px 0 #f1c40f; ===== */
         margin-bottom: 20px;
         text-align: center;
         letter-spacing: 2px;
@@ -728,6 +728,34 @@
     </style>
   </head>
   <body>
+    <!-- ===== 加载遮罩 ===== -->
+    <div
+      id="loadingMask"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: #f5efe6; /* 背景色，可换成你喜欢的 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999; /* 确保在最上层 */
+        font-family: &quot;Press Start 2P&quot;, monospace;
+        font-size: 24px;
+        color: #e67e22;
+        transition: opacity 0.8s ease;
+      "
+    >
+      <div style="text-align: center">
+        <div style="font-size: 48px; margin-bottom: 20px">...</div>
+        <div>加载中</div>
+        <div style="font-size: 14px; margin-top: 20px; color: #4e3d28">
+          请稍候，美味即将呈现
+        </div>
+      </div>
+    </div>
     <!-- ===== 顶部状态栏 ===== -->
     <div class="outer-top-bar">
       <!-- 第一个：头控状态 -->
@@ -797,17 +825,17 @@
         class="modal-overlay"
         style="background: rgba(255, 248, 240, 0.75)"
       >
-        <div class="modal-title">👨‍🍳 像素厨房</div>
+        <div class="modal-title">热血厨子</div>
         <div class="modal-card" style="background: #fffefc">
-          <div class="subtitle-big">📷 开启摄像头</div>
-          <div class="subtitle-small">触屏滑动 · 头控可选</div>
+          <div class="subtitle-big">开启摄像头</div>
+          <div class="subtitle-small">左右摆头接收食材</div>
 
           <div class="btn-row">
             <button class="btn btn-start-camera" id="startWithCameraBtn">
-              📷 允许并开始
+              允许并开始
             </button>
             <button class="btn btn-secondary" id="startTouchBtn">
-              👆 触屏玩法
+              触屏玩法
             </button>
           </div>
 
@@ -815,12 +843,12 @@
             class="btn btn-secondary btn-small start-avatar-btn"
             id="openAvatarBtn"
           >
-            🔄 更换厨师形象
+            更换厨师形象
           </button>
 
           <!-- 游戏说明（放在底部，居中） -->
           <div style="margin-top: 20px; text-align: center">
-            <span class="info-link-bottom" id="openInfoBtn">📖 游戏说明</span>
+            <span class="info-link-bottom" id="openInfoBtn">游戏说明</span>
           </div>
 
           <input
@@ -834,11 +862,11 @@
 
       <!-- ===== 游戏说明弹窗 ===== -->
       <div id="infoModal" class="modal-overlay hidden">
-        <div class="modal-title" style="font-size: 28px">📖 游戏说明</div>
+        <div class="modal-title" style="font-size: 28px">游戏说明</div>
         <div class="modal-card" style="max-width: 360px; padding: 20px">
           <button class="close-btn" id="infoCloseBtn">&times;</button>
           <div class="section">
-            <h3>🎮 游戏玩法</h3>
+            <h3>游戏玩法</h3>
             <p>
               控制厨师接住传送带上的食材，凑齐菜谱所需材料后自动出餐，赚取金币！
             </p>
@@ -849,7 +877,7 @@
             <p>• 连击数越高，得分加成越多！</p>
           </div>
           <div class="section">
-            <h3>⚠️ 免责声明</h3>
+            <h3>免责声明</h3>
             <p>
               本游戏为个人开发作品，仅供娱乐参考。游戏过程中请勿过度依赖头控操作，注意休息。
             </p>
@@ -876,7 +904,7 @@
       <div id="avatarModal" class="modal-overlay hidden">
         <div class="modal-card" style="max-width: 360px; padding: 20px">
           <button class="close-btn" id="avatarCloseBtn">&times;</button>
-          <h2 style="font-size: 20px; margin-bottom: 10px">👨‍🍳 更换形象</h2>
+          <h2 style="font-size: 20px; margin-bottom: 10px">更换厨师形象</h2>
           <div class="avatar-preview-container">
             <img id="avatarChefBg" class="chef-bg" src="" alt="厨师" />
             <div class="avatar-circle" id="avatarCircle">
@@ -912,18 +940,18 @@
           </div>
 
           <button class="btn avatar-confirm-btn" id="avatarConfirmBtn">
-            ✅ 确认
+            确认
           </button>
         </div>
       </div>
 
       <!-- ===== 暂停弹窗（速度滑杆） ===== -->
       <div id="pauseModal" class="modal-overlay hidden">
-        <div class="modal-title" style="font-size: 30px">⏸ 暂停</div>
+        <div class="modal-title" style="font-size: 40px">暂停</div>
         <div class="modal-card">
           <div style="margin: 8px 0">
             <div class="settings-row">
-              <span>🎵 音乐</span>
+              <span>音乐</span>
               <div class="toggle-wrap">
                 <button
                   class="toggle-btn active"
@@ -937,7 +965,7 @@
               </div>
             </div>
             <div class="settings-row">
-              <span>🔊 音效</span>
+              <span>音效</span>
               <div class="toggle-wrap">
                 <button
                   class="toggle-btn active"
@@ -952,7 +980,7 @@
             </div>
             <!-- 速度滑杆 -->
             <div class="settings-row">
-              <span>📦 传送带速度</span>
+              <span>传送带速度</span>
               <div class="speed-control">
                 <div class="slider-row">
                   <input
@@ -970,14 +998,14 @@
           </div>
           <div class="btn-group">
             <button class="btn" id="resumeBtn" style="font-size: 18px">
-              ▶ 继续
+              继续
             </button>
             <button
               class="btn btn-secondary"
               id="restartBtn"
               style="font-size: 18px"
             >
-              🔄 重新开始
+              重新开始
             </button>
           </div>
         </div>
@@ -985,7 +1013,7 @@
 
       <!-- ===== 结算弹窗（时间到） ===== -->
       <div id="resultModal" class="modal-overlay hidden">
-        <div class="modal-title">🍳 时间到！</div>
+        <div class="modal-title">时间到！</div>
         <div class="modal-card">
           <div class="score-number" id="finalScore">0</div>
           <div style="font-size: 14px; color: #7a7268; margin: 6px 0">
@@ -1006,17 +1034,17 @@
             </div>
           </div>
           <button class="btn" id="retryBtn" style="font-size: 18px">
-            🔄 再来一局
+            再来一局
           </button>
           <button
             class="btn btn-secondary"
             id="rankBtn"
             style="font-size: 18px"
           >
-            📊 我的评级
+            我的评级
           </button>
           <!-- 底部邮箱 -->
-          <div class="footer-email">📧 我的邮箱：xxx@example.com</div>
+          <div class="footer-email">我的邮箱：xxx@example.com</div>
         </div>
       </div>
     </div>
@@ -1658,6 +1686,8 @@
         }
 
         function update(dt) {
+          // 如果这一帧耗时超过 50 毫秒，强行按 33 毫秒算，防止突然跳帧
+          dt = Math.min(dt, 0.033);
           if (!state.playing || state.paused || state.over) return;
 
           if (state.timerStarted) {
@@ -2778,8 +2808,9 @@
                     } catch (e) {}
                   }
                 },
-                width: 320,
-                height: 240,
+                width: 160,
+                height: 120,
+                frameRate: 15,
               });
 
               camera
@@ -3179,6 +3210,13 @@
         // 16. 启动
         // ================================================================
         loadImgs(() => {
+          // ----- 隐藏加载遮罩（渐隐效果） -----
+          const mask = document.getElementById("loadingMask");
+          mask.style.opacity = "0";
+          setTimeout(() => {
+            mask.style.display = "none";
+          }, 800); // 等待渐隐动画完成
+
           resetGameState();
           document.getElementById("startOverlay").classList.remove("hidden");
           document.getElementById("resultModal").classList.add("hidden");
